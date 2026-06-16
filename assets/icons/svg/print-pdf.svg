@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="印刷/PDF">
+  
+  <g stroke="#6F9278" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<path d="M7.2 8.2V4.2h8.4v4"/>
+<rect x="4" y="8" width="12.8" height="8.1" rx="2.4"/>
+<path d="M7.4 15.1h7.1v4.7H7.4z"/>
+<path d="M6.6 11.4h.01"/>
+<path d="M9 17.5h3.8"/>
+<path d="M16.1 11.4h3.8v8.4h-5.7v-4.2"/>
+<path d="M17.4 14.8c.25-.4.56-.6.95-.6.47 0 .8.28.8.72 0 .76-.95.8-.95 1.48"/>
+<path d="M18.35 17.9h.01"/>
+  </g>
+</svg>

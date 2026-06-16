@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="締め月のシフトを空欄にする">
+  
+  <g stroke="#6F9278" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<rect x="4" y="4.6" width="13.8" height="14" rx="3"/>
+<path d="M7.4 3.5v3M14.4 3.5v3M4 8.8h13.8"/>
+<path d="M7 11.8h2M10.7 11.8h2M14.4 11.8h.8M7 14.6h2M10.7 14.6h1.3"/>
+<path d="M13.4 19.1l2.6-2.6 3.5 3.5-1.2 1.2h-3.5z"/>
+<path d="M15.4 14.5l1.6-1.6 3.5 3.5-1.6 1.6"/>
+<path d="M14.8 21.2h4"/>
+  </g>
+</svg>

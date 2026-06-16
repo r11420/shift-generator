@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="下へ移動">
+  
+  <g stroke="#6F9278" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<path d="M12 19V5"/>
+<path d="M6.5 13.5L12 19l5.5-5.5"/>
+<path d="M6 4h12"/>
+  </g>
+</svg>

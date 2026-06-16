@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>使い方マニュアル｜KJM Shift＋</title>
+<style>
+:root{--bg:#fbf8f3;--ink:#33302b;--muted:#7a7064;--line:#e3dccf;--soft:#eef2ec;--accent:#5a8c69;--accent2:#3f6f55}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.7}
+.mh{position:sticky;top:0;z-index:10;background:var(--accent);color:#fff;padding:13px 22px;font-size:20px;font-weight:900;display:flex;align-items:baseline;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.mh span{font-size:13px;font-weight:600;opacity:.92}
+.mhIcon{width:26px;height:26px;flex:none;align-self:center;filter:brightness(0) invert(1)}
+.mwrap{display:grid;grid-template-columns:268px 1fr;align-items:start;max-width:1180px;margin:0 auto}
+.mnav{position:sticky;top:54px;align-self:start;max-height:calc(100vh - 60px);overflow:auto;padding:14px 10px;border-right:1px solid var(--line)}
+.mnav .navTitle{font-size:12px;font-weight:900;color:var(--muted);padding:4px 10px 8px}
+.mnav a{display:block;text-decoration:none;color:var(--ink);border-radius:10px;padding:9px 10px;font-size:14px;font-weight:700;line-height:1.35}
+.mnav a:hover{background:var(--soft)}
+.mnav a:target,.mnav a.active{background:var(--soft)}
+.mnav .mnNum{display:inline-block;min-width:1.7em;color:var(--accent2);font-weight:900}
+.mbody{padding:10px 30px 80px;min-width:0}
+.manChapter{padding:20px 0;border-bottom:1px dashed var(--line);scroll-margin-top:64px}
+.manChapter h3{font-size:21px;margin:6px 0 12px;display:flex;align-items:center;gap:8px}
+.manChapter h3 .mnNum{background:var(--accent);color:#fff;border-radius:10px;font-size:14px;padding:2px 11px}
+.manChapter p{font-size:15px;line-height:1.9;margin:7px 0;color:#33302b}
+.manLead{color:#5b554d}
+.manChapter a,.manTip a,.manWarn a{color:#2f6f55;font-weight:800}
+ol.manSteps{list-style:none;counter-reset:mstep;padding:0;margin:12px 0;display:flex;flex-direction:column;gap:9px}
+ol.manSteps li{counter-increment:mstep;position:relative;padding:11px 13px 11px 50px;background:#fff;border:1px solid var(--line);border-radius:12px;font-size:15px;line-height:1.6}
+ol.manSteps li::before{content:counter(mstep);position:absolute;left:11px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:15px}
+ul.manList{margin:8px 0;padding-left:22px;font-size:15px;line-height:1.85}
+.manFig{margin:14px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.09)}
+.manFig img{display:block;width:100%;height:auto}
+.manFig figcaption{font-size:13px;color:#5b554d;padding:10px 14px;background:#f7f3ec;border-top:1px solid var(--line);line-height:1.8}
+.manFig figcaption b{color:#c0392b}
+.manWarn{margin:13px 0;border:1px solid #e6cf9a;background:#fff8e8;border-left:6px solid #e0a93a;border-radius:12px;padding:13px 15px}
+.manWarn .manWarnHead{font-weight:900;color:#8a5a00;font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.manWarn p,.manWarn li{color:#5f4a1f}
+.manTip{margin:13px 0;border:1px solid #bcd6e8;background:#eef5fb;border-radius:12px;padding:13px 15px}
+.manTip .manTipHead{font-weight:900;color:#2f5b93;font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.manBackup{margin:15px 0;border:2px solid #8fc0a9;background:#eef7f1;border-radius:14px;padding:15px 17px;box-shadow:0 4px 12px rgba(72,111,78,.1)}
+.manBackup .manBackupHead{font-weight:900;color:var(--accent2);font-size:17px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.manBackup .manFolder{display:inline-block;background:#fff;border:1px solid #8fc0a9;border-radius:10px;padding:4px 12px;font-weight:900;color:var(--accent2);margin:4px 0}
+.manKbd{display:inline-block;background:#fff;border:1px solid #cdc3b4;border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-weight:900;font-size:13px;color:#4a443c}
+.manCheck{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:7px}
+.manCheck li{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:15px}
+.manCheck li::before{content:"\2610 ";font-weight:900;color:var(--accent2)}
+.mnNum2,.manNum2{display:inline-block;min-width:1.55em;height:1.55em;line-height:1.55em;text-align:center;border-radius:50%;background:#e53935;color:#fff;font-weight:900;font-size:13px;margin:0 2px}
+@media (max-width:880px){.mwrap{grid-template-columns:1fr}.mnav{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header class="mh"><img class="mhIcon" src="assets/icons/svg/manual-guide.svg" alt="">KJM Shift＋ 使い方マニュアル <span>※ 実際の操作画面（別タブ）と見比べながらお読みください</span></header>
+<div class="mwrap">
+  <nav class="mnav" aria-label="章メニュー">
+    <div class="navTitle">もくじ（クリックで移動）</div>
+        <a href="#man-1"><span class="mnNum">1</span>はじめに（できること）</a>
+        <a href="#man-2"><span class="mnNum">2</span>ぜったいに守ること</a>
+        <a href="#man-3"><span class="mnNum">3</span>毎月の流れ</a>
+        <a href="#man-4"><span class="mnNum">4</span>締め月の見方</a>
+        <a href="#man-5"><span class="mnNum">5</span>画面の見方（左メニュー）</a>
+        <a href="#man-6"><span class="mnNum">6</span>スタッフを登録・変更</a>
+        <a href="#man-7"><span class="mnNum">7</span>基本ルールの設定（おもにチーフ以上）</a>
+        <a href="#man-8"><span class="mnNum">8</span>希望休・全体予定を入れる</a>
+        <a href="#man-9"><span class="mnNum">9</span>臨時休業（店舗の休み）</a>
+        <a href="#man-10"><span class="mnNum">10</span>部署別シフトを作る</a>
+        <a href="#man-11"><span class="mnNum">11</span>自動作成の便利な機能</a>
+        <a href="#man-12"><span class="mnNum">12</span>部署別シフトを直す（編集）</a>
+        <a href="#man-13"><span class="mnNum">13</span>警告を確認する</a>
+        <a href="#man-14"><span class="mnNum">14</span>全体シフト表を見る・直す</a>
+        <a href="#man-15"><span class="mnNum">15</span>印刷・ファイル出力</a>
+        <a href="#man-16"><span class="mnNum">16</span>バックアップを取る</a>
+        <a href="#man-17"><span class="mnNum">17</span>復元するとき（チーフ以上）</a>
+        <a href="#man-18"><span class="mnNum">18</span>トリマー月次表・外部サロン管理システム連携</a>
+        <a href="#man-19"><span class="mnNum">19</span>OBIC連携用（店長のみ）</a>
+        <a href="#man-20"><span class="mnNum">20</span>困ったとき</a>
+        <a href="#man-21"><span class="mnNum">21</span>作業後チェックリスト</a>
+  </nav>
+  <main class="mbody">
+<section class="manChapter" id="man-1">
+          <h3><span class="mnNum">1</span>はじめに（このアプリでできること）</h3>
+          <p class="manLead">KJM Shift＋は、お店のシフトを作るアプリです。おもにこの5つができます。入力した内容はこの端末（パソコン）の中だけに自動で保存され、外部には送信されません。</p>
+          <ul class="manList"><li>スタッフや希望休を登録する</li><li>部署ごとにシフトを自動で作る</li><li>作ったシフトを全体表で確認・修正する</li><li>シフトを印刷する</li><li>バックアップ（控え）を保存する</li></ul>
+          <div class="manTip"><div class="manTipHead">💡 自動保存です</div><p>「保存」ボタンを押さなくても、入力するたびに自動で保存されます。だからこそ、まちがいもすぐ保存されます。困ったら早めに直しましょう。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-calendar.png" alt="全体シフト表の上部。編集モードにするボタンとファイル出力" loading="lazy" width="1158" height="212"><figcaption>これが最初に開く「全体シフト表」です。<b>①</b>編集モードにするボタン　<b>②</b>ファイル出力（印刷など）。※①と②の間にある「部署別シフト作成へ」は10章で使います。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-2">
+          <h3><span class="mnNum">2</span>ぜったいに守ること</h3>
+          <p class="manLead">わからないときは、絶対に押さない・やらないでください。</p>
+          <div class="manWarn"><div class="manWarnHead">⚠ その1：「すべて初期化」は押さない</div><p>設定や作ったシフトが<b>すべて消えて元に戻せません</b>。わからないときは触らないでください。</p></div>
+          <div class="manWarn"><div class="manWarnHead">⚠ その2：「バックアップから復元」を勝手にしない</div><p>今のデータが<b>まるごと前の状態に戻り</b>、当月だけ戻すことはできません。復元は必ず店長またはチーフ以上に確認してから。</p></div>
+          <div class="manWarn"><div class="manWarnHead">⚠ その3：別の端末（パソコン）で作業しない</div><p>データはこの端末の中だけに保存されます。別のパソコンでは同じデータが見えません。作業は決められた<b>店舗PC</b>で。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-backup.png" alt="バックアップ画面。バックアップ取得・バックアップから復元・すべて初期化のボタン" loading="lazy" width="2200" height="646"><figcaption>「バックアップ」画面。<b>③</b>赤い「すべて初期化」と<b>②</b>「バックアップから復元」は、勝手に押さないでください（<b>①</b>はバックアップ取得＝OK）。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-3">
+          <h3><span class="mnNum">3</span>毎月の流れ</h3>
+          <p class="manLead">毎月の作業は、下の<b>手順1〜9</b>の順に進めます。手順の番号（緑の丸）は「作業の順番」です。下の画像にある左メニューの赤い番号 <span class="manNum2">1</span>〜<span class="manNum2">8</span> は「メニューの位置」で、作業の順番とは別物です。各手順では、使うメニューを赤い番号で示します（例：<span class="manNum2">1</span>＝全体シフト表）。</p>
+          <ol class="manSteps">
+            <li>締め月を確認する〔メニュー上部の締め月バッジ〕</li>
+            <li>（必要なら）スタッフ・基本ルールを確認する〔<span class="manNum2">4</span>スタッフ／<span class="manNum2">3</span>基本ルール〕</li>
+            <li>希望休・全体予定を入れる〔<span class="manNum2">5</span>シフト希望・全体予定〕</li>
+            <li>部署別シフトを作成する〔<span class="manNum2">2</span>部署別シフト作成〕</li>
+            <li>警告を確認する（許容の判断はチーフ以上）〔<span class="manNum2">7</span>集計・警告〕</li>
+            <li>問題なければ確定する〔<span class="manNum2">2</span>部署別シフト作成〕</li>
+            <li>全体シフト表で確認する〔<span class="manNum2">1</span>全体シフト表〕</li>
+            <li>印刷する〔<span class="manNum2">1</span>全体シフト表 → 📤ファイル出力〕</li>
+            <li>バックアップを取る〔<span class="manNum2">6</span>バックアップ〕</li>
+          </ol>
+          <figure class="manFig"><img src="assets/manual/m-menu.png" alt="左メニュー。全体シフト表/部署別シフト作成/基本ルール/スタッフ/シフト希望・全体予定/バックアップ/集計・警告/OBIC連携用" loading="lazy" width="500" height="1714"><figcaption>左メニューの赤い番号は「メニューの位置」です（作業の順番ではありません）：<span class="manNum2">1</span>全体シフト表　<span class="manNum2">2</span>部署別シフト作成　<span class="manNum2">3</span>基本ルール　<span class="manNum2">4</span>スタッフ　<span class="manNum2">5</span>シフト希望・全体予定　<span class="manNum2">6</span>バックアップ　<span class="manNum2">7</span>集計・警告　<span class="manNum2">8</span>【店長】OBIC連携用。上の手順で「〔<span class="manNum2">1</span>全体シフト表〕」のように出てくる番号が、この画像の番号です。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-4">
+          <h3><span class="mnNum">4</span>締め月の見方</h3>
+          <p class="manLead">このアプリは「15日締め」です。作業の前に、画面の締め月が正しいか必ず確認します。</p>
+          <ul class="manList"><li>8月度のシフト → 7月16日 〜 8月15日</li><li>9月度のシフト → 8月16日 〜 9月15日</li></ul>
+          <div class="manTip"><div class="manTipHead">💡 月の変え方</div><p>左メニュー上の締め月バッジの <b>◀ ▶</b> で月を変えます。ここを変えると全部の画面が同じ月に切り替わります。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-period.png" alt="締め月バッジ。前後の月へ動かす◀▶の矢印" loading="lazy" width="568" height="364"><figcaption><b>①</b>締め月バッジ。◀ ▶ で締め月を前後に動かせます。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-5">
+          <h3><span class="mnNum">5</span>画面の見方（左メニュー）</h3>
+          <p class="manLead">左のメニューで画面を切り替えます。それぞれの役割はこちらです。</p>
+          <ul class="manList">
+            <li><span class="manNum2">1</span><b>全体シフト表</b>：全員のシフトをまとめて見る・直す</li>
+            <li><span class="manNum2">2</span><b>部署別シフト作成</b>：部署ごとに自動で作って確定する</li>
+            <li><span class="manNum2">3</span><b>基本ルール</b>：連勤・必要人数・シフト区分などの前提（おもにチーフ以上）</li>
+            <li><span class="manNum2">4</span><b>スタッフ</b>：スタッフの登録・変更</li>
+            <li><span class="manNum2">5</span><b>シフト希望・全体予定</b>：希望休や店舗予定を入れる</li>
+            <li><span class="manNum2">6</span><b>バックアップ</b>：控えの保存・復元</li>
+            <li><span class="manNum2">7</span><b>集計・警告</b>：不足や違反のチェック</li>
+            <li><span class="manNum2">8</span><b>【店長】OBIC連携用</b>：店長専用</li>
+          </ul>
+          <figure class="manFig"><img src="assets/manual/m-menu.png" alt="左メニュー。全体シフト表/部署別シフト作成/基本ルール/スタッフ/シフト希望・全体予定/バックアップ/集計・警告/OBIC連携用" loading="lazy" width="500" height="1714"><figcaption>左メニューの赤い番号 <span class="manNum2">1</span>〜<span class="manNum2">8</span> は、上の一覧と同じ並びです。今いる画面は色が濃くなります。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-6">
+          <h3><span class="mnNum">6</span>スタッフを登録・変更する</h3>
+          <p class="manLead">「スタッフ」画面で登録・変更します。追加や退職者の削除は、各部署のチーフ以上も行えます。一覧は社員番号の昇順で並びます。</p>
+          <ol class="manSteps"><li>左メニューの「スタッフ」を押す</li><li>「この部署にスタッフを追加」を押す（または既存スタッフのカードを押すと編集できます）</li><li>姓・名、姓のよみ・名のよみ、社員番号（5桁）を入れる</li><li>必要に応じてタグ・対応できる部署・固定公休などを設定する</li><li>「追加」を押す（編集中は「編集を終える」）</li></ol>
+          <figure class="manFig"><img src="assets/manual/m-staff.png" alt="スタッフ一覧。追加ボタン、検索、社員番号順に並ぶスタッフ行" loading="lazy" width="2360" height="366"><figcaption>スタッフ一覧。<b>①</b>「この部署にスタッフを追加」　<b>②</b>名前・よみがなで検索　<b>③</b>スタッフ名（クリックで編集できます。一覧は名前の下の「No.〇〇」＝社員番号の昇順で並びます）。</figcaption></figure>
+          <figure class="manFig"><img src="assets/manual/m-staff-edit.png" alt="スタッフ編集フォーム。姓名・よみがな・社員番号・タグ・対応できる部署・固定公休" loading="lazy" width="2124" height="2824"><figcaption>スタッフの編集。<b>①</b>姓・名　<b>②</b>姓のよみ・名のよみ（漢字を打つと自動で入ります）　<b>③</b>社員番号（5桁。番号で社員/パートが自動で付きます）　<b>④</b>タグ　<b>⑤</b>対応できる部署・兼務可能部署（チェックすると他部署のシフトにも入れます）　<b>⑥</b>固定公休日（毎週の決まった休み）。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💾 変更したら…</div><p>スタッフを追加・削除したら、必ずバックアップを取りましょう（→ <a href="#man-16">16章「バックアップ」</a>）。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-7">
+          <h3><span class="mnNum">7</span>基本ルールの設定（おもにチーフ以上）</h3>
+          <p class="manLead">自動作成の「前提」を決める画面です。ここがズレていると警告が増えます。上の「共通ルール／部署別ルール」タブで切り替えます。</p>
+          <ul class="manList"><li><b>共通ルール</b>：最大連勤、試行回数、全体の最低人数、定休日、スタッフタグ一覧、定期スケジュール（毎月の納品など）、シフト区分（時間帯）</li><li><b>部署別ルール</b>：部署ごとの必要人数（早・中・遅／平日・土日祝）</li></ul>
+          <figure class="manFig"><img src="assets/manual/m-basic-common.png" alt="基本ルール（共通）。共通/部署別タブ・最大連勤・タグ一覧・定期スケジュール" loading="lazy" width="2360" height="1360"><figcaption>基本ルール（共通）。<b>①</b>共通／部署別のタブ　<b>②</b>最大連勤など　<b>③</b>全体スケジュールのタグ一覧（納品・SALEなど）　<b>④</b>定期スケジュール（毎月くり返す予定）。</figcaption></figure>
+          <figure class="manFig"><img src="assets/manual/m-basic-dept.png" alt="基本ルール（部署別）の画面。部署別ルールタブ、部署の選択、その部署の必要人数" loading="lazy" width="2400" height="1320"><figcaption>基本ルール（部署別）。<b>①</b>部署別タブ　<b>②</b>部署を選ぶ　<b>③</b>その部署の必要人数。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 「チーフMTG」の日のしくみ</div><p>全体予定や定期スケジュールに<b>「チーフMTG」</b>タグを入れた日は、<b>「チーフ」「園長」</b>タグの付いたスタッフ（その日出勤する場合）を、自動で<b>なるべく遅番</b>に寄せます。これは強制ではなく弱い希望で、必要人数などが優先されます。なお<b>「チーフ」「園長」「チーフMTG」</b>のタグ名は変えないでください（変えるとこのしくみが効かなくなります）。</p></div>
+          <div class="manTip"><div class="manTipHead">💡 困ったら</div><p>必要人数の変更はチーフ以上に確認してから。むやみに変えると警告や不足が増えます。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-8">
+          <h3><span class="mnNum">8</span>希望休・全体予定を入れる</h3>
+          <p class="manLead">「シフト希望・全体予定」画面です。上に「シフト希望」と「全体予定」の2つのタブがあります。</p>
+          <p><b>シフト希望（個人の希望休など）</b></p>
+          <ol class="manSteps"><li>「シフト希望」タブを選ぶ</li><li>「表示する部署」を選ぶ</li><li>個人の名前タブを押す（「全体」は見るだけで追加できません）</li><li>条件（日付など）と希望（休／有休／早・中・遅など）を選ぶ</li><li>「＋ このスタッフに追加」を押す（「保存」ボタンはありません。1件ずつ追加します）</li></ol>
+          <figure class="manFig"><img src="assets/manual/m-prefs.png" alt="シフト希望の画面。シフト希望タブ、表示する部署、個人の名前タブ、希望の選択、このスタッフに追加ボタン" loading="lazy" width="1626" height="870"><figcaption>シフト希望。<b>①</b>「シフト希望」タブ　<b>②</b>表示する部署　<b>③</b>個人の名前タブ（「全体」は見るだけ）　<b>④</b>希望（休・有休・早中遅など）　<b>⑤</b>「＋ このスタッフに追加」で1件ずつ登録。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 「勤務できない日」は</div><p>休みたい日も勤務できない日も、希望で<b>「休」</b>を選んで追加します。</p></div>
+          <p><b>全体予定（お店全体の予定）</b></p>
+          <figure class="manFig"><img src="assets/manual/m-event.png" alt="全体予定タブ。タグ・日付/曜日の指定・追加ボタン" loading="lazy" width="2360" height="450"><figcaption>全体予定タブ。<b>①</b>タグ（納品・SALEなど）　<b>②</b>日付か曜日で指定　<b>③</b>「＋ 追加」。登録するとシフト表の日付の下に出ます。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-9">
+          <h3><span class="mnNum">9</span>臨時休業（店舗の休み）</h3>
+          <p class="manLead">お店を臨時で休む日を設定できます。「シフト希望・全体予定」の「表示する部署」で<b>「店舗」</b>を選びます。</p>
+          <ol class="manSteps"><li>「表示する部署」で「店舗」を選ぶ</li><li>休業にする日を押して切り替える</li></ol>
+          <div class="manWarn"><div class="manWarnHead">⚠ 影響が大きい操作です</div><p>臨時休業にすると、その日は全スタッフが休み扱いになり、全体シフト表・部署別シフト表・OBIC連携用の表（アプリ内の出力用画面）にも反映されます。OBICシステムへ自動で送られるわけではありません。設定前にチーフ以上に確認してください。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-closure.png" alt="店舗の臨時休業画面。日付ボタンを押して休業のオン/オフを切り替え" loading="lazy" width="2324" height="670"><figcaption>店舗の臨時休業の画面。日付を押すと休業のオン/オフが切り替わります。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-10">
+          <h3><span class="mnNum">10</span>部署別シフトを作る</h3>
+          <p class="manLead">部署ごとに、シフトを自動で作ります。</p>
+          <ol class="manSteps"><li>左メニューの「部署別シフト作成」を押す</li><li>作る部署の<b>カード</b>を押して選ぶ</li><li>締め月が正しいか確認する</li><li>「✨ この部署だけ自動作成」を押す</li><li>出てきたシフトと警告を確認する</li><li>問題なければ「確定」を押す</li></ol>
+          <figure class="manFig"><img src="assets/manual/m-deptbuild.png" alt="部署別シフト作成の画面。選択中の部署カード、この部署だけ自動作成ボタン、確定ボタン" loading="lazy" width="2400" height="1080"><figcaption>部署別シフト作成。<b>①</b>選んだ部署のカード（押すと緑になり、下の作成欄がその部署になります）　<b>②</b>「✨ この部署だけ自動作成」　<b>③</b>確認したら「確定」。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 「確定」と「再編集」</div><p>確定すると全体表に反映され、そのセルは編集できなくなります。一度確定すると同じボタンが<b>「再編集」</b>に変わり、押せばやり直せます（取り消せます）。<b>兼務スタッフ</b>は、所属・兼務先のうち<b>どれか1つの部署が確定された時点で、その人のシフトは全部署で編集できなくなります</b>（直すときは、確定した側を「再編集」に戻します）。</p></div>
+          <div class="manTip"><div class="manTipHead">💡 確定できないとき</div><p><b>「重大」な警告</b>が残っていると確定できません（「注意」だけなら確定できます）。なお「重大」は、確定ボタンの下や確定時のメッセージでは<b>「エラー」</b>と表示されます。内容を確認し、許容してよいかはチーフ以上が判断します（→ <a href="#man-13">13章「警告を確認する」</a>）。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-11">
+          <h3><span class="mnNum">11</span>自動作成の便利な機能</h3>
+          <p class="manLead">作り直したいときに使えます。むずかしければ、まずは「自動作成」と「確定」だけで大丈夫です。</p>
+          <ul class="manList"><li><b>別パターン再生成</b>：同じ条件で別の案を作る</li><li><b>生成を中止</b>：作成中に止める（変更は反映されません）</li><li><b>前案に戻す／前案と比較</b>：作り直す前の案に戻したり、見比べたりできる</li><li><b>この締め月のシフトを空欄にする</b>：その部署のこの月を白紙に戻す</li></ul>
+          <figure class="manFig"><img src="assets/manual/m-deptbuild2.png" alt="部署別シフト作成の補助ボタン。別パターン再生成・この締め月のシフトを空欄にする・ファイル出力" loading="lazy" width="1234" height="308"><figcaption>作り直し系のボタン。<b>①</b>別パターン再生成など　<b>②</b>「この締め月のシフトを空欄にする」やファイル出力。</figcaption></figure>
+          <p><b>手で一気に入れたいとき（一括手動登録）</b></p>
+          <figure class="manFig"><img src="assets/manual/m-bulk.png" alt="一括手動登録タブ。条件を選んでまとめてシフトを入力する画面" loading="lazy" width="2324" height="1040"><figcaption>上の「一括手動登録」タブ。条件を選んで、まとめてシフトを入れられます。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-12">
+          <h3><span class="mnNum">12</span>部署別シフトを直す（編集）</h3>
+          <p class="manLead">自動作成したシフトは、<b>「部署別シフト作成」の確認表の上で直接</b>直せます。ふだんの修正はこの方法がおすすめです（全体シフト表へ移動する必要はありません）。直すのは<b>確定する前</b>。確定後に直したいときは、いったん「再編集」に戻します（→ <a href="#man-10">10章「部署別シフトを作る」</a>）。</p>
+          <ol class="manSteps">
+            <li>「部署別シフト作成」で部署を選び、下の<b>確認表</b>を見る</li>
+            <li>直したいマスを<b>右クリック</b>して、「休／有休／シフト区分（C・E・Gなど）／空欄にする」から選ぶ</li>
+            <li>左クリックでも、同じ内容を一覧から選べます</li>
+          </ol>
+          <figure class="manFig"><img src="assets/manual/q-deptedit.png" alt="部署別シフト作成の確認表でマスを右クリックして開くクイック入力メニュー" loading="lazy" width="325" height="334"><figcaption>確認表のマスを<b>右クリック</b>すると、このクイック入力メニューが開きます。選ぶだけで変更できます。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 まとめて直す・元に戻す</div>
+            <ul class="manList"><li><span class="manKbd">Shift</span>を押しながら<b>クリック／ドラッグ</b>で複数のマスを四角く選び、右クリックでまとめて変更できます。</li><li>まちがえたら <span class="manKbd">Ctrl</span>＋<span class="manKbd">Z</span>（元に戻す）。確認表の上の <b>「↩ 元に戻す／↪ やり直す」</b> でも戻せます。</li></ul>
+          </div>
+          <div class="manTip"><div class="manTipHead">💡 全体シフト表からも直せます</div><p>全体シフト表からも編集できますが、ふだんは<b>部署別シフト作成から直すのがおすすめ</b>です（全体シフト表については → <a href="#man-14">14章</a>）。</p></div>
+          <div class="manTip"><div class="manTipHead">💾 直したら…</div><p>修正したら、必ずバックアップを取りましょう（→ <a href="#man-16">16章「バックアップ」</a>）。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-13">
+          <h3><span class="mnNum">13</span>警告を確認する（許容の判断はチーフ以上）</h3>
+          <p class="manLead">「集計・警告」画面で、スタッフ別の回数と、不足・連勤・希望未達などの警告を確認できます。警告は<b>「重大」</b>と<b>「注意」</b>に分かれます。<b>「重大」は部署の確定をブロックします</b>（確定ボタンの下や確定時のメッセージでは「エラー」と表示）。<b>「注意」は確定をブロックしません</b>（残す場合も内容は必ず確認してください）。</p>
+          <ul class="manList"><li>人数が足りない／連勤が多い／希望休が反映できていない／早番・遅番が足りない など</li></ul>
+          <div class="manWarn"><div class="manWarnHead">⚠ 「許容」してよいかを決める人</div><p>警告の一覧で各行のチェックを付けると「許容（OKとする）」になります（確認ダイアログが出ます）。<b>これを判断するのはチーフ以上</b>です。一般スタッフだけで決めないでください。<b>「重大（エラー）」が残っていると確定できません</b>。迷ったら確定せずチーフ以上へ。許容は「集計・警告」画面でも、部署別シフト作成の「下書きチェック」でもできます。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-stats.png" alt="集計・警告の画面。スタッフ別の回数表と、必要人数の不足状況" loading="lazy" width="2324" height="1200"><figcaption>集計・警告。スタッフ別の回数表と、不足状況が出ます。さらに下に出る<b>警告の一覧</b>で、各行のチェックを付けると「許容」にできます（確認ダイアログあり。「全て／重大／注意／許容済み」で絞り込めます）。</figcaption></figure>
+        </section>
+
+        <section class="manChapter" id="man-14">
+          <h3><span class="mnNum">14</span>全体シフト表を見る・直す</h3>
+          <p class="manLead">全員のシフトをまとめて見られる画面です。<b>ふだんは見るだけ</b>です。</p>
+          <div class="manTip"><div class="manTipHead">💡 直すときは「部署別シフト作成」がおすすめ</div><p>シフトの修正は、基本的に <a href="#man-12">12章「部署別シフトを直す（編集）」</a>（部署別シフト作成の確認表で直接）で行うのがおすすめです。<b>全体シフト表からも直せます</b>が、全体を見比べながら直したいときなどに使います。どちらの場合も、編集の前にチーフ以上へ確認しましょう。</p></div>
+          <div class="manTip"><div class="manTipHead">💡 全体シフト表での直し方（編集モード）</div>
+            <p>全体シフト表で直すときは、まず「編集モードにする」を押します（押すと「参照モードに戻す」に変わります）。そのあと：</p>
+            <ul class="manList"><li>マスを<b>クリック</b>すると一覧が開き、シフトを選べます</li><li>マスを<b>右クリック</b>すると、休・有休・各区分などをすぐ入れられます</li><li><span class="manKbd">Shift</span>を押しながらドラッグ／クリックで、四角く<b>複数選択</b>→右クリックでまとめて変更</li><li>まちがえたら <span class="manKbd">Ctrl</span>＋<span class="manKbd">Z</span>（元に戻す）。表の上の「↩ 元に戻す／↪ やり直す」でもできます</li></ul>
+          </div>
+          <figure class="manFig"><img src="assets/manual/m-edit.png" alt="全体シフト表の編集モード。参照モードに戻すボタンと元に戻す/やり直し" loading="lazy" width="2320" height="1440"><figcaption>編集モードの画面。<b>①</b>「参照モードに戻す」（押すと見るだけに戻る）　<b>②</b>「↩ 元に戻す／↪ やり直す」。青い帯に操作のヒントも出ます。</figcaption></figure>
+          <figure class="manFig"><img src="assets/manual/q-edit-cell.png" alt="シフト表のマスを右クリックして開くクイック入力メニュー。空欄にする・休・有休・各区分の選択肢" loading="lazy" width="329" height="338"><figcaption>マスを<b>右クリック</b>すると、このクイック入力メニューが開きます。「空欄にする／休／有休／シフト区分（C・E・Gなど）」から選ぶだけ。マスを<b>左クリック</b>した場合も、同じ内容を一覧から選べます。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 マスが編集できないとき</div><p>確定済み部署のスタッフのマスは編集できません（直すには、その部署を「再編集」に戻します）。<b>兼務スタッフ</b>は、所属・兼務先のうちどれか1つの部署が確定されていると、全部署のマスが編集できなくなります。</p></div>
+          <div class="manTip"><div class="manTipHead">💾 直したら…</div><p>修正したら、必ずバックアップを取りましょう（→ <a href="#man-16">16章「バックアップ」</a>）。なお「元に戻す」が効くのはシフト表の編集だけです。希望休やスタッフの追加・初期化・復元は戻せません。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-15">
+          <h3><span class="mnNum">15</span>印刷・ファイル出力</h3>
+          <p class="manLead">できあがったシフトを紙に出したり、ファイルに出したりできます。印刷は一般スタッフでもできます。</p>
+          <ol class="manSteps"><li>「全体シフト表」（または「部署別シフト作成」）を開く</li><li>締め月と内容を確認する</li><li>「📤 ファイル出力」を<b>1回クリックして開く</b></li><li>「印刷/PDF」を押す（CSV出力・Excel出力もここ）</li><li>印刷画面でプリンターを選び、印刷する</li></ol>
+          <figure class="manFig"><img src="assets/manual/m-export.png" alt="ファイル出力メニュー。CSV出力・Excel出力・印刷/PDF" loading="lazy" width="440" height="384"><figcaption>「📤 ファイル出力」を開いたところ。<b>①</b>メニューが開く　<b>②</b>「印刷/PDF」（その上にCSV出力・Excel出力）。</figcaption></figure>
+          <div class="manWarn"><div class="manWarnHead">⚠ 印刷の前にチェック</div><ul class="manList"><li>締め月は正しいですか？</li><li>必要な部署は全部「確定」していますか？</li><li>へんな場所に空欄はありませんか？</li><li>警告は確認済みですか？／チーフ以上の確認は終わっていますか？</li></ul></div>
+        </section>
+
+        <section class="manChapter" id="man-16">
+          <h3><span class="mnNum">16</span>バックアップを取る</h3>
+          <div class="manBackup">
+            <div class="manBackupHead">💾 シフトを作ったあと・直したあと・印刷したあとは、必ずバックアップ！</div>
+            <p>作業した人が、毎回バックアップ（控え）を取ります。保存する場所はここです。</p>
+            <p>保存先 → <span class="manFolder">デスクトップの「KJM Shift＋バックアップ」フォルダ</span></p>
+          </div>
+          <ol class="manSteps"><li>左メニューの「バックアップ」を押す</li><li>緑の「バックアップ取得（JSON保存）」を押す</li><li><b>保存先を選ぶ画面</b>が出たら、<b>「KJM Shift＋バックアップ」フォルダ</b>を選んで「保存」を押す（下の画像）</li></ol>
+          <figure class="manFig"><img src="assets/manual/m-backup.png" alt="バックアップ画面。バックアップ取得・バックアップから復元・すべて初期化のボタン" loading="lazy" width="2200" height="646"><figcaption>バックアップ画面。<b>①</b>緑の「バックアップ取得（JSON保存）」を押します（赤い「すべて初期化」「バックアップから復元」は押さない）。</figcaption></figure>
+          <figure class="manFig"><img src="assets/manual/m-backup-save.png" alt="保存先に「KJM Shift＋バックアップ」フォルダを選んで保存する画面" loading="lazy" width="662" height="401"><figcaption>保存先を選ぶ画面。<b>①</b>「KJM Shift＋バックアップ」フォルダを選び　<b>②</b>「保存」を押します。これで控えがそのフォルダに直接入ります。</figcaption></figure>
+          <div class="manWarn"><div class="manWarnHead">⚠ 大事なこと</div><ul class="manList"><li>データはこの端末の中だけ。控えはこのバックアップだけが頼りです。</li><li>ファイル名は基本そのまま（いつの控えか分からなくなるため）。</li><li>保存先を選ぶ画面が出ず、自動で「ダウンロード」フォルダに入る場合は、そのファイルを「KJM Shift＋バックアップ」フォルダへ移してください。</li></ul></div>
+        </section>
+
+        <section class="manChapter" id="man-17">
+          <h3><span class="mnNum">17</span>復元するとき（チーフ以上）</h3>
+          <div class="manWarn"><div class="manWarnHead">⚠ 復元はスタッフが勝手に行わない</div><p>復元すると、今のデータが<b>全期間まるごと前の状態に上書き</b>されます。当月だけ戻すことはできません。必ず店長またはチーフ以上に確認してください。</p></div>
+          <p class="manLead">復元してよいのは、こんなときだけです。</p>
+          <ul class="manList"><li>データが消えた</li><li>大きく間違えて戻せない</li><li>店長またはチーフ以上から指示があった</li></ul>
+          <div class="manWarn"><div class="manWarnHead">⚠ 復元の前に確認</div><ul class="manList"><li>本当に復元が必要ですか？</li><li>復元するファイルは正しいですか？</li><li>今のデータのバックアップは取りましたか？</li><li>チーフ以上に確認しましたか？</li></ul></div>
+        </section>
+
+        <section class="manChapter" id="man-18">
+          <h3><span class="mnNum">18</span>トリマー月次表・外部サロン管理システム連携</h3>
+          <p class="manLead">トリマーを選ぶと、「部署別シフト作成」の下に1日〜月末のひと月分の表が出ます（<b>見るだけ</b>。直すときは部署別シフト作成（15日締め）の確認表から → <a href="#man-12">12章</a>）。年・月を選んで、印刷やファイル出力（CSV）ができます。トリマーは、このCSVを<b>外部サロン管理システム</b>へ取り込みます。</p>
+          <figure class="manFig"><img src="assets/manual/m-monthly.png" alt="トリマー月次表。1か月分の表と、年・月の選択、右上のファイル出力ボタン" loading="lazy" width="2124" height="1246"><figcaption>トリマー月次表。年・月を選んで表示します。右上の「ファイル出力」から印刷・CSV・Excelが出せます。</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 月次表の対象月は個別に選びます</div><p>月次表の<b>年・月</b>は、左メニュー上部の締め月（◀ ▶）とは<b>別に</b>、この月次表で個別に選びます。締め月を変えても、月次表は自動では切り替わりません。</p></div>
+          <p><b>外部サロン管理システムへの取り込み手順</b></p>
+          <div class="manTip"><div class="manTipHead">💡 先に「確定」まで</div><p>取り込む前に、<b>10章のとおりトリマーのシフトを作って「確定」</b>しておきます。</p></div>
+          <ol class="manSteps">
+            <li>トリマー月次表の<b>年・月</b>を、取り込みたい月に合わせる</li>
+            <li>右上の「ファイル出力」を<b>1回押して開き</b>、<b>「CSV出力」</b>を選んでCSVを保存する（ふつうはブラウザの<b>「ダウンロード」フォルダ</b>に入ります。16章のバックアップ用フォルダとは別です。場所を覚えておきます）</li>
+            <li>外部サロン管理システムで、<b>手順1と同じ月</b>のシフト表ページを開く</li>
+            <li>ブックマークバーの<b>「外部サロン管理システム_シフト自動入力」</b>を実行する</li>
+            <li>手順2で保存した<b>CSVファイル</b>を選ぶ</li>
+            <li>反映する</li>
+            <li>自動入力された内容（人数・公休の位置・対象月）を確認する</li>
+            <li>問題なければ保存する</li>
+          </ol>
+          <figure class="manFig"><img src="assets/manual/q-monthly-csv.png" alt="月次表のファイル出力メニュー。CSV出力を選ぶ" loading="lazy" width="212" height="235"><figcaption>手順2：月次表の「ファイル出力」を開いて <b>「CSV出力」</b> を選びます。</figcaption></figure>
+          <div class="manWarn"><div class="manWarnHead">⚠ 月ちがいに注意</div><p>アプリで出力した月と、外部サロン管理システムで開くシフト表の月が<b>同じ</b>であることを必ず確認してください。ちがう月だと反映されません。</p></div>
+          <div class="manTip"><div class="manTipHead">💡 手順3以降はアプリの外（外部サロン管理システム）</div><p>手順3〜8は外部サロン管理システムでの操作です（別アプリのため、このマニュアルには画面写真がありません）。外部サロン管理システムの画面に従って進めてください。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-19">
+          <h3><span class="mnNum">19</span>OBIC連携用（店長のみ）</h3>
+          <div class="manWarn"><div class="manWarnHead">⚠ 「【店長】OBIC連携用」は店長だけが使います</div><p>店長以外は触らないでください。氏名・社員番号を含むため、取り扱いに注意します。</p></div>
+          <p class="manLead">全スタッフの休日（公休・希望休・有休）を、社員番号の昇順で並べた「OBICへ取り込むための一覧」を作る画面です（アプリ内の出力用の表で、OBICへ自動送信はされません）。<b>休み（公休・希望休・有休）の日に「休日」、出勤（勤務シフト。その他を含む）の日は空欄</b>で出力されます（臨時休業日も休み扱い）。コピーまたはExcel出力したものを、店長がOBIC側に貼り付け／取り込みます。対象の締め月は「全体シフト表」で選んだ月です。</p>
+          <ol class="manSteps"><li>「コピー」を押す（休日/空欄をExcelと同じ形でコピー）→ OBICのシフト表に貼り付け</li><li>または「Excel出力」でファイルに保存</li><li>貼り付け後、<b>アプリの「対象スタッフ 合計○名」とOBIC側の行数・氏名の並び</b>が合っているか必ず照合する</li></ol>
+          <div class="manWarn"><div class="manWarnHead">⚠ 貼り付け前に「未設定」の表示を確認（行ズレ防止）</div><p>コピー/貼り付けの前に、合計の横に<b>赤い「社員番号 未設定 ○名」</b>が出ていないか必ず確認してください。社員番号が未設定のスタッフは<b>並びの末尾に入り、貼り付け時に全員の行が1行ずれる</b>原因になります。出ている場合は、先に「スタッフ」画面で社員番号を入れてから貼り付けます。<b>「部署未設定」</b>のスタッフはそもそも対象外です（部署を割り当てると対象になります）。</p></div>
+          <figure class="manFig"><img src="assets/manual/m-obic.png" alt="OBIC連携用の画面。コピー、Excel出力、対象人数と注意表示" loading="lazy" width="2400" height="382"><figcaption>OBIC連携用。<b>①</b>「コピー」　<b>②</b>「Excel出力」　<b>③</b>対象人数と注意表示（「社員番号 未設定 ○名」「部署未設定 ○名は対象外」が出たら要対応）。社員番号の昇順に並びます。（下の画像は全員に社員番号がある状態の例）</figcaption></figure>
+          <div class="manTip"><div class="manTipHead">💡 出したファイルの管理</div><p>Excel出力した休日一覧は<b>氏名・社員番号を含みます</b>。共有フォルダ・メール添付・USB持ち出しは避け、OBIC取り込み後は端末内の所定の場所で管理してください（不要になったら削除）。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-20">
+          <h3><span class="mnNum">20</span>困ったとき</h3>
+          <div class="manTip"><div class="manTipHead">画面がへんになった</div><p>一度ページを更新（ブラウザの再読込）してください。なお、更新するとシフト表の「元に戻す」履歴は消えます。直らないときは担当者へ。</p></div>
+          <div class="manTip"><div class="manTipHead">入力した内容がない</div><p>別の端末で開いていないか確認してください。データは端末ごとに違うことがあります。</p></div>
+          <div class="manTip"><div class="manTipHead">まちがえて操作した</div><p>すぐに作業を止めて、チーフ以上に伝えてください。勝手に復元や初期化をしないでください。</p></div>
+          <div class="manTip"><div class="manTipHead">印刷できない</div><p>プリンターが選ばれているか確認。だめなら PDF 保存、またはチーフ以上へ。</p></div>
+          <div class="manTip"><div class="manTipHead">タグ「社員/パート」「部署未設定」が直せない</div><p>これらは社員番号・部署から自動で付くタグです。手では変えられません（部署や社員番号を直すと変わります）。</p></div>
+        </section>
+
+        <section class="manChapter" id="man-21">
+          <h3><span class="mnNum">21</span>作業後チェックリスト</h3>
+          <p class="manLead">作業が終わったら、最後に確認してください。</p>
+          <ul class="manCheck"><li>締め月は正しい</li><li>希望休・全体予定を入れた</li><li>部署別シフトを作成した</li><li>警告を確認した（許容はチーフ以上）</li><li>必要な部署を確定した</li><li>全体シフト表を確認した</li><li>印刷した</li><li>バックアップを取り、保存フォルダに入れた</li></ul>
+          <div class="manBackup"><div class="manBackupHead">★ ひとことで覚えるルール</div><p><b>1) 初期化しない　2) 勝手に復元しない　3) 作業したらバックアップ</b></p></div>
+        </section>
+  </main>
+</div>
+</body>
+</html>

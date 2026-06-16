@@ -1,0 +1,232 @@
+{
+  "name": "KJM Shift+ Modern UI Icon Set",
+  "style": "rounded outline, modern SaaS, sage green based, pet-salon friendly",
+  "size": "24x24 SVG source + 128x128 PNG export",
+  "stroke_width": "1.85",
+  "colors": {
+    "ink": "#2E2A24",
+    "muted": "#81796E",
+    "sage": "#6F9278",
+    "sage_dark": "#587662",
+    "sage_soft": "#E8F0EA",
+    "gold": "#D9A441",
+    "gold_soft": "#FFF3D6",
+    "danger": "#D8756B",
+    "danger_soft": "#FBE7E4",
+    "success": "#6F9A76",
+    "success_soft": "#DDEDDD",
+    "surface": "#FFFDF8"
+  },
+  "icons": [
+    {
+      "file": "svg/nav-overall-shift.svg",
+      "png": "png_128/nav-overall-shift.png",
+      "category": "nav",
+      "label_ja": "全体シフト表",
+      "recommended_use": "全体シフト表"
+    },
+    {
+      "file": "svg/nav-department-create.svg",
+      "png": "png_128/nav-department-create.png",
+      "category": "nav",
+      "label_ja": "部署別シフト作成",
+      "recommended_use": "部署別シフト作成"
+    },
+    {
+      "file": "svg/nav-rules.svg",
+      "png": "png_128/nav-rules.png",
+      "category": "nav",
+      "label_ja": "基本ルール",
+      "recommended_use": "基本ルール"
+    },
+    {
+      "file": "svg/nav-staff.svg",
+      "png": "png_128/nav-staff.png",
+      "category": "nav",
+      "label_ja": "スタッフ",
+      "recommended_use": "スタッフ"
+    },
+    {
+      "file": "svg/nav-requests.svg",
+      "png": "png_128/nav-requests.png",
+      "category": "nav",
+      "label_ja": "固定希望・勤務不可",
+      "recommended_use": "固定希望・勤務不可"
+    },
+    {
+      "file": "svg/nav-backup.svg",
+      "png": "png_128/nav-backup.png",
+      "category": "nav",
+      "label_ja": "バックアップ",
+      "recommended_use": "バックアップ"
+    },
+    {
+      "file": "svg/nav-warnings.svg",
+      "png": "png_128/nav-warnings.png",
+      "category": "nav",
+      "label_ja": "集計・警告",
+      "recommended_use": "集計・警告"
+    },
+    {
+      "file": "svg/action-auto-generate.svg",
+      "png": "png_128/action-auto-generate.png",
+      "category": "action",
+      "label_ja": "自動作成",
+      "recommended_use": "自動作成"
+    },
+    {
+      "file": "svg/action-confirm.svg",
+      "png": "png_128/action-confirm.png",
+      "category": "action",
+      "label_ja": "確定",
+      "recommended_use": "確定"
+    },
+    {
+      "file": "svg/action-edit.svg",
+      "png": "png_128/action-edit.png",
+      "category": "action",
+      "label_ja": "編集",
+      "recommended_use": "編集"
+    },
+    {
+      "file": "svg/action-reedit.svg",
+      "png": "png_128/action-reedit.png",
+      "category": "action",
+      "label_ja": "再編集",
+      "recommended_use": "再編集"
+    },
+    {
+      "file": "svg/action-export-csv.svg",
+      "png": "png_128/action-export-csv.png",
+      "category": "action",
+      "label_ja": "CSV出力",
+      "recommended_use": "CSV出力"
+    },
+    {
+      "file": "svg/action-export-excel.svg",
+      "png": "png_128/action-export-excel.png",
+      "category": "action",
+      "label_ja": "Excel出力",
+      "recommended_use": "Excel出力"
+    },
+    {
+      "file": "svg/action-print-pdf.svg",
+      "png": "png_128/action-print-pdf.png",
+      "category": "action",
+      "label_ja": "印刷/PDF",
+      "recommended_use": "印刷/PDF"
+    },
+    {
+      "file": "svg/action-backup-save.svg",
+      "png": "png_128/action-backup-save.png",
+      "category": "action",
+      "label_ja": "バックアップ取得",
+      "recommended_use": "バックアップ取得"
+    },
+    {
+      "file": "svg/action-restore.svg",
+      "png": "png_128/action-restore.png",
+      "category": "action",
+      "label_ja": "バックアップから復元",
+      "recommended_use": "バックアップから復元"
+    },
+    {
+      "file": "svg/action-add-staff.svg",
+      "png": "png_128/action-add-staff.png",
+      "category": "action",
+      "label_ja": "スタッフ追加",
+      "recommended_use": "スタッフ追加"
+    },
+    {
+      "file": "svg/action-delete.svg",
+      "png": "png_128/action-delete.png",
+      "category": "action",
+      "label_ja": "削除",
+      "recommended_use": "削除"
+    },
+    {
+      "file": "svg/action-move-up.svg",
+      "png": "png_128/action-move-up.png",
+      "category": "action",
+      "label_ja": "上へ移動",
+      "recommended_use": "上へ移動"
+    },
+    {
+      "file": "svg/action-move-down.svg",
+      "png": "png_128/action-move-down.png",
+      "category": "action",
+      "label_ja": "下へ移動",
+      "recommended_use": "下へ移動"
+    },
+    {
+      "file": "svg/status-error.svg",
+      "png": "png_128/status-error.png",
+      "category": "status",
+      "label_ja": "エラー",
+      "recommended_use": "エラー"
+    },
+    {
+      "file": "svg/status-allowed.svg",
+      "png": "png_128/status-allowed.png",
+      "category": "status",
+      "label_ja": "許容済み",
+      "recommended_use": "許容済み"
+    },
+    {
+      "file": "svg/status-success.svg",
+      "png": "png_128/status-success.png",
+      "category": "status",
+      "label_ja": "成功・完了",
+      "recommended_use": "成功・完了"
+    },
+    {
+      "file": "svg/status-info.svg",
+      "png": "png_128/status-info.png",
+      "category": "status",
+      "label_ja": "情報",
+      "recommended_use": "情報"
+    },
+    {
+      "file": "svg/shift-early.svg",
+      "png": "png_128/shift-early.png",
+      "category": "shift",
+      "label_ja": "早番",
+      "recommended_use": "早番"
+    },
+    {
+      "file": "svg/shift-middle.svg",
+      "png": "png_128/shift-middle.png",
+      "category": "shift",
+      "label_ja": "中番",
+      "recommended_use": "中番"
+    },
+    {
+      "file": "svg/shift-late.svg",
+      "png": "png_128/shift-late.png",
+      "category": "shift",
+      "label_ja": "遅番",
+      "recommended_use": "遅番"
+    },
+    {
+      "file": "svg/ui-search.svg",
+      "png": "png_128/ui-search.png",
+      "category": "ui",
+      "label_ja": "検索",
+      "recommended_use": "検索"
+    },
+    {
+      "file": "svg/ui-menu.svg",
+      "png": "png_128/ui-menu.png",
+      "category": "ui",
+      "label_ja": "メニュー",
+      "recommended_use": "メニュー"
+    },
+    {
+      "file": "svg/ui-close.svg",
+      "png": "png_128/ui-close.png",
+      "category": "ui",
+      "label_ja": "閉じる",
+      "recommended_use": "閉じる"
+    }
+  ]
+}

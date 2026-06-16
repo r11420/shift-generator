@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="スプレッドシート出力">
+  <g stroke="#6F9278" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<path d="M6.2 3.7h8.1l3.5 3.5v13.1H6.2z"/>
+<path d="M14.3 3.7v3.5h3.5"/>
+<rect x="8.1" y="9.1" width="7.7" height="6.7" rx="1.2"/>
+<path d="M8.1 11.3h7.7M8.1 13.5h7.7M10.7 9.1v6.7M13.2 9.1v6.7"/>
+<path d="M12 16.7v3.1"/>
+<path d="M10.2 18l1.8 1.8 1.8-1.8"/>
+<path d="M9.7 20.3h4.6"/>
+  </g>
+</svg>

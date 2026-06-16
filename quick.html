@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>クイックマニュアル｜KJM Shift＋</title>
+<style>
+:root{--bg:#fbf8f3;--ink:#33302b;--muted:#7a7064;--line:#e3dccf;--soft:#eef2ec;--accent:#5a8c69;--accent2:#3f6f55;--amber:#e0a93a;--amberD:#8a5a00}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.7}
+.qh{position:sticky;top:0;z-index:20;background:var(--amber);color:#3a2a00;padding:13px 22px;font-size:20px;font-weight:900;display:flex;align-items:baseline;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.qh span{font-size:13px;font-weight:700;opacity:.9}
+.qhIcon{width:26px;height:26px;flex:none;align-self:center}
+.qnav{position:sticky;top:50px;z-index:15;background:rgba(251,248,243,.96);backdrop-filter:blur(3px);border-bottom:1px solid var(--line);padding:9px 16px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.qnav .qnavLbl{font-size:12px;font-weight:900;color:var(--muted);margin-right:2px}
+.qnav a{text-decoration:none;font-weight:900;font-size:14px;padding:7px 14px;border-radius:999px;border:2px solid var(--line);color:var(--ink);background:#fff;display:inline-flex;align-items:center;gap:5px}
+.qnavIcon{width:16px;height:16px;flex:none}
+.qnav a.b{border-color:#5a8c69;color:#3f6f55}.qnav a.t{border-color:#a9712f;color:#7d531f}.qnav a.m{border-color:#3a5a8c;color:#27406a}
+.qnav a:hover{filter:brightness(.97)}
+.qwrap{max-width:860px;margin:0 auto;padding:16px 18px 90px}
+.qintro{background:#fff8e8;border:1px solid #e6cf9a;border-left:6px solid var(--amber);border-radius:13px;padding:13px 16px;margin:8px 0 18px;font-size:14.5px;color:#5f4a1f}
+.qintro b{color:var(--amberD)}
+.qintro a{color:#27406a;font-weight:900}
+.qbackupTop{background:#fbe7e4;border:1px solid #e6c4c0;border-left:6px solid #c0504a;border-radius:13px;padding:13px 16px;margin:0 0 18px;font-size:14.5px;color:#8a2c2c;font-weight:700}
+.qbackupTop b{color:#a02620}
+.qflow{margin:0 0 30px;border:1px solid var(--line);border-radius:18px;background:#fcfaf6;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.06);scroll-margin-top:108px}
+.qflowHead{display:flex;align-items:center;gap:13px;padding:15px 18px;background:var(--role);color:#fff}
+.qflowIcon{width:30px;height:30px;flex:none;object-fit:contain;filter:brightness(0) invert(1)}
+.qflowTitle{font-size:21px;font-weight:900}
+.qflowSub{font-size:13.5px;font-weight:700;opacity:.95;margin-top:2px;line-height:1.5}
+.qchips{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:13px 18px 4px}
+.qchip{background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:800;color:var(--roleD,#444)}
+.qchipExt{background:#f3eee6;color:#7a7064;border-style:dashed}
+.qchipArrow{color:var(--muted);font-weight:900;font-size:13px}
+.qsteps{display:flex;flex-direction:column;gap:13px;padding:14px 18px 6px}
+.qstep{position:relative;background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px 16px;box-shadow:0 2px 9px rgba(0,0,0,.06)}
+.qstepHead{display:flex;align-items:center;gap:12px}
+.qnum{flex:none;width:38px;height:38px;border-radius:50%;background:var(--role,var(--accent));color:#fff;font-weight:900;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.22)}
+.qact{font-size:17.5px;font-weight:900;color:var(--ink);line-height:1.4}
+.qdesc{font-size:14.5px;color:#544f47;margin:8px 0 11px 50px;line-height:1.75}
+.qdesc b{color:var(--roleD,#222)}
+.qkbd{display:inline-block;background:#fff;border:1px solid #cdc3b4;border-bottom-width:2px;border-radius:6px;padding:0 6px;font-weight:900;font-size:13px;color:#4a443c}
+.qhint{display:inline-block;margin-top:5px;font-size:13px;color:#7a7064}
+.qhint b{color:var(--roleD,#5a4a2a)}
+.qfig{margin:0 0 2px 50px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;display:inline-block;max-width:calc(100% - 50px)}
+.qfig img{display:block;width:100%;height:auto}
+.qext{background:#faf7f2;border-style:dashed}
+.qext .qnum{background:#b3a892}
+.qextTag{margin-left:auto;flex:none;font-size:11.5px;font-weight:900;color:#7a6a4a;background:#efe7d8;border:1px solid #ddd0b8;border-radius:999px;padding:3px 10px}
+.qextBanner{background:#f1ece3;border:1px dashed #c9bda4;border-radius:12px;padding:11px 14px;margin:4px 0 2px;font-size:13.5px;font-weight:700;color:#6b5d44}
+.qextBanner b{color:#4a3f2c}
+.qnote{background:#eef5fb;border:1px solid #bcd6e8;border-radius:12px;padding:11px 16px;margin:13px 18px 0;font-size:14px;color:#2f5b93;font-weight:700}
+.qnote a{color:#27406a;font-weight:900}
+.qbackup{margin:8px 18px 16px;background:#eef7f1;border:2px solid #8fc0a9;border-radius:13px;padding:12px 15px;font-size:15px;font-weight:800;color:var(--accent2)}
+.qbackup b{color:#2e6a45}
+.qfoot{text-align:center;color:var(--muted);font-size:13px;padding:6px 0 0}
+.qfoot a{color:#27406a;font-weight:900}
+@media (max-width:620px){.qdesc,.qfig{margin-left:0}.qfig{max-width:100%}.qact{font-size:16px}}
+</style>
+</head>
+<body>
+<header class="qh"><img class="qhIcon" src="assets/icons/svg/quick-manual.svg" alt="">KJM Shift＋ クイックマニュアル <span>※ よく使う操作だけ。実際の操作画面（別タブ）と見比べながらどうぞ</span></header>
+<nav class="qnav" aria-label="役割メニュー">
+  <span class="qnavLbl">ジャンプ：</span>
+  <a class="b" href="#q-basic"><img class="qnavIcon" src="assets/icons/svg/person.svg" alt="">基本（全員）</a>
+  <a class="t" href="#q-trimmer"><img class="qnavIcon" src="assets/icons/svg/scissors.svg" alt="">トリマー</a>
+  <a class="m" href="#q-manager"><img class="qnavIcon" src="assets/icons/svg/dog.svg" alt="">店長</a>
+</nav>
+<div class="qwrap">
+  <div class="qintro">このページは、<b>毎日よく使う操作だけ</b>をまとめた早わかり版です。各手順の<b>番号どおりに、画面を見ながら押していくだけ</b>で完了します。くわしい説明や他の機能は <b>「📖 使い方マニュアル」</b> を見てください。<br><b>自分の役割の所だけ</b>読めばOK：<a href="#q-basic">基本</a>（シフトを作る・全員）／<a href="#q-trimmer">トリマー</a>（基本の後に外部サロン管理システム取込）／<a href="#q-manager">店長</a>（全体の確認・印刷・OBIC）</div>
+  <div class="qbackupTop">💾 このアプリは<b>バックアップが重要</b>です。作業完了時には、かならずバックアップ取得をしましょう（→ 基本フローの手順8）。</div>
+
+  <section class="qflow" id="q-basic" style="--role:#5a8c69;--roleD:#3f6f55">
+    <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/person.svg" alt=""><div><div class="qflowTitle">基本（全員）</div><div class="qflowSub">毎月のシフト作成は、この8ステップだけ。上から順に進めれば完成します。</div></div></div>
+    <div class="qchips"><span class="qchip">締め月を確認</span><span class="qchipArrow">›</span><span class="qchip">希望休</span><span class="qchipArrow">›</span><span class="qchip">全体予定</span><span class="qchipArrow">›</span><span class="qchip">自動作成</span><span class="qchipArrow">›</span><span class="qchip">確認</span><span class="qchipArrow">›</span><span class="qchip">編集</span><span class="qchipArrow">›</span><span class="qchip">確定</span><span class="qchipArrow">›</span><span class="qchip">バックアップ</span></div>
+    <div class="qsteps">
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">1</span><span class="qact">操作対象の月（締め月）を確認する</span></div>
+        <p class="qdesc">左メニューの上にある締め月バッジが、作りたい月になっているか確認します。ちがうときは <span class="qkbd">◀</span> <span class="qkbd">▶</span> で合わせます。<br><span class="qhint">※このアプリは「15日締め」。例：<b>8月度＝7/16〜8/15</b>。作りたい月度の「◯月締め」に合わせます。</span></p>
+        <figure class="qfig"><img src="assets/manual/m-period.png" alt="締め月バッジ" loading="lazy" width="284" height="182" style="max-width:284px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">2</span><span class="qact">希望休を登録する（あれば）</span></div>
+        <p class="qdesc">「シフト希望・全体予定」→<b>「シフト希望」タブ</b>。<b>①</b>タブ→<b>②</b>部署→<b>③</b>個人を選び、<b>④</b>希望（休など）を選んで <b>⑤</b>「＋ このスタッフに追加」を押します。1件ずつ追加します。</p>
+        <figure class="qfig"><img src="assets/manual/m-prefs.png" alt="希望休の登録" loading="lazy" width="813" height="435" style="max-width:813px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">3</span><span class="qact">全体予定を登録する（あれば）</span></div>
+        <p class="qdesc">同じ画面の<b>「全体予定」タブ</b>。<b>①</b>タグ（納品・SALEなど）→<b>②</b>日付/曜日を決めて <b>③</b>「＋ 追加」。お店全体の予定を入れます。</p>
+        <figure class="qfig"><img src="assets/manual/m-event.png" alt="全体予定の登録" loading="lazy" width="1180" height="225" style="max-width:1180px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">4</span><span class="qact">部署別に自動生成する</span></div>
+        <p class="qdesc">「部署別シフト作成」を開き、<b>①</b>作る部署のカードを選んで <b>②</b>「✨ この部署だけ自動作成」を押します。（確定はまだ。手順7で行います）</p>
+        <figure class="qfig"><img src="assets/manual/q-deptgen.png" alt="部署のカードを選び自動作成を押す" loading="lazy" width="1200" height="484" style="max-width:1200px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">5</span><span class="qact">生成されたシフトを確認する</span></div>
+        <p class="qdesc">出てきた表をながめ、<b>赤いセル</b>や<b>警告</b>がないか確認します。気になるところは次の手順で直します。</p>
+        <figure class="qfig"><img src="assets/manual/q-check.png" alt="生成結果の確認" loading="lazy" width="1162" height="576" style="max-width:1162px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">6</span><span class="qact">シフトを編集する（必要なら）</span></div>
+        <p class="qdesc">直すときは、いま開いている<b>「部署別シフト作成」の確認表で直接</b>直せます（全体シフト表へ移動しなくてOK）。マスを<b>右クリック</b>して「休／有休／シフト区分（C・E・Gなど）」から選ぶだけ（左クリックでも一覧が出ます）。<br><span class="qhint">・まちがえたら <span class="qkbd">Ctrl</span>＋<span class="qkbd">Z</span>、または表の上の <b>「↩ 元に戻す」</b>ボタンで戻せます。<br>・<span class="qkbd">Shift</span>＋クリック／ドラッグで複数のマスをまとめて選び、右クリックで一括変更できます。</span></p>
+        <figure class="qfig"><img src="assets/manual/q-deptedit.png" alt="部署別シフト作成の確認表でマスを右クリックして直す" loading="lazy" width="325" height="334" style="max-width:325px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">7</span><span class="qact">確定する</span></div>
+        <p class="qdesc">問題なければ「部署別シフト作成」で <b>「確定」</b>を押します。全体表に反映され、そのセルは編集できなくなります（「再編集」で戻せます）。<br><span class="qhint">※赤い<b>「エラー（重大）」</b>が残っていると確定できません。許容してよいかの判断はチーフ以上へ（→ <a href="manual.html#man-13">📖 13章</a>）。</span></p>
+        <figure class="qfig"><img src="assets/manual/q-confirm.png" alt="確定ボタン" loading="lazy" width="1136" height="47" style="max-width:1136px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">8</span><span class="qact">バックアップを取る</span></div>
+        <p class="qdesc">「バックアップ」を開き、<b>緑の「バックアップ取得（JSON保存）」</b>を押します。<b>保存先を選ぶ画面</b>が出たら、<b>デスクトップの「KJM Shift＋バックアップ」フォルダ</b>を選んで「保存」を押します（下の画像）。<br><b>⚠ 同じ画面の赤い「すべて初期化」と「バックアップから復元」は押さないでください</b>（押すのは緑の取得だけ）。</p>
+        <figure class="qfig"><img src="assets/manual/q-backup-get.png" alt="バックアップ取得ボタン" loading="lazy" width="570" height="88" style="max-width:570px"></figure><figure class="qfig"><img src="assets/manual/m-backup-save.png" alt="保存先に「KJM Shift＋バックアップ」フォルダを選んで保存" loading="lazy" width="662" height="401" style="max-width:662px"></figure>
+      </div>
+    </div>
+    <div class="qbackup">💾 シフトを作ったあと・直したあとは、<b>かならずバックアップ</b>（手順8）。</div>
+  </section>
+
+  <section class="qflow" id="q-trimmer" style="--role:#a9712f;--roleD:#7d531f">
+    <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/scissors.svg" alt=""><div><div class="qflowTitle">トリマー（外部サロン管理システム連携）</div><div class="qflowSub">「基本」のシフトができたあと、外部サロン管理システムへ取り込みます。</div></div></div>
+    <div class="qnote">まず上の<a href="#q-basic">「基本」の手順1〜8</a>でシフトを作って確定してください。そのあと、次の手順で外部サロン管理システムへ取り込みます。</div>
+    <div class="qchips"><span class="qchip">月次表の対象月</span><span class="qchipArrow">›</span><span class="qchip">CSV出力</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 外部サロン管理システムを開く</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 自動入力を実行</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ CSVを選ぶ</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 反映</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 確認</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 保存</span></div>
+    <div class="qsteps">
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">1</span><span class="qact">トリマー月次表の対象月を選ぶ</span></div>
+        <p class="qdesc">「部署別シフト作成」で<b>トリマー</b>を選ぶと、下に1か月分の<b>月次表</b>が出ます。<b>年・月</b>を取り込みたい月に合わせます。</p>
+        <figure class="qfig"><img src="assets/manual/q-monthly-month.png" alt="月次表の対象月" loading="lazy" width="1162" height="260" style="max-width:1162px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">2</span><span class="qact">CSVを出力する</span></div>
+        <p class="qdesc">月次表の右上「ファイル出力」→<b>「CSV出力」</b>。CSVファイルが保存されます。ふつうはブラウザの<b>「ダウンロード」フォルダ</b>に入ります（手順5でこのファイルを選びます）。</p>
+        <figure class="qfig"><img src="assets/manual/q-monthly-csv.png" alt="CSV出力メニュー" loading="lazy" width="212" height="235" style="max-width:212px"></figure>
+      </div>
+      <div class="qextBanner">📌 ここからは <b>外部サロン管理システム</b> での操作です（このアプリの外）。画面は外部サロン管理システム側をご覧ください。</div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">3</span><span class="qact">外部サロン管理システムの対象月シフト表ページを開く</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">ブラウザで外部サロン管理システムを開き、対象月のシフト表ページを表示します。<b>⚠ 手順1で出力した月と同じ月</b>のページを開いてください（月がちがうとずれて入ります）。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">4</span><span class="qact">ブックマークバーから「外部サロン管理システム_シフト自動入力」を実行</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">ブラウザのブックマークバーにある「外部サロン管理システム_シフト自動入力」をクリックします。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">5</span><span class="qact">さきほど出力したCSVファイルを選ぶ</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">手順2で保存したCSVファイルを選択します（見つからないときは「ダウンロード」フォルダを開きます）。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">6</span><span class="qact">反映する</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">内容をシフト表に反映します。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">7</span><span class="qact">自動入力された内容を確認する</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">人数・公休の位置・対象月が合っているか確認します。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">8</span><span class="qact">保存する</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">問題なければ保存します。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="qflow" id="q-manager" style="--role:#3a5a8c;--roleD:#27406a">
+    <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/dog.svg" alt=""><div><div class="qflowTitle">店長（全体確認・OBIC）</div><div class="qflowSub">全体の確認・印刷と、OBICへの取り込み。OBIC連携は店長のみ。</div></div></div>
+    <div class="qchips"><span class="qchip">全体を確認</span><span class="qchipArrow">›</span><span class="qchip">印刷</span><span class="qchipArrow">›</span><span class="qchip">バックアップ</span><span class="qchipArrow">›</span><span class="qchip">OBICをコピー</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ OBICに貼り付け</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 確認</span></div>
+    <div class="qsteps">
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">1</span><span class="qact">全体シフトを確認する</span></div>
+        <p class="qdesc">「全体シフト表」を開き、締め月と全体の内容（各部署が確定済みか、へんな空欄がないか）を<b>見て確認</b>します（見るだけ。編集モードにする必要はありません）。</p>
+        <figure class="qfig"><img src="assets/manual/q-calendar-view.png" alt="全体シフト表（参照モード）。部署・スタッフごとの日々のシフトと、確定済みを示すバッジ" loading="lazy" width="900" height="330" style="max-width:700px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">2</span><span class="qact">全体シフトを印刷する</span></div>
+        <p class="qdesc">「📤 ファイル出力」を押して開き、<b>「印刷/PDF」</b>を選びます。プリンターを選んで印刷します。</p>
+        <figure class="qfig"><img src="assets/manual/m-export.png" alt="印刷メニュー" loading="lazy" width="220" height="192" style="max-width:220px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">3</span><span class="qact">バックアップを取る</span></div>
+        <p class="qdesc">「バックアップ」→<b>緑の「バックアップ取得（JSON保存）」</b>（赤枠）。保存ファイルを「KJM Shift＋バックアップ」フォルダへ。<br>※赤い「すべて初期化」「バックアップから復元」は押さないでください。</p>
+        <figure class="qfig"><img src="assets/manual/q-backup-get.png" alt="バックアップ取得ボタン" loading="lazy" width="570" height="88" style="max-width:570px"></figure>
+      </div>
+      <div class="qstep">
+        <div class="qstepHead"><span class="qnum">4</span><span class="qact">OBIC連携用をコピーする</span></div>
+        <p class="qdesc">「【店長】OBIC連携用」を開き、<b>「コピー」</b>を押します（休日/空欄をExcelと同じ形でコピー）。<b>店長のみ</b>の操作。OBICへ自動送信はされず、手で貼り付けます。<br><span class="qhint">⚠ コピー前に、合計の横に赤い<b>「社員番号 未設定 ○名」</b>が出ていないか確認。出ていたら先に「スタッフ」画面で社員番号を入れます（未設定者は末尾に入り全員が1行ずれます）。→ <a href="manual.html#man-19">📖 19章</a></span></p>
+        <figure class="qfig"><img src="assets/manual/q-obic-copy.png" alt="OBIC連携用のコピー" loading="lazy" width="143" height="124" style="max-width:143px"></figure>
+      </div>
+      <div class="qextBanner">📌 ここからは <b>OBIC</b> での操作です（このアプリの外）。画面はOBIC側をご覧ください。</div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">5</span><span class="qact">OBICのシフト表に貼り付ける</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">OBICのシフト表で、<b>一番左上のセル</b>に貼り付けます。</p>
+      </div>
+      <div class="qstep qext">
+        <div class="qstepHead"><span class="qnum">6</span><span class="qact">貼り付けた内容を確認する</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">貼り付けた内容（人数・氏名の並び・休日の位置）が正しいか確認します。<b>OBICの画面とアプリの画面で内容が一致しているか</b>を見ます。</p>
+      </div>
+    </div>
+  </section>
+  <div class="qfoot">もっとくわしく知りたいときは <a href="manual.html">📖 使い方マニュアル</a> へ。</div>
+</div>
+</body>
+</html>

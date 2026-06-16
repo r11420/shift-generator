@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="使い方マニュアル">
+  <g stroke="#6F9278" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<path d="M4 6.4c2.9-.9 5.3-.55 8 1.35 2.7-1.9 5.1-2.25 8-1.35v12.4c-2.9-.9-5.3-.55-8 1.35-2.7-1.9-5.1-2.25-8-1.35z"/>
+<path d="M12 7.75v12.4"/>
+<circle cx="8.2" cy="11.1" r="1.85"/>
+<path d="M8.2 13.8v.15"/>
+<path d="M15.1 10.4h2.8M15.1 13h2.8M15.1 15.6h1.9"/>
+  </g>
+</svg>
