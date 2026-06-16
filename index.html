@@ -5096,7 +5096,7 @@ function computeJapaneseHoliday(y,m,d){
 document.getElementById('jsonFile')?.addEventListener('change', loadJSONFile);
 initCalendarHScroll();
 
-// ===== 別タブ同時編集ロック（同じアプリを複数のブラウザタブで開いたときの誤操作・上書き防止）=====
+// ===== 別タブ同時編集ロック（同じツールを複数のブラウザタブで開いたときの誤操作・上書き防止）=====
 // データ保護：localStorage は後勝ち保存のため、複数タブで編集すると一方の変更が消える恐れがある。
 // そこで「編集できるタブは常に1つだけ」とし、他のタブは操作不可（オーバーレイで遮断＋保存停止）にする。
 // 「このタブで編集する」を押すと編集権を引き継げる（他タブが操作不可になる）。BroadcastChannel 非対応環境では従来どおり単一タブ動作。
@@ -5116,7 +5116,7 @@ function ensureTabLockOverlay(){
   ov = document.createElement('div');
   ov.id = 'tabLockOverlay';
   ov.innerHTML = `<div class="tabLockCard">
-      <div class="tabLockTitle">このアプリは別のタブで開かれています</div>
+      <div class="tabLockTitle">このツールは別のタブで開かれています</div>
       <div class="tabLockBody">データの取り違え・上書きを防ぐため、編集できるタブは1つだけです。<br>このタブでは操作できません。編集する場合は下のボタンでこのタブに切り替えてください（他のタブが操作不可になります）。</div>
       <button type="button" class="btn tabLockBtn" id="tabLockTakeoverBtn">このタブで編集する</button>
       <div class="tabLockHint">※ 切り替え前に、編集中のタブで「バックアップ取得」をしておくと安心です。</div>

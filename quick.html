@@ -68,8 +68,8 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
   <a class="m" href="#q-manager"><img class="qnavIcon" src="assets/icons/svg/dog.svg" alt="">店長</a>
 </nav>
 <div class="qwrap">
-  <div class="qintro">このページは、<b>毎日よく使う操作だけ</b>をまとめた早わかり版です。各手順の<b>番号どおりに、画面を見ながら押していくだけ</b>で完了します。くわしい説明や他の機能は <b>「📖 使い方マニュアル」</b> を見てください。<br><b>自分の役割の所だけ</b>読めばOK：<a href="#q-basic">基本</a>（シフトを作る・全員）／<a href="#q-trimmer">トリマー</a>（基本の後に外部サロン管理システム取込）／<a href="#q-manager">店長</a>（全体の確認・印刷・OBIC）</div>
-  <div class="qbackupTop">💾 このアプリは<b>バックアップが重要</b>です。作業完了時には、かならずバックアップ取得をしましょう（→ 基本フローの手順8）。</div>
+  <div class="qintro">このページは、<b>毎日よく使う操作だけ</b>をまとめた早わかり版です。各手順の<b>番号どおりに、画面を見ながら押していくだけ</b>で完了します。くわしい説明や他の機能は <b>「📖 使い方マニュアル」</b> を見てください。<br><b>自分の役割の所だけ</b>読めばOK：<a href="#q-basic">基本</a>（シフトを作る・全員）／<a href="#q-trimmer">トリマー</a>（基本の後にサロンドワン取込）／<a href="#q-manager">店長</a>（全体の確認・印刷・OBIC）</div>
+  <div class="qbackupTop">💾 このツールは<b>バックアップが重要</b>です。作業完了時には、かならずバックアップ取得をしましょう（→ 基本フローの手順8）。</div>
 
   <section class="qflow" id="q-basic" style="--role:#5a8c69;--roleD:#3f6f55">
     <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/person.svg" alt=""><div><div class="qflowTitle">基本（全員）</div><div class="qflowSub">毎月のシフト作成は、この8ステップだけ。上から順に進めれば完成します。</div></div></div>
@@ -77,7 +77,7 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
     <div class="qsteps">
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">1</span><span class="qact">操作対象の月（締め月）を確認する</span></div>
-        <p class="qdesc">左メニューの上にある締め月バッジが、作りたい月になっているか確認します。ちがうときは <span class="qkbd">◀</span> <span class="qkbd">▶</span> で合わせます。<br><span class="qhint">※このアプリは「15日締め」。例：<b>8月度＝7/16〜8/15</b>。作りたい月度の「◯月締め」に合わせます。</span></p>
+        <p class="qdesc">左メニューの上にある締め月バッジが、作りたい月になっているか確認します。ちがうときは <span class="qkbd">◀</span> <span class="qkbd">▶</span> で合わせます。<br><span class="qhint">※このツールは「15日締め」。例：<b>8月度＝7/16〜8/15</b>。作りたい月度の「◯月締め」に合わせます。</span></p>
         <figure class="qfig"><img src="assets/manual/m-period.png" alt="締め月バッジ" loading="lazy" width="284" height="182" style="max-width:284px"></figure>
       </div>
       <div class="qstep">
@@ -120,9 +120,9 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
   </section>
 
   <section class="qflow" id="q-trimmer" style="--role:#a9712f;--roleD:#7d531f">
-    <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/scissors.svg" alt=""><div><div class="qflowTitle">トリマー（外部サロン管理システム連携）</div><div class="qflowSub">「基本」のシフトができたあと、外部サロン管理システムへ取り込みます。</div></div></div>
-    <div class="qnote">まず上の<a href="#q-basic">「基本」の手順1〜8</a>でシフトを作って確定してください。そのあと、次の手順で外部サロン管理システムへ取り込みます。</div>
-    <div class="qchips"><span class="qchip">月次表の対象月</span><span class="qchipArrow">›</span><span class="qchip">CSV出力</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 外部サロン管理システムを開く</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 自動入力を実行</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ CSVを選ぶ</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 反映</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 確認</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 保存</span></div>
+    <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/scissors.svg" alt=""><div><div class="qflowTitle">トリマー（サロンドワン連携）</div><div class="qflowSub">「基本」のシフトができたあと、サロンドワンへ取り込みます。</div></div></div>
+    <div class="qnote">まず上の<a href="#q-basic">「基本」の手順1〜8</a>でシフトを作って確定してください。そのあと、次の手順でサロンドワンへ取り込みます。</div>
+    <div class="qchips"><span class="qchip">月次表の対象月</span><span class="qchipArrow">›</span><span class="qchip">CSV出力</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ サロンドワンを開く</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 自動入力を実行</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ CSVを選ぶ</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 反映</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 確認</span><span class="qchipArrow">›</span><span class="qchip qchipExt">▷ 保存</span></div>
     <div class="qsteps">
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">1</span><span class="qact">トリマー月次表の対象月を選ぶ</span></div>
@@ -134,14 +134,14 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
         <p class="qdesc">月次表の右上「ファイル出力」→<b>「CSV出力」</b>。CSVファイルが保存されます。ふつうはブラウザの<b>「ダウンロード」フォルダ</b>に入ります（手順5でこのファイルを選びます）。</p>
         <figure class="qfig"><img src="assets/manual/q-monthly-csv.png" alt="CSV出力メニュー" loading="lazy" width="212" height="235" style="max-width:212px"></figure>
       </div>
-      <div class="qextBanner">📌 ここからは <b>外部サロン管理システム</b> での操作です（このアプリの外）。画面は外部サロン管理システム側をご覧ください。</div>
+      <div class="qextBanner">📌 ここからは <b>サロンドワン</b> での操作です（このツールの外）。画面はサロンドワン側をご覧ください。</div>
       <div class="qstep qext">
-        <div class="qstepHead"><span class="qnum">3</span><span class="qact">外部サロン管理システムの対象月シフト表ページを開く</span><span class="qextTag">別アプリ</span></div>
-        <p class="qdesc">ブラウザで外部サロン管理システムを開き、対象月のシフト表ページを表示します。<b>⚠ 手順1で出力した月と同じ月</b>のページを開いてください（月がちがうとずれて入ります）。</p>
+        <div class="qstepHead"><span class="qnum">3</span><span class="qact">サロンドワンの対象月シフト表ページを開く</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">ブラウザでサロンドワンを開き、対象月のシフト表ページを表示します。<b>⚠ 手順1で出力した月と同じ月</b>のページを開いてください（月がちがうとずれて入ります）。</p>
       </div>
       <div class="qstep qext">
-        <div class="qstepHead"><span class="qnum">4</span><span class="qact">ブックマークバーから「外部サロン管理システム_シフト自動入力」を実行</span><span class="qextTag">別アプリ</span></div>
-        <p class="qdesc">ブラウザのブックマークバーにある「外部サロン管理システム_シフト自動入力」をクリックします。</p>
+        <div class="qstepHead"><span class="qnum">4</span><span class="qact">ブックマークバーから「サロンドワン_シフト自動入力」を実行</span><span class="qextTag">別アプリ</span></div>
+        <p class="qdesc">ブラウザのブックマークバーにある「サロンドワン_シフト自動入力」をクリックします。</p>
       </div>
       <div class="qstep qext">
         <div class="qstepHead"><span class="qnum">5</span><span class="qact">さきほど出力したCSVファイルを選ぶ</span><span class="qextTag">別アプリ</span></div>
@@ -186,14 +186,14 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
         <p class="qdesc">「【店長】OBIC連携用」を開き、<b>「コピー」</b>を押します（休日/空欄をExcelと同じ形でコピー）。<b>店長のみ</b>の操作。OBICへ自動送信はされず、手動で貼り付けて反映させます。<br><span class="qhint">⚠ コピー前に、合計の横に赤い<b>「社員番号 未設定 ○名」</b>が出ていないか確認。出ていたら先に「スタッフ」画面で社員番号を入れます（未設定者は末尾に入り全員が1行ずれます）。→ <a href="manual.html#man-19">📖 19章</a></span></p>
         <figure class="qfig"><img src="assets/manual/q-obic-copy.png" alt="OBIC連携用のコピー" loading="lazy" width="143" height="124" style="max-width:143px"></figure>
       </div>
-      <div class="qextBanner">📌 ここからは <b>OBIC</b> での操作です（このアプリの外）。画面はOBIC側をご覧ください。</div>
+      <div class="qextBanner">📌 ここからは <b>OBIC</b> での操作です（このツールの外）。画面はOBIC側をご覧ください。</div>
       <div class="qstep qext">
         <div class="qstepHead"><span class="qnum">5</span><span class="qact">OBICのシフト表に貼り付ける</span><span class="qextTag">別アプリ</span></div>
-        <p class="qdesc">OBICのシフト表で、<b>一番左上のセル</b>に貼り付けます。</p>
+        <p class="qdesc">OBICのシフト表で、<b>一番左上のセル</b>に <span class="qkbd">Ctrl</span>＋<span class="qkbd">V</span>、または <span class="qkbd">右クリック</span>→<span class="qkbd">貼り付け</span> で貼り付けます。</p>
       </div>
       <div class="qstep qext">
         <div class="qstepHead"><span class="qnum">6</span><span class="qact">貼り付けた内容を確認する</span><span class="qextTag">別アプリ</span></div>
-        <p class="qdesc">貼り付けた内容（人数・氏名の並び・休日の位置）が正しいか確認します。<b>OBICの画面とアプリの画面で内容が一致しているか</b>を見ます。</p>
+        <p class="qdesc">貼り付けた内容（人数・氏名の並び・休日の位置）が正しいか確認します。<b>OBICの画面とツールの画面で内容が一致しているか</b>を見ます。</p>
       </div>
     </div>
   </section>
