@@ -2562,11 +2562,16 @@ function resetDeptSchedule(dept){
   pullInputs(); normalizeState(); genDiff=null;
   if(isDeptConfirmed(dept)){ alert(`${dept} は確定済みです。「再編集」を押してから空欄リセットしてください。`); return; }
   const days=getDays();
+  const dayKeySet = new Set(days.map(d=>d.key));
   const targets=[];
   for(const day of days){ const da=schedule[day.key]; if(!da) continue; for(const st of state.staff){ if(da[st.name] && cellRelevantDept(day.key, st.name)===dept) targets.push([day.key, st.name]); } }
-  if(!targets.length){ alert(`${state.year}年${state.month}月締めの ${dept} のシフトは、すでにすべて空欄です。`); return; }
-  if(!confirm(`【注意】${state.year}年${state.month}月締めの ${dept} のシフトをすべて空欄にします。
-作成済みのシフト（「休」も含む）${targets.length}件を削除します（直後なら「元に戻す」で取り消せます）。
+  // この部署・この締め月で「人数不足を許容」にしているフラグ。残すと、空欄に戻したのに
+  // 人数不足が"許容済み"（緑）のまま表示され、特定の日だけ緑になる誤表示の原因になる。
+  const staleAllow = Object.keys(allowedErrors).filter(k=>{ const p=k.split('|'); return p[0]==='count' && p[3]===dept && dayKeySet.has(p[2]); });
+  if(!targets.length && !staleAllow.length){ alert(`${state.year}年${state.month}月締めの ${dept} のシフトは、すでにすべて空欄です。`); return; }
+  const delDetail = [targets.length?`作成済みのシフト（「休」も含む）${targets.length}件`:'', staleAllow.length?`「許容」設定${staleAllow.length}件`:''].filter(Boolean).join('と');
+  if(!confirm(`【注意】${state.year}年${state.month}月締めの ${dept} を空欄に戻します。
+${delDetail}を削除します（直後なら「元に戻す」で取り消せます）。
 ほかの締め月・ほかの部署には影響しません。
 
 実行しますか？`)) return;
@@ -2576,6 +2581,7 @@ function resetDeptSchedule(dept){
     if(assignDept[key]) delete assignDept[key][name];
     if(locks[key]) delete locks[key][name];
   }
+  for(const k of staleAllow) delete allowedErrors[k];
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   msg(`${dept} の ${state.year}年${state.month}月締めシフトを空欄にしました（${targets.length}件）。`, 'ok');
 }
