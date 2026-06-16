@@ -150,7 +150,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .bulkAssignBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0 14px}.bulkAssignBox h3{margin:0 0 8px}.bulkWeekdayActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bulkWeekdays{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.bulkWeekdays label{margin:0;text-align:center}.bulkWeekdays input{width:auto;margin-right:3px}.otherShiftInput{margin-top:6px}
 
 @media (max-width:1100px){.wrap{grid-template-columns:1fr}.appLayout{grid-template-columns:1fr}.calendarControl{grid-template-columns:1fr}.menuRail{position:static}.contentArea{min-width:0}.summary{grid-template-columns:repeat(2,1fr)}header{padding-top:16px}.card{padding:13px}.tableWrap{max-height:none}.staffHead{grid-template-columns:1fr 96px}.deptTabs{grid-template-columns:repeat(2,1fr)}.staffToolbar{grid-template-columns:1fr}.sticky2,.headSticky2{left:92px}.deptCol{min-width:92px;width:92px}.staffCol{min-width:130px;width:130px}}
-@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52}.todayCol{box-shadow:none}th.todayCol .dateNum::after{content:none}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
+@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
 .shiftText{display:none}
 
 /* 操作性・視認性の改善 */
@@ -184,8 +184,6 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .checkLine{display:flex;align-items:center;gap:8px}
 .dangerZone{border:1px solid #f1c7c7;background:#fffafa;border-radius:14px;padding:12px;margin-top:14px}
 .dangerZone h3{margin:0 0 6px;color:#9b2222}
-.todayCol{box-shadow:inset 0 0 0 2px rgba(51,48,43,.4)}
-th.todayCol .dateNum::after{content:"本日";display:inline-block;margin-top:2px;font-size:9px;font-weight:900;color:#fff;background:#33302b;border-radius:7px;padding:0 6px;line-height:1.6;letter-spacing:.5px}
 .metricBad{color:var(--bad)}
 .metricLink{cursor:pointer}
 #calendarTable tbody tr:hover td:not(.sticky1):not(.sticky2):not(.weekendCol):not(.errorCell):not(.allowedErrorCell):not(.lockedCell):not(.closedHead){background:#faf7f0}
@@ -751,7 +749,7 @@ function isLateGroup(v, dayObj=null){ return groupOfShift(v, dayObj)==='L'; }
 function groupLabel(g){ return GROUP_LABEL[g] || g || ''; }
 function groupKeyFromLabel(label){ const hit=Object.entries(GROUP_LABEL).find(([,v])=>v===label); return hit ? hit[0] : label; }
 function shiftGroupClass(v, dayObj=null){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'shiftGroup-OFF'; if(v===PAID_LEAVE) return 'shiftGroup-PAID'; if(isCustomShift(v)) return 'shiftGroup-OTHER'; const g=groupOfShift(v, dayObj); return g ? `shiftGroup-${g}` : ''; }
-function dayColClass(day){ const base = day.closure ? 'closureHead' : (day.closed ? 'closedHead' : (day.holType ? 'weekendCol' : '')); return day.isToday ? `${base} todayCol`.trim() : base; }
+function dayColClass(day){ return day.closure ? 'closureHead' : (day.closed ? 'closedHead' : (day.holType ? 'weekendCol' : '')); }
 // ===== 全体スケジュール（定期スケジュール＋全体予定）：シフト表の日付下にタグ表示 =====
 const WD_FULL = WD; // 曜日ラベルは WD と同一（重複定義を避けて一元化）
 function daysInMonthOf(y,m){ return new Date(y,m,0).getDate(); }
@@ -4819,7 +4817,8 @@ tr.pbBefore{break-before:page;page-break-before:always}
 .shiftGroup-OTHER{background:#fdf0f0!important;border-color:#dcb3b1!important;color:#8b3a38!important}
 .desiredOffMark{display:block;margin-top:1pt;font-size:5pt;color:#2f7d6d;font-weight:800}
 .pill,.roleBadge,.limitBadge{font-size:5.5pt;padding:0.5pt 2pt;border-radius:6pt;background:#fff;border:0.5pt solid #c4b9a8;display:inline-block}
-.leaderBadge{font-size:5.5pt;padding:0.5pt 2pt;border-radius:6pt;background:#f2eafd;border:0.5pt solid #bda3e0;color:#5d398c;display:inline-block}
+.roleBadge{background:#fff1dc!important;color:#7a4b00!important;border:0.5pt solid #e6cfa6!important}
+.roleBadge.leaderTag{background:#f2eafd!important;color:#5d398c!important;border:0.5pt solid #d9c6f0!important}
 .small{font-size:5.5pt;color:#857d72}
 .holiday{color:#b4574f}
 .shiftLegend{margin-top:10pt;page-break-inside:avoid}
