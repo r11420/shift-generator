@@ -123,6 +123,25 @@ th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f
 .deptBuildCard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;text-align:left;cursor:pointer}
 .deptBuildCard.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(109,143,114,.15)}
 .deptBuildCard.confirmed{background:#f2f7f2;border-color:#b7d9ba}
+.stepperWrap{margin:0 0 14px}
+.stepperTitle{font-size:12px;font-weight:900;color:var(--ink2);margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.stepAllDone{font-size:11px;font-weight:900;color:var(--sgd);background:var(--sgs);border:1px solid var(--sgl);border-radius:999px;padding:2px 8px}
+.stepper{display:flex;align-items:center;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--ln);border-radius:14px;padding:9px 12px}
+.step{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:999px;font-size:13px;font-weight:800;color:var(--ink3)}
+.step .stepNum{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;background:#fff;border:1.5px solid var(--ln);color:var(--ink3)}
+.step.done{color:var(--sgd)}.step.done .stepNum{background:var(--sgs);border-color:var(--sgl);color:var(--sgd)}
+.step.current{color:var(--ink)}.step.current .stepNum{background:var(--sgd);border-color:var(--sgd);color:#fff}
+.stepSep{flex:1;min-width:12px;height:2px;background:var(--ln);margin:0 1px}
+.dStat{display:inline-block;font-size:11px;font-weight:900;border-radius:999px;padding:2px 9px;border:1px solid}
+.dStatNew{color:var(--ink3);background:#fff;border-color:var(--ln)}
+.dStatClosed{color:var(--gd);background:var(--gdb);border-color:var(--gdl)}
+.dStatMade{color:var(--erl);background:var(--erb);border-color:var(--ern)}
+.dStatWarn{color:var(--rd);background:var(--rdb);border-color:var(--rdl)}
+.dStatDone{color:var(--sgd);background:var(--sgs);border-color:var(--sgl)}
+.prefsCloseRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 8px}
+.prefsClosedTag{font-size:12px;font-weight:900;color:var(--gd);background:var(--gdb);border:1px solid var(--gdl);border-radius:999px;padding:3px 10px}
+.prefsCloseBtn{flex:0 0 auto;width:auto}
+.genTime{margin-top:7px;color:var(--ink3)}
 .deptBuildCard b{display:block;font-size:16px}.confirmBadge{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#edf7ed;color:#285c2b;margin-top:5px}.editBadge{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#fff6db;color:#7a4b00;margin-top:5px}.lockedCell{background:#f7f2e8!important}.confirmedLock{font-size:10px;color:#285c2b;background:#edf7ed;border:1px solid #cde8cd;border-radius:8px;padding:1px 4px;margin-top:3px;display:inline-block}.editableSelect:disabled{opacity:.72;cursor:not-allowed;background:#f5f0e7;color:#6d6258}.deptNotice{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.deptNotice .badge{background:#edf7ed;color:#285c2b}.deptStatusLine{font-size:12px;color:var(--muted);margin-top:4px}.deptActionBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}.deptActionBox h3{margin-top:0}
 
 
@@ -1087,6 +1106,7 @@ function defaultState(){
     avoidLateEarly: true, holidayAsWeekend: true,
     closedWeekdays: [],
     closures: {}, // 臨時休業の日付キー集合 {'YYYY-MM-DD':true}（店舗単位・全スタッフ休扱い）
+    periodProgress: {}, lastBackupSig: '', lastBackupAt: 0, // F2: 締め月ごとの進捗（部署別の締切/作成時刻）とバックアップ署名
     globalNeeds: {week:{E:0,L:0}, hol:{E:0,L:0}},
     deptNeeds: defaultDeptNeeds(),
     deptMaxNeeds: defaultDeptMaxNeeds(),
@@ -1132,6 +1152,7 @@ function normalizeState(){
     for(const sh of ['E','L']) state.globalNeeds[k][sh] = +state.globalNeeds[k][sh] || 0;
   }
   if(state.roleNeeds) delete state.roleNeeds; // 責任者最低人数は廃止
+  if(!state.periodProgress || typeof state.periodProgress!=='object') state.periodProgress = {}; // F2 進捗ストア
   if(!state.deptGroupEnabled) state.deptGroupEnabled = defaultDeptGroupEnabled();
   for(const d of DEPTS){
     if(!state.deptGroupEnabled[d]) state.deptGroupEnabled[d]=defaultDeptGroupEnabled()[d];
@@ -2379,6 +2400,52 @@ function calendarRenderData(){
   return calendarEditMode ? {schedule, assignDept} : confirmedViewData();
 }
 function setActiveBuildDept(dept){ pullInputs(); genDiff=null; activeBuildDept = dept; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+// ===== F2: 5ステップ進捗（現在地は状態から計算。手動フラグは最小限） =====
+function progressFor(pk){
+  pk = pk || periodKey();
+  if(!state.periodProgress || typeof state.periodProgress!=='object') state.periodProgress = {};
+  let p = state.periodProgress[pk];
+  if(!p || typeof p!=='object') p = state.periodProgress[pk] = {prefsClosed:{}, generatedAt:{}};
+  if(!p.prefsClosed) p.prefsClosed = {};
+  if(!p.generatedAt) p.generatedAt = {};
+  return p;
+}
+// 必要部署＝在籍 or 兼務対象スタッフがいる部署（0名部署は対象外）
+function requiredDepartments(){ return DEPTS.filter(d=>state.staff.some(s=>s.dept===d || (s.supportDepts||[]).includes(d))); }
+// 締切＝手動締切 or その部署に区分（早/中/遅）が割当済み
+function deptClosed(dept){ return !!progressFor().prefsClosed[dept] || deptHasAnyAssignment(dept); }
+// その部署の未解消の重大警告（許容済みを除く）件数
+function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(schedule, getDays(), true, assignDept)); return w.filter(x=>x.level==='bad' && !isWarningAllowed(x)).length; }
+function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
+function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} }
+// バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
+function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs])); }catch(e){ return String(Math.random()); } }
+// 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
+function stepsDone(){
+  const req = requiredDepartments();
+  const has = req.length>0;
+  const s1 = has && req.every(deptClosed);
+  const s2 = has && req.every(deptHasAnyAssignment);
+  const s3 = s2 && req.every(d=>deptCriticalCount(d)===0);
+  const s4 = has && req.every(isDeptConfirmed);
+  const s5 = s4 && !!state.lastBackupSig && state.lastBackupSig===backupSignature();
+  return [s1,s2,s3,s4,s5];
+}
+function currentStep(){ const i = stepsDone().indexOf(false); return i===-1 ? 5 : i; }
+function stepperHtml(){
+  const labels = ['希望休入力','部署別作成','警告確認','確定','バックアップ'];
+  const done = stepsDone(); const cur = currentStep();
+  const steps = labels.map((l,i)=>{ const st = done[i] ? 'done' : (cur===i ? 'current' : 'todo'); return `<div class="step ${st}"><span class="stepNum">${done[i]?'✓':(i+1)}</span><span class="stepLabel">${esc(l)}</span></div>`; }).join('<span class="stepSep" aria-hidden="true"></span>');
+  return `<div class="stepperWrap"><div class="stepperTitle">毎月の流れ（現在地）${done.every(Boolean)?'<span class="stepAllDone">すべて完了</span>':''}</div><div class="stepper" role="list">${steps}</div></div>`;
+}
+// 部署タブの状態バッジ（未着手／締切・未作成／作成済み／要確認／確定済み）
+function deptStatusBadge(dept){
+  if(isDeptConfirmed(dept)) return '<span class="dStat dStatDone">確定済み</span>';
+  if(deptHasAnyAssignment(dept)) return deptCriticalCount(dept)>0 ? '<span class="dStat dStatWarn">要確認</span>' : '<span class="dStat dStatMade">作成済み</span>';
+  if(progressFor().prefsClosed[dept]) return '<span class="dStat dStatClosed">締切・未作成</span>';
+  return '<span class="dStat dStatNew">未着手</span>';
+}
+function toggleDeptPrefsClosed(dept){ const p = progressFor(); p.prefsClosed[dept] = !p.prefsClosed[dept]; preserveScroll(()=>{ persist(); renderAll(); }); }
 function renderDeptBuildPanel(){
   const box=document.getElementById('deptBuildPanel'); if(!box) return;
   const buildDepts = buildableDepts();
@@ -2387,7 +2454,7 @@ function renderDeptBuildPanel(){
     const stCount=state.staff.filter(s=>s.dept===d || (s.supportDepts||[]).includes(d)).length;
     const ownCount=state.staff.filter(s=>s.dept===d).length;
     const needBadge = hasNeeds(d) ? '' : '<span class="miniBadge" title="基本ルールで必要人数が未入力です">必要人数未設定</span> ';
-    return `<button type="button" class="deptBuildCard ${activeBuildDept===d?'active':''} ${isDeptConfirmed(d)?'confirmed':''}" onclick="setActiveBuildDept('${escAttr(d)}')"><b>${esc(d)}</b><span class="deptStatusLine">所属${ownCount}名 / 対応可能${stCount}名</span><br>${needBadge}${isDeptConfirmed(d)?'<span class="confirmBadge">確定済み</span>':'<span class="editBadge">編集中</span>'}</button>`;
+    return `<button type="button" class="deptBuildCard ${activeBuildDept===d?'active':''} ${isDeptConfirmed(d)?'confirmed':''}" onclick="setActiveBuildDept('${escAttr(d)}')"><b>${esc(d)}</b><span class="deptStatusLine">所属${ownCount}名 / 対応可能${stCount}名</span><br>${needBadge}${deptStatusBadge(d)}</button>`;
   }).join('')}</div>`;
   const needWeek=state.deptNeeds[activeBuildDept]?.week||{E:0,M:0,L:0};
   const needHol=state.deptNeeds[activeBuildDept]?.hol||{E:0,M:0,L:0};
@@ -2416,10 +2483,12 @@ function renderDeptBuildPanel(){
         <button class="btn genBtn" onclick="generateDeptSchedule(activeBuildDept)" ${genDisabledAttr}><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">この部署だけ自動作成</button>
         <button class="btn2 genBtn" onclick="generateDeptSchedule(activeBuildDept,{variant:true})" ${variantDisabledAttr} title="${variantTitle}"><img class="appicon" src="assets/icons/svg/regenerate-pattern.svg" alt="">別パターン再生成</button>
         ${diffBtn}
-      </div>`;
+      </div>
+      ${progressFor().generatedAt[activeBuildDept] ? `<div class="small genTime">前回の作成：${new Date(progressFor().generatedAt[activeBuildDept]).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
   const bulkTabContent = renderBulkAssignBox(activeBuildDept);
   const actionBox = `<div class="deptActionBox">
       <h3>${esc(activeBuildDept)} の作成・確定</h3>
+      ${(!isDeptConfirmed(activeBuildDept) && !deptHasAnyAssignment(activeBuildDept)) ? `<div class="prefsCloseRow">${progressFor().prefsClosed[activeBuildDept] ? '<span class="prefsClosedTag">希望休：締切済み</span><button type="button" class="btn2 prefsCloseBtn" onclick="toggleDeptPrefsClosed(activeBuildDept)">締切を解除</button>' : '<button type="button" class="btn2 prefsCloseBtn" onclick="toggleDeptPrefsClosed(activeBuildDept)">この部署の希望休入力を締め切る</button><span class="small">希望休が無い／集め終わった部署を、作成前に「完了」にできます</span>'}</div>` : ''}
       <div class="buildTabs" role="tablist"><button type="button" role="tab" class="${deptBuildTab==='auto'?'active':''}" onclick="setDeptBuildTab('auto')"><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">自動生成</button><button type="button" role="tab" class="${deptBuildTab==='bulk'?'active':''}" onclick="setDeptBuildTab('bulk')"><img class="appicon" src="assets/icons/svg/bulk-manual-register.svg" alt="">一括手動登録</button></div>
       <div class="buildTabBody">${deptBuildTab==='auto' ? autoTabContent : bulkTabContent}</div>
       <div id="genProgress" class="progressBox" aria-live="polite"><div class="progressTrack"><div id="genProgressFill" class="progressFill"></div></div><div class="progressRow"><div id="genProgressText" class="progressText">待機中</div><button type="button" id="genCancelBtn" class="btn2 genCancelBtn" onclick="requestGenerationCancel()" style="display:none">生成を中止</button></div></div>
@@ -2458,7 +2527,7 @@ function renderDeptBuildPanel(){
       <div id="monthlyView"></div>
     </div>` : '';
   // 並び：作成・確定（自動/一括タブ＋共通出力） → 下書きチェック → シフト表 → 参考情報
-  box.innerHTML = `${periodControl}${cards}${actionBox}<div id="draftWarningsBox" class="draftWarnBox"></div><div class="deptShiftPreview" id="deptShiftPreview"></div>${candidateTable}${footerNote}${monthlyBlock}`;
+  box.innerHTML = `${stepperHtml()}${periodControl}${cards}${actionBox}<div id="draftWarningsBox" class="draftWarnBox"></div><div class="deptShiftPreview" id="deptShiftPreview"></div>${candidateTable}${footerNote}${monthlyBlock}`;
   renderDeptShiftPreview();
   renderDraftWarnings(activeBuildDept, scopedWarns);
   renderMonthlyView();
@@ -3304,6 +3373,7 @@ async function generateDeptSchedule(dept, options={}){
             days: qDays.map(d=>({key:d.key, m:d.m, day:d.day, wd:d.wd, holiday:!!d.holiday, closed:!!d.closed})),
             staff: candidates.map(s=>s.name), prev: prevSnap, after: afterSnap, changed }
         : null;
+      markDeptGenerated(dept);
       preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
       const doneText = earlyStopped
         ? `${dept} の${options.variant?'別パターン':''}部署別シフト作成が完了しました（${attemptsUsed}回目でエラー0の案が見つかったため早期終了）。別案を見たい場合は「別パターン再生成」を押してください。`
@@ -4942,6 +5012,7 @@ async function downloadJSON(){
       const handle = await window.showSaveFilePicker({ suggestedName: fname, types:[{description:'バックアップ(JSON)', accept:{'application/json':['.json']}}] });
       const w = await handle.createWritable();
       await w.write(json); await w.close();
+      markBackupTaken();
       toast('バックアップを保存しました。');
       return;
     }catch(err){
@@ -4956,6 +5027,7 @@ async function downloadJSON(){
     a.href=URL.createObjectURL(blob);
     a.download=fname;
     a.click(); URL.revokeObjectURL(a.href);
+    markBackupTaken();
     toast('バックアップを取得しました（ダウンロード）。');
   }catch(e){ alert('バックアップの保存に失敗しました。'+(e&&e.message?'\n'+e.message:'')); }
 }
