@@ -241,7 +241,8 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .mcChip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;background:var(--sgs);color:var(--sgd);border:1px solid var(--sgl);border-radius:999px;padding:2px 4px 2px 9px}
 .mcChipX{border:0;background:transparent;color:var(--sgd);font-weight:900;cursor:pointer;padding:0 2px;font-size:13px}
 .mcOtherInput{width:160px;padding:5px 8px;border:1px solid var(--ln);border-radius:8px}
-#mcDeptSel{padding:5px 8px;border:1px solid var(--ln);border-radius:8px;font-weight:700}
+.mcRow .badge{white-space:nowrap}
+.mcMini{padding:4px 11px;font-size:12px}
 .mcCountRow td{background:#FBF4E8;font-weight:800}
 .mcCountRow .staffCol{color:#8A4E12}
 .mcCountCell{text-align:center}
@@ -562,9 +563,6 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <h3>シフト区分</h3>
         <div class="small">区分名・時間・平日/土日祝の早中遅割り当てを編集できます。</div>
         <div id="shiftDefEditor"></div>
-        <div class="subtleHr"></div>
-        <h3>朝掃除タグ <span class="small">早番の勤務に自動で表示。下の条件に当てはまる場合は付けません</span></h3>
-        <div id="morningCleanSettings"></div>
       </div>
       <div id="basicDeptPane" style="display:none">
         <h3>部署別ルール</h3>
@@ -891,12 +889,16 @@ function occText(occ){
 }
 function wdListText(wds){ return (wds||[]).map(Number).sort((a,b)=>a-b).map(w=>WD_FULL[w]||'').join('・'); }
 function recurringMatchesDay(rs, day){ // 定期予定1件がこの日に該当するか
-  if(rs.axis==='date'){ if(rs.mode==='monthEnd') return day.day===daysInMonthOf(day.y, day.m); return +rs.day===day.day; }
+  if(rs.axis==='date'){
+    if(rs.month && rs.month!=='every' && +rs.month!==day.m) return false; // 月指定（毎月以外）
+    if(rs.mode==='monthEnd') return day.day===daysInMonthOf(day.y, day.m);
+    return +rs.day===day.day;
+  }
   if(rs.axis==='wd') return wdOccMatchesDay(rs, day);
   return false;
 }
 function recurringRuleText(rs){
-  if(rs.axis==='date') return rs.mode==='monthEnd' ? '毎月 月末' : `毎月 ${+rs.day}日`;
+  if(rs.axis==='date'){ const mo=(rs.month && rs.month!=='every') ? `${+rs.month}月` : '毎月'; const da=(rs.mode==='monthEnd') ? '月末' : `${+rs.day}日`; return `${mo} ${da}`; }
   const {wds,occ}=wdOccOf(rs); return `${wdListText(wds)}曜 ${occText(occ)}`;
 }
 function periodEventMatchesDay(ev, day){ if(ev.axis==='date') return ev.date===day.key; if(ev.axis==='wd') return wdOccMatchesDay(ev, day); return false; }
@@ -1199,11 +1201,11 @@ function defaultState(){
     scheduleTags: DEFAULT_SCHEDULE_TAGS.slice(), // 全体予定タグ一覧
     recurringSchedules: [],                       // 定期予定（毎月/月末/毎週/第N/最終）
     scheduleEventsByPeriod: {},                    // 全体予定（締め月ごと）
-    morningCleanExclude: defaultMorningCleanExclude(), // 朝掃除タグを付けない条件
-    morningCleanOverrideByPeriod: {}                  // 朝掃除タグのセル別手動上書き（締め月ごと、key=dateKey|staff → true/false）
+    morningCleanExclude: defaultMorningCleanExclude(), // 朝そうじタグを付けない条件
+    morningCleanOverrideByPeriod: {}                  // 朝そうじタグのセル別手動上書き（締め月ごと、key=dateKey|staff → true/false）
   };
 }
-function defaultMorningCleanExclude(){ return { byDept: { '管理': {all:true, events:[], wds:[], occ:[]} } }; } // 既定：管理部署は朝掃除なし
+function defaultMorningCleanExclude(){ return { byDept: { '管理': {all:true, events:[], wds:[], occ:[]} } }; } // 既定：管理部署は朝そうじなし
 function normalizeState(){
   invalidateStaffIndex();
   if(!state.closeDay) state.closeDay = 15;
@@ -1502,7 +1504,7 @@ function renderInputs(){
   document.getElementById('periodDisplay').innerHTML = periodLabelHtml();
   updateCurrentPeriodBadge();
   document.getElementById('closedWeekdays').innerHTML = WD.map((w,i)=>`<label class="badge"><input class="closedWd" type="checkbox" value="${i}" ${state.closedWeekdays.includes(i)?'checked':''} style="width:auto">${w}</label>`).join('');
-  renderBasicDeptTabs(); renderBasicDeptRulePanel(); renderTagManager(); renderScheduleTagManager(); renderRecurringSchedule(); renderShiftDefEditor(); renderMorningCleanSettings(); renderDeptBuildPanel(); renderStaffDeptTabs(); renderStaffList(); renderPrefList();
+  renderBasicDeptTabs(); renderBasicDeptRulePanel(); renderTagManager(); renderScheduleTagManager(); renderRecurringSchedule(); renderShiftDefEditor(); renderDeptBuildPanel(); renderStaffDeptTabs(); renderStaffList(); renderPrefList();
   document.querySelectorAll('input,textarea,select').forEach(el=>{
     // JSONバックアップ読込用のfile inputまで共通onchangeで上書きすると、復元処理が一切動かなくなるため除外する。
     // menuYear/menuMonth（メニューの締め月バッジ）は専用ハンドラを使うため共通配線しない。
@@ -1566,7 +1568,7 @@ function renderBasicDeptRulePanel(){
         ${cell('hol','L','遅番帯','pL')}
       </div>
     </div>
-  </div>`;
+  </div>` + morningCleanDeptHtml(d);
 }
 function groupSelectHtml(value, cls){ return `<select class="${cls}"><option value="E" ${value==='E'?'selected':''}>早</option><option value="M" ${value==='M'?'selected':''}>中</option><option value="L" ${value==='L'?'selected':''}>遅</option></select>`; }
 function renderShiftDefEditor(){
@@ -1810,7 +1812,6 @@ function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if
 // ===== 定期予定（基本ルール：毎月/月末/毎週/第N/最終）=====
 function scheduleTagOptionsHtml(sel=''){ return (state.scheduleTags||[]).map(t=>`<option value="${esc(t)}" ${sel===t?'selected':''}>${esc(t)}</option>`).join('')+`<option value="__OTHER__" ${sel==='__OTHER__'?'selected':''}>その他（自由入力）</option>`; }
 function onRecAxisChange(){ const ax=document.getElementById('recAxis')?.value; const d=document.getElementById('recDateOpts'), w=document.getElementById('recWdOpts'); if(d) d.style.display = ax==='date'?'':'none'; if(w) w.style.display = ax==='wd'?'':'none'; }
-function onRecDateModeChange(){ const m=document.getElementById('recDateMode')?.value; const wrap=document.getElementById('recDayWrap'); const day=document.getElementById('recDay'); const monthEnd=(m==='monthEnd'); if(day) day.disabled=monthEnd; if(wrap) wrap.classList.toggle('isDisabled', monthEnd); }
 function onRecTagChange(){ const t=document.getElementById('recTag')?.value; const o=document.getElementById('recTagOther'); if(o) o.style.display = t==='__OTHER__'?'':'none'; }
 // 曜日チェック＋回数チェックの入力ブロック（定期予定・全体予定で共用）。occ に 'last' を出すかは withLast で切替。
 function wdOccCheckboxesHtml(prefix, withLast){
@@ -1839,7 +1840,7 @@ function renderRecurringSchedule(){
         <select id="recTag" onchange="onRecTagChange()" title="タグ">${scheduleTagOptionsHtml()}</select>
         <input id="recTagOther" placeholder="その他の内容" style="display:none">
         <select id="recAxis" onchange="onRecAxisChange()" title="指定方法"><option value="date">日付で指定</option><option value="wd">曜日で指定</option></select>
-        <span id="recDateOpts"><select id="recDateMode" onchange="onRecDateModeChange()"><option value="monthly">毎月（日付）</option><option value="monthEnd">月末</option></select><span id="recDayWrap"><input id="recDay" type="text" inputmode="numeric" min="1" max="31" value="1" title="日"><span class="small">日</span></span></span>
+        <span id="recDateOpts"><select id="recMonth" title="月"><option value="every">毎月</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('')}</select> <select id="recDay" title="日">${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${i===0?'selected':''}>${i+1}日</option>`).join('')}<option value="end">月末</option></select></span>
       </div>
       <div id="recWdOpts" class="recWdBlock" style="display:none">${wdOccCheckboxesHtml('rec', true)}</div>
       <div class="recFormRow"><button type="button" class="btn" onclick="addRecurringSchedule()">＋ 追加</button></div>
@@ -1854,7 +1855,7 @@ function addRecurringSchedule(){
   if(!tag){ alert('タグを選択（その他は内容を入力）してください。'); return; }
   const axis=document.getElementById('recAxis')?.value||'date';
   let rs={id:makeStaffId(), tag, axis};
-  if(axis==='date'){ const mode=document.getElementById('recDateMode')?.value||'monthly'; rs.mode=mode; if(mode==='monthly') rs.day=clampInt(document.getElementById('recDay')?.value,1,31,1); }
+  if(axis==='date'){ rs.month=document.getElementById('recMonth')?.value||'every'; const dv=document.getElementById('recDay')?.value||'1'; if(dv==='end'){ rs.mode='monthEnd'; } else { rs.mode='monthly'; rs.day=clampInt(dv,1,31,1); } }
   else { const r=readWdOcc('rec'); if(r.error){ alert(r.error); return; } rs.wds=r.wds; rs.occ=r.occ; }
   if(!confirmAction(`定期予定「${tag}（${recurringRuleText(rs)}）」を追加しますか？`)) return;
   state.recurringSchedules.push(rs);
@@ -4168,21 +4169,21 @@ function shortageDetails(days=getDays(), out=schedule, deptOut=assignDept){
 }
 function preferenceForStaffDay(staffName, day){ return activePreferences().find(p=>p.staff===staffName && preferenceAppliesToDay(p, day)); }
 function hopeMarkHtml(staffName, day, v){ const p=preferenceForStaffDay(staffName, day); if(!p) return ''; const ps=normalizeStoredShift(p.shift); const label=isRestShift(ps)?`${shiftLabel(ps)}希望`:'希望'; return `<span class="desiredOffMark">${label}</span>`; }
-// ===== 朝掃除タグ =====
-// 区分の実効の見た目（当日のグループ色を反映）。朝掃除タグの色合わせに使う。
+// ===== 朝そうじタグ =====
+// 区分の実効の見た目（当日のグループ色を反映）。朝そうじタグの色合わせに使う。
 function effectiveAppearanceForDay(v, day){
   const k=appearanceKey(v); const over=state.shiftAppearance&&state.shiftAppearance[k];
   if(over) return {...defaultAppearanceForKey(k), ...over};
   const g = (k==='OFF'||k==='PAID'||k==='OTHER') ? k : (groupOfShift(v, day)||codeWeekGroup(k));
   return {...(APPEARANCE_DEFAULTS[g]||APPEARANCE_DEFAULTS.M)};
 }
-// 朝掃除の自動判定：早番の勤務に付ける。所属部署ごとの除外条件に当たる場合は付けない。
+// 朝そうじの自動判定：早番の勤務に付ける。所属部署ごとの除外条件に当たる場合は付けない。
 function morningCleanAuto(day, v, dept){
   if(!isWorkingShift(v) || !isEarlyGroup(v, day)) return false;
   const cfg=state.morningCleanExclude && state.morningCleanExclude.byDept && state.morningCleanExclude.byDept[dept];
   const tags=scheduleTagsForDay(day);
   if(cfg){
-    if(cfg.all) return false;                                          // この部署は朝掃除なし
+    if(cfg.all) return false;                                          // この部署は朝そうじなし
     if((cfg.events||[]).some(t=>tags.includes(t))) return false;       // 除外する全体予定（文字列一致）
     if(morningCleanWdMatch(cfg, day)) return false;                    // 除外曜日（回数指定可）
   }
@@ -4197,7 +4198,7 @@ function morningCleanWdMatch(cfg, day){
   if(!numWds.length) return false;
   return wdOccMatchesDay({wds:numWds, occ:cfg.occ||[]}, day);
 }
-// 朝掃除タグの実効状態（手動上書きを加味）。勤務シフトのみ対象。
+// 朝そうじタグの実効状態（手動上書きを加味）。勤務シフトのみ対象。
 function morningCleanActive(staffName, day, v){
   if(!isWorkingShift(v)) return false;
   const st=findStaff(staffName); const dept=st?st.dept:'';
@@ -4208,13 +4209,13 @@ function morningCleanActive(staffName, day, v){
   if(ovr===false) return false; // 手動OFF
   return morningCleanAuto(day, v, dept);
 }
-// 全体シフト編集モード／部署別シフトのセルから、朝掃除を手動でON/OFF（付与・削除とも確認）。
+// 全体シフト編集モード／部署別シフトのセルから、朝そうじを手動でON/OFF（付与・削除とも確認）。
 function toggleMorningCleanOverride(dayKey, staffName){
   const day=dayByKey(getDays(), dayKey); if(!day) return;
   const v=normalizeStoredShift(schedule[dayKey]?.[staffName]||'');
-  if(!isWorkingShift(v)){ alert('勤務シフトのセルにのみ朝掃除を付けられます。'); return; }
+  if(!isWorkingShift(v)){ alert('勤務シフトのセルにのみ朝そうじを付けられます。'); return; }
   const st=findStaff(staffName); const cur=morningCleanActive(staffName, day, v); const want=!cur;
-  if(!confirm(`${staffName} の ${day.m}/${day.day} に朝掃除を${want?'付け':'外し'}ますか？`)) return;
+  if(!confirm(`${staffName} の ${day.m}/${day.day} に朝そうじを${want?'付け':'外し'}ますか？`)) return;
   const auto=morningCleanAuto(day, v, st?st.dept:''); const pk=periodKeyForDate(day.y, day.m, day.day);
   if(!state.morningCleanOverrideByPeriod) state.morningCleanOverrideByPeriod={};
   if(!state.morningCleanOverrideByPeriod[pk]) state.morningCleanOverrideByPeriod[pk]={};
@@ -4222,21 +4223,20 @@ function toggleMorningCleanOverride(dayKey, staffName){
   if(want===auto) delete store[key]; else store[key]=want; // 自動と一致するなら上書きを残さない
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
-// セル下に表示する朝掃除タグ（色は該当区分の色に合わせる）
+// セル下に表示する朝そうじタグ（色は該当区分の色に合わせる）
 function morningCleanMarkHtml(staffName, day, v){
   if(!morningCleanActive(staffName, day, v)) return '';
   const a=effectiveAppearanceForDay(v, day);
-  return `<span class="morningCleanMark" style="background:${a.bg};color:${a.fg};border-color:${a.border}">朝掃除</span>`;
+  return `<span class="morningCleanMark" style="background:${a.bg};color:${a.fg};border-color:${a.border}">朝そうじ</span>`;
 }
-// 全体シフト表の下に「朝掃除」日別合計行を作る（その日に朝掃除タグが付く人数）
+// 全体シフト表の下に「朝そうじ」日別合計行を作る（その日に朝そうじタグが付く人数）
 function renderMorningCleanRow(days, displaySchedule, staffList){
   let total=0; const cells=days.map(day=>{
     let n=0; for(const st of staffList){ const v=displaySchedule[day.key]?.[st.name]||''; if(morningCleanActive(st.name, day, v)) n++; }
     total+=n; return `<td class="dateCol ${dayColClass(day)} mcCountCell">${n||''}</td>`;
   }).join('');
-  return `<tr class="mcCountRow"><td class="deptCol sticky1"></td><td class="staffCol sticky2">朝掃除</td>${cells}<td class="sumCol"><b>${total}</b></td><td class="sumCol"></td><td class="sumCol"></td><td class="sumCol"></td></tr>`;
+  return `<tr class="mcCountRow"><td class="deptCol sticky1"></td><td class="staffCol sticky2">朝そうじ</td>${cells}<td class="sumCol"><b>${total}</b></td><td class="sumCol"></td><td class="sumCol"></td><td class="sumCol"></td></tr>`;
 }
-let mcActiveDept = null; // 朝掃除設定：編集中の部署
 function mcCfgFor(dept){
   const ex=state.morningCleanExclude||(state.morningCleanExclude=defaultMorningCleanExclude());
   if(!ex.byDept) ex.byDept={};
@@ -4244,48 +4244,48 @@ function mcCfgFor(dept){
   c.all=!!c.all; for(const f of ['events','wds','occ']) if(!Array.isArray(c[f])) c[f]=[];
   return c;
 }
-function mcDeptHasRule(d){ const c=state.morningCleanExclude&&state.morningCleanExclude.byDept&&state.morningCleanExclude.byDept[d]; return !!(c && (c.all || (c.events&&c.events.length) || (c.wds&&c.wds.length))); }
-function renderMorningCleanSettings(){
-  const box=document.getElementById('morningCleanSettings'); if(!box) return;
+// 部署別ルールタブに表示する、その部署の朝そうじ除外設定UI
+function morningCleanDeptHtml(dept){
   bindMorningCleanDelegation();
-  if(!mcActiveDept || !DEPTS.includes(mcActiveDept)) mcActiveDept=DEPTS[0];
-  const dept=mcActiveDept, cfg=mcCfgFor(dept), tagList=state.scheduleTags||[];
-  const deptSel=`<div class="mcGroup"><label class="mcLabel" for="mcDeptSel">設定する部署</label><div class="mcRow"><select id="mcDeptSel" class="mcCtl" data-mc="dept">${DEPTS.map(d=>`<option value="${escAttr(d)}" ${d===dept?'selected':''}>${esc(d)}${mcDeptHasRule(d)?' ●':''}</option>`).join('')}</select><span class="small">● が付く部署は除外設定あり</span></div></div>`;
-  const allChk=`<label class="mcChk"><input type="checkbox" class="mcCtl" data-mc="all" ${cfg.all?'checked':''}>この部署は朝掃除を付けない</label>`;
-  const evChecks = tagList.length ? tagList.map(t=>`<label class="mcChk"><input type="checkbox" class="mcCtl" data-mc="event" data-val="${escAttr(t)}" ${cfg.events.includes(t)?'checked':''}>${esc(t)}</label>`).join('') : '<span class="small">全体予定タグ一覧が未登録です</span>';
-  const customChips = cfg.events.filter(t=>!tagList.includes(t)).map(t=>`<span class="mcChip">${esc(t)}<button type="button" class="mcChipX" data-mcact="del-event" data-val="${escAttr(t)}" title="削除">×</button></span>`).join('');
-  const wdRow = WD_FULL.map((w,i)=>`<label class="badge"><input type="checkbox" class="mcCtl" data-mc="wd" data-val="${i}" ${cfg.wds.map(String).includes(String(i))?'checked':''}>${w}</label>`).join('')+`<label class="badge"><input type="checkbox" class="mcCtl" data-mc="wd" data-val="hol" ${cfg.wds.includes('hol')?'checked':''}>祝</label>`;
-  const occRow = [1,2,3,4,5].map(n=>`<label class="badge"><input type="checkbox" class="mcCtl" data-mc="occ" data-val="${n}" ${cfg.occ.map(String).includes(String(n))?'checked':''}>第${n}</label>`).join('')+`<label class="badge"><input type="checkbox" class="mcCtl" data-mc="occ" data-val="last" ${cfg.occ.includes('last')?'checked':''}>最終</label>`+`<label class="badge"><input type="checkbox" class="mcCtl" data-mc="occ" data-val="every" ${cfg.occ.includes('every')?'checked':''}>毎週</label>`;
-  box.innerHTML = deptSel +
+  const cfg=mcCfgFor(dept), tagList=state.scheduleTags||[]; const da=`data-dept="${escAttr(dept)}"`;
+  const allChk=`<label class="mcChk"><input type="checkbox" class="mcCtl" ${da} data-mc="all" ${cfg.all?'checked':''}>この部署は朝そうじを付けない</label>`;
+  const evChecks = tagList.length ? tagList.map(t=>`<label class="mcChk"><input type="checkbox" class="mcCtl" ${da} data-mc="event" data-val="${escAttr(t)}" ${cfg.events.includes(t)?'checked':''}>${esc(t)}</label>`).join('') : '<span class="small">全体予定タグ一覧が未登録です</span>';
+  const customChips = cfg.events.filter(t=>!tagList.includes(t)).map(t=>`<span class="mcChip">${esc(t)}<button type="button" class="mcChipX" data-mcact="del-event" ${da} data-val="${escAttr(t)}" title="削除">×</button></span>`).join('');
+  const wdRow = WD_FULL.map((w,i)=>`<label class="badge"><input type="checkbox" class="mcCtl" ${da} data-mc="wd" data-val="${i}" ${cfg.wds.map(String).includes(String(i))?'checked':''}>${w}</label>`).join('')+`<label class="badge"><input type="checkbox" class="mcCtl" ${da} data-mc="wd" data-val="hol" ${cfg.wds.includes('hol')?'checked':''}>祝</label>`;
+  const wdBtns=`<button type="button" class="btn2 mcMini" data-mcact="wd-all" ${da}>全チェック</button><button type="button" class="btn2 mcMini" data-mcact="wd-none" ${da}>全解除</button>`;
+  const occRow = [1,2,3,4,5].map(n=>`<label class="badge occPill"><input type="checkbox" class="mcCtl" ${da} data-mc="occ" data-val="${n}" ${cfg.occ.map(String).includes(String(n))?'checked':''}>第${n}</label>`).join('')+`<label class="badge occPill"><input type="checkbox" class="mcCtl" ${da} data-mc="occ" data-val="last" ${cfg.occ.includes('last')?'checked':''}>最終</label>`+`<label class="badge occPill"><input type="checkbox" class="mcCtl" ${da} data-mc="occ" data-val="every" ${cfg.occ.includes('every')?'checked':''}>毎週</label>`;
+  return `<div class="subtleHr"></div><h3>朝そうじタグの除外設定</h3>`+
+    `<div class="small">早番の勤務に自動表示される「朝そうじ」タグを、この部署では付けない条件を設定します。</div>`+
     `<div class="mcDeptBody${cfg.all?' mcDimmed':''}">`+
       `<div class="mcGroup">${allChk}</div>`+
       `<div class="mcGroup"><div class="mcLabel">除外する全体予定（その日に該当タグがある日）</div><div class="mcRow">${evChecks}</div>`+
-        `<div class="mcRow" style="margin-top:6px">${customChips}<input type="text" id="mcOtherInput" class="mcOtherInput" placeholder="その他（自由入力）"><button type="button" class="btn2" data-mcact="add-event">追加</button></div></div>`+
-      `<div class="mcGroup"><div class="mcLabel">除外する曜日（複数可）</div><div class="mcRow">${wdRow}</div>`+
-        `<div class="mcLabel" style="margin-top:6px">回数（複数可・「毎週」で第Nは無視）</div><div class="mcRow">${occRow}</div></div>`+
+        `<div class="mcRow" style="margin-top:6px">${customChips}<input type="text" class="mcOtherInput" ${da} placeholder="その他（自由入力）"><button type="button" class="btn2" data-mcact="add-event" ${da}>追加</button></div></div>`+
+      `<div class="mcGroup"><div class="mcLabel">除外する曜日（複数可）</div><div class="mcRow">${wdRow}</div><div class="mcRow" style="margin-top:6px">${wdBtns}</div>`+
+        `<div class="mcLabel" style="margin-top:6px">回数（複数可・「毎週」で第Nは無視）</div><div class="mcRow occRow">${occRow}</div></div>`+
     `</div>`+
     `<div class="small">組み込みルール：「納品」予定がある日の<b>用品</b>部署は自動で対象外です（設定とは別に常に適用）。</div>`;
 }
 function bindMorningCleanDelegation(){
   if(typeof document==='undefined' || document._mcBound) return; document._mcBound=true;
   document.addEventListener('change', e=>{ const el=e.target&&e.target.closest&&e.target.closest('.mcCtl'); if(el) onMorningCleanCtl(el); });
-  document.addEventListener('click', e=>{ const t=e.target&&e.target.closest&&e.target.closest('[data-mcact]'); if(!t) return;
-    if(t.dataset.mcact==='add-event') mcAddCustomEvent(); else if(t.dataset.mcact==='del-event') mcRemoveEvent(t.dataset.val); });
-  document.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target && e.target.id==='mcOtherInput'){ e.preventDefault(); mcAddCustomEvent(); } });
+  document.addEventListener('click', e=>{ const t=e.target&&e.target.closest&&e.target.closest('[data-mcact]'); if(!t) return; const dept=t.dataset.dept;
+    if(t.dataset.mcact==='add-event') mcAddCustomEvent(dept);
+    else if(t.dataset.mcact==='del-event') mcRemoveEvent(dept, t.dataset.val);
+    else if(t.dataset.mcact==='wd-all'){ const cfg=mcCfgFor(dept); cfg.wds=[0,1,2,3,4,5,6,'hol']; persist(); renderAll(); renderBasicDeptRulePanel(); }
+    else if(t.dataset.mcact==='wd-none'){ const cfg=mcCfgFor(dept); cfg.wds=[]; persist(); renderAll(); renderBasicDeptRulePanel(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target && e.target.classList && e.target.classList.contains('mcOtherInput')){ e.preventDefault(); mcAddCustomEvent(e.target.dataset.dept); } });
 }
 function mcToggleArr(arr, val, on){ const i=arr.findIndex(x=>x===val); if(on&&i<0)arr.push(val); else if(!on&&i>=0)arr.splice(i,1); }
 function onMorningCleanCtl(el){
-  const which=el.dataset.mc;
-  if(which==='dept'){ mcActiveDept=el.value; renderMorningCleanSettings(); return; }
-  const cfg=mcCfgFor(mcActiveDept);
-  if(which==='all'){ cfg.all=!!el.checked; persist(); renderAll(); renderMorningCleanSettings(); return; }
+  const dept=el.dataset.dept; if(!dept) return; const which=el.dataset.mc; const cfg=mcCfgFor(dept);
+  if(which==='all'){ cfg.all=!!el.checked; persist(); renderAll(); renderBasicDeptRulePanel(); return; }
   if(which==='event') mcToggleArr(cfg.events, el.dataset.val, el.checked);
   else if(which==='wd') mcToggleArr(cfg.wds, (el.dataset.val==='hol'?'hol':Number(el.dataset.val)), el.checked);
   else if(which==='occ') mcToggleArr(cfg.occ, ((el.dataset.val==='every'||el.dataset.val==='last')?el.dataset.val:Number(el.dataset.val)), el.checked);
   persist(); renderAll();
 }
-function mcAddCustomEvent(){ const inp=document.getElementById('mcOtherInput'); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return; const cfg=mcCfgFor(mcActiveDept); if(!cfg.events.includes(v)) cfg.events.push(v); inp.value=''; persist(); renderMorningCleanSettings(); renderAll(); }
-function mcRemoveEvent(v){ const cfg=mcCfgFor(mcActiveDept); const i=cfg.events.indexOf(v); if(i>=0)cfg.events.splice(i,1); persist(); renderMorningCleanSettings(); renderAll(); }
+function mcAddCustomEvent(dept){ if(!dept) return; const inp=document.querySelector('.mcOtherInput'); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return; const cfg=mcCfgFor(dept); if(!cfg.events.includes(v)) cfg.events.push(v); inp.value=''; persist(); renderBasicDeptRulePanel(); renderAll(); }
+function mcRemoveEvent(dept, v){ if(!dept) return; const cfg=mcCfgFor(dept); const i=cfg.events.indexOf(v); if(i>=0)cfg.events.splice(i,1); persist(); renderBasicDeptRulePanel(); renderAll(); }
 function explainShortage(out, days, day, dept, sh){
   const offMap=fixedWeeklyOffMap(days); const prefMap=buildPreferenceMap(days);
   const reasons={}; let ok=0;
@@ -4620,7 +4620,7 @@ function renderCalendar(){
       const staffEnc=encodeURIComponent(st.name);
       const deptMini=(isWorkingShift(v)&&adep!==st.dept)?`<div class="miniBadge">${esc(adep)}</div>`:'';
       const lockMark='';
-      const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'allowedErrorCell':'errorCell'):'';
+      const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'':'errorCell'):''; /* 全体シフト表では許容済みの緑表示は出さない */
       if(calendarEditMode && !confirmed){
         html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }else{
@@ -4794,16 +4794,16 @@ function applyValueToSelectionCells(value){
   preserveScroll(()=>{ persist(); renderAll(); });
   toast(`選択した ${n} セルに「${shiftLabel(value)||'空欄'}」を設定しました。`);
 }
-function openCellQuickMenu(e, sel){
+function openCellQuickMenu(e, sel, full){
   const staff=decodeURIComponent(sel.dataset.staff||''); const st=findStaff(staff);
-  const codes=(Array.isArray(st?.canShifts)&&st.canShifts.length)?st.canShifts:SHIFT_CODES;
-  // 範囲選択中で、右クリックしたセルが選択内なら「選択範囲に一括適用」モード
+  const codes = full ? SHIFT_CODES.slice() : ((Array.isArray(st?.canShifts)&&st.canShifts.length)?st.canShifts:SHIFT_CODES);
+  // 範囲選択中で、対象セルが選択内なら「選択範囲に一括適用」モード
   const inSel = sel.closest('td') && sel.closest('td').classList.contains('cellRangeSel');
   const selSelects = selectionSelects();
   const batch = inSel && selSelects.length>1;
   const m=ensureCellQuickMenu(); m.innerHTML='';
   const mkBtn=(label,val,cls)=>{ const b=document.createElement('button'); b.type='button'; if(cls) b.className=cls; b.textContent=label; b.addEventListener('mousedown',ev=>ev.preventDefault()); b.addEventListener('click',()=> batch ? applyValueToSelectionCells(val) : applyCellQuickValue(sel,val)); return b; };
-  const head=document.createElement('div'); head.className='cqHead'; head.textContent=batch?`選択中 ${selSelects.length} セルに一括設定`:(staff||'クイック入力'); m.appendChild(head);
+  const head=document.createElement('div'); head.className='cqHead'; head.textContent=batch?`選択中 ${selSelects.length} セルに一括設定${full?'（全選択肢）':''}`:(full?'全選択肢一覧':(staff||'よく使う項目')); m.appendChild(head);
   m.appendChild(mkBtn('空欄にする','','cqClear'));
   m.appendChild(mkBtn('休','OFF'));
   m.appendChild(mkBtn('有休',PAID_LEAVE));
@@ -4811,13 +4811,13 @@ function openCellQuickMenu(e, sel){
   for(const c of codes) wrap.appendChild(mkBtn(c+'：'+(SHIFT_TIMES[c]||''), c));
   m.appendChild(wrap);
   m.appendChild(mkBtn('その他（自由入力）…','__OTHER__'));
-  // 朝掃除タグの手動ON/OFF（単一セルのみ。勤務シフトに限る）
+  // 朝そうじタグの手動ON/OFF（単一セルのみ。勤務シフトに限る）
   if(!batch){
     const dayKey=sel.dataset.key, day=dayByKey(getDays(), dayKey), cv=normalizeStoredShift(schedule[dayKey]?.[staff]||'');
     if(day && isWorkingShift(cv)){
       const on=morningCleanActive(staff, day, cv);
       const div=document.createElement('div'); div.className='cqDivider'; m.appendChild(div);
-      const tb=document.createElement('button'); tb.type='button'; tb.className='cqMorning'; tb.textContent=on?'朝掃除を外す':'朝掃除をつける';
+      const tb=document.createElement('button'); tb.type='button'; tb.className='cqMorning'; tb.textContent=on?'朝そうじを外す':'朝そうじをつける';
       tb.addEventListener('mousedown',ev=>ev.preventDefault());
       tb.addEventListener('click',()=>{ closeCellQuickMenu(); toggleMorningCleanOverride(dayKey, staff); });
       m.appendChild(tb);
@@ -4890,7 +4890,7 @@ function _cellAutoScrollMaybe(){ if(_cellDragging && _cellDragScroller && !_cell
 // セルは <select> のため、Shiftなしの素のドラッグはネイティブ操作と競合する。Shift時のみ範囲選択に割り当てる。
 if(typeof document!=='undefined' && typeof document.addEventListener==='function' && !document._cellMenuBound){
   document._cellMenuBound=true;
-  document.addEventListener('contextmenu', e=>{ const sel=e.target.closest && e.target.closest('select.editableSelect'); if(sel && !sel.disabled){ e.preventDefault(); openCellQuickMenu(e, sel); } });
+  document.addEventListener('contextmenu', e=>{ const sel=e.target.closest && e.target.closest('select.editableSelect'); if(sel && !sel.disabled){ e.preventDefault(); openCellQuickMenu(e, sel, true); } });
   document.addEventListener('mousedown', e=>{
     _cellJustDragged=false; // 新しい操作の開始：前回ドラッグの残り印をクリア
     const sel=e.target.closest && e.target.closest('select.editableSelect');
@@ -4904,11 +4904,13 @@ if(typeof document!=='undefined' && typeof document.addEventListener==='function
       paintCellSelection(new Set([cellKeyOf(sel)])); // 押した位置を一時表示
       try{ sel.focus({preventScroll:true}); }catch(_){}
     } else if(sel && !sel.disabled && e.button===0 && !e.shiftKey){
-      // 複数選択中に選択内セルを左クリック → ネイティブを開かず、選択範囲への一括入力メニューを表示
-      const td=sel.closest('td');
-      if(td && td.classList.contains('cellRangeSel') && cellSel.size>1){
-        e.preventDefault(); _cellJustDragged=true; openCellQuickMenu(e, sel);
-      }
+      // 左クリック → ネイティブを開かず「よく使う項目」メニューを表示（単体／複数選択どちらも）
+      e.preventDefault();
+      const td=sel.closest('td'); const inMulti = td && td.classList.contains('cellRangeSel') && cellSel.size>1;
+      if(!inMulti && cellSel.size) clearCellSelection(); // 選択外を左クリック→既存の選択は解除して単体メニュー
+      _cellJustDragged=true; // 直後のclickでメニューを閉じない／選択を消さない
+      try{ sel.focus({preventScroll:true}); }catch(_){}
+      openCellQuickMenu(e, sel, false);
     }
   });
   document.addEventListener('mousemove', e=>{ if(!_cellDragging) return; _cellDragMX=e.clientX; _cellDragMY=e.clientY; _cellAutoScrollMaybe(); }, {passive:true});
@@ -5248,7 +5250,7 @@ tr.pbBefore{break-before:page;page-break-before:always}
 .shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}
 .shiftGroup-OTHER{background:#fdf0f0!important;border-color:#dcb3b1!important;color:#8b3a38!important}
 .desiredOffMark{display:block;margin-top:1pt;font-size:5pt;color:#2f7d6d;font-weight:800}
-.morningCleanMark{display:table;margin:0.5pt auto 0;font-size:5pt;font-weight:800;border:0.4pt solid;border-radius:2pt;padding:0 1.5pt;line-height:1.2;text-align:center;white-space:nowrap}
+.morningCleanMark{display:block;margin:0.5pt 0 0;font-size:5pt;font-weight:800;background:transparent!important;border:0!important;border-radius:0;padding:0;line-height:1.2;text-align:center;white-space:nowrap}
 .pill,.roleBadge,.limitBadge{font-size:5.5pt;padding:0.5pt 2pt;border-radius:6pt;background:#fff;border:0.5pt solid #c4b9a8;display:inline-block}
 .roleBadge{background:#fff1dc!important;color:#7a4b00!important;border:0.5pt solid #e6cfa6!important}
 .roleBadge.leaderTag{background:#f2eafd!important;color:#5d398c!important;border:0.5pt solid #d9c6f0!important}
