@@ -2434,7 +2434,9 @@ function stepsDone(){
 function currentStep(){ const i = stepsDone().indexOf(false); return i===-1 ? 5 : i; }
 function stepperHtml(){
   const labels = ['希望休入力','部署別作成','警告確認','確定','バックアップ'];
-  const done = stepsDone(); const cur = currentStep();
+  // 表示は順次的に：あるステップが未完了なら、それ以降は（条件を満たしても）完了扱いにしない
+  const raw = stepsDone(); const cur = currentStep();
+  const done = raw.map((_,i)=>raw.slice(0,i+1).every(Boolean));
   const steps = labels.map((l,i)=>{ const st = done[i] ? 'done' : (cur===i ? 'current' : 'todo'); return `<div class="step ${st}"><span class="stepNum">${done[i]?'✓':(i+1)}</span><span class="stepLabel">${esc(l)}</span></div>`; }).join('<span class="stepSep" aria-hidden="true"></span>');
   return `<div class="stepperWrap"><div class="stepperTitle">毎月の流れ（現在地）${done.every(Boolean)?'<span class="stepAllDone">すべて完了</span>':''}</div><div class="stepper" role="list">${steps}</div></div>`;
 }
