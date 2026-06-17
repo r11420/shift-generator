@@ -112,7 +112,7 @@ th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f
 .menuRail{position:sticky;top:14px;background:var(--mlk);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:7px}
 .menuTitle{font-size:13px;font-weight:900;color:var(--muted);padding:4px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .menuItem{width:100%;text-align:left;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
-.menuItem span{font-weight:900;font-size:13px}.menuItem small{font-size:11px;color:var(--muted);font-weight:700;line-height:1.35}.menuItem.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 10px 24px rgba(72,111,78,.18)}.menuItem.active small{color:rgba(255,255,255,.86)}
+.menuItem span{font-weight:900;font-size:13px}.menuItem small{font-size:11px;color:var(--muted);font-weight:700;line-height:1.35}.menuItem.active{background:var(--sgs);border-color:var(--sgl);color:var(--ink);box-shadow:inset 3px 0 0 var(--sgd)}.menuItem.active small{color:var(--ink2)}.menuGroup{font-size:11px;font-weight:900;color:var(--ink3);letter-spacing:.04em;padding:12px 8px 3px;display:flex;align-items:center;gap:5px}.menuGroup:first-of-type{padding-top:2px}.menuLockIcon{width:13px;height:13px;flex:none;opacity:.85}
 .contentArea{min-width:0}.menuPanel{display:none}.menuPanel.active{display:block}.panelHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.panelHead h2{margin:0 0 4px}.panelHead p{margin:0;color:var(--muted);font-size:13px}.panelActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.panelActions button{white-space:nowrap}
 
 
@@ -179,7 +179,7 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .appicon{display:inline-block;flex:0 0 auto;width:16px;height:16px;object-fit:contain;vertical-align:-3px}
 .appicon.lg{width:20px;height:20px;vertical-align:-4px}
 .appicon.xl{width:22px;height:22px;vertical-align:-5px}
-.menuItem.active .appicon,.btn .appicon,.btnDanger .appicon,.staffAddButton .appicon,.staffEditDone .appicon{filter:brightness(0) invert(1)}
+.btn .appicon,.btnDanger .appicon,.staffAddButton .appicon,.staffEditDone .appicon{filter:brightness(0) invert(1)}
 .buildTabs button.active .appicon{filter:brightness(0) invert(1)}
 .appicon.flip{transform:scaleX(-1)}
 .manualOpenBtn:hover .appicon{filter:brightness(0) invert(1)}
@@ -417,10 +417,6 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <h1>KJM Shift＋</h1>
     <p>部署ごとに「自動作成 → 確認 → 確定」で全体シフトができあがります。入力した内容はこの端末の中にだけ自動保存され、外部には送信されません。</p>
   </div>
-  <div class="manualBtns noPrint">
-    <button type="button" class="manualOpenBtn quickManualBtn" onclick="window.open('quick.html','_blank','noopener')" title="よく使う操作だけの早わかり版を別タブで開きます"><img class="appicon lg" src="assets/icons/svg/quick-manual.svg" alt="">クイックマニュアル</button>
-    <button type="button" class="manualOpenBtn" onclick="window.open('manual.html','_blank','noopener')" title="使い方マニュアルを別タブで開く（実画面と見比べられます）"><img class="appicon lg" src="assets/icons/svg/manual-guide.svg" alt="">使い方マニュアル</button>
-  </div>
 </header>
 
 <div class="appLayout">
@@ -428,13 +424,18 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <div class="menuTitle">メニュー</div>
     <div id="currentPeriodBadge" class="currentPeriodBadge">締め月を読み込み中...</div>
     <button type="button" class="backupHint" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">シフトやスタッフを編集したら、こまめなバックアップをおすすめします（クリックでバックアップ取得）</button>
+    <div class="menuGroup">よく使う</div>
     <button class="menuItem active" data-panel="calendar" onclick="showMenuPanel('calendar')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-overall-shift.svg" alt=""></span><span class="menuLabelWrap"><span>全体シフト表</span><small>全体をながめる・編集</small></span></button>
     <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動作成→確定</small></span></button>
-    <button class="menuItem" data-panel="basic" onclick="showMenuPanel('basic')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-rules.svg" alt=""></span><span class="menuLabelWrap"><span>基本ルール</span><small>連勤・休業日・必要人数</small></span></button>
-    <button class="menuItem" data-panel="staff" onclick="showMenuPanel('staff')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-staff.svg" alt=""></span><span class="menuLabelWrap"><span>スタッフ</span><small>登録・タグ・並び替え</small></span></button>
     <button class="menuItem" data-panel="prefs" onclick="showMenuPanel('prefs')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-requests.svg" alt=""></span><span class="menuLabelWrap"><span>シフト希望・全体予定</span><small>希望休・全体の予定</small></span></button>
     <button class="menuItem" data-panel="actions" onclick="showMenuPanel('actions')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-backup.svg" alt=""></span><span class="menuLabelWrap"><span>バックアップ</span><small>まるごと保存・復元</small></span></button>
+    <button type="button" class="menuItem menuLink" onclick="window.open('manual.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/manual-guide.svg" alt=""></span><span class="menuLabelWrap"><span>使い方マニュアル</span><small>くわしい手順・別タブで開く</small></span></button>
+    <button type="button" class="menuItem menuLink" onclick="window.open('quick.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/quick-manual.svg" alt=""></span><span class="menuLabelWrap"><span>クイックマニュアル</span><small>よく使う操作の早わかり・別タブ</small></span></button>
+    <div class="menuGroup">管理者向け<svg class="menuLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <button class="menuItem" data-panel="basic" onclick="showMenuPanel('basic')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-rules.svg" alt=""></span><span class="menuLabelWrap"><span>基本ルール</span><small>連勤・休業日・必要人数</small></span></button>
+    <button class="menuItem" data-panel="staff" onclick="showMenuPanel('staff')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-staff.svg" alt=""></span><span class="menuLabelWrap"><span>スタッフ</span><small>登録・タグ・並び替え</small></span></button>
     <button class="menuItem" data-panel="stats" onclick="showMenuPanel('stats')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-warnings.svg" alt=""></span><span class="menuLabelWrap"><span>集計・警告</span><small>不足・違反のチェック</small></span></button>
+    <div class="menuGroup">店長のみ<svg class="menuLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
     <button class="menuItem" data-panel="obic" onclick="showMenuPanel('obic')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/action-export-excel.svg" alt=""></span><span class="menuLabelWrap"><span>【店長】OBIC連携用</span><small>全スタッフの休日をExcel出力</small></span></button>
   </nav>
   <main class="contentArea">
