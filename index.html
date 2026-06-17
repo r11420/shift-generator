@@ -11,6 +11,15 @@
   --accent:#6d8f72; --accent2:#3f6f55; --soft:#eaf1ea;
   --e:#f0a63a; --m:#6fa8dc; --l:#a37ad6; --off:#d9d1c5; --bad:#c0605e; --warn:#b06a00;
   --mint:#e2f4ee; --mintInk:#2f7d6d;
+  /* リデザイン用トークン（§3.1）。既存varは温存し、要所にこれらを適用する */
+  --sf:#FFFFFF; --iv:#FAF7EF; --bg2:#F5EEE0; --ink2:#6E6253; --ink3:#9C8F7D; --ln:#E6DCCB;
+  --sg:#6E9081; --sgd:#52735F; --sgs:#E7F0EA; --sgl:#C2D3C7;
+  --rd:#BD544B; --rdb:#FBEDEB; --rdl:#E8C4BF;
+  --gd:#A9781F; --gdb:#FAF2DE; --gdl:#E6D2A0;
+  --sel:#6C7686; --selb:#EEF0F3; --sell:#C6CBD4;
+  --erl:#3F6184; --erb:#E7EFF7; --ern:#C4D4E5;
+  --mdl:#566E5C; --mdb:#E9EFE8; --mdn:#CFDACE;
+  --ltl:#6B5894; --ltb:#EFE9F5; --ltn:#DACFE7;
   --shadow:0 16px 40px rgba(54,45,34,.08);
   --font-ui:"Noto Sans JP","BIZ UDPGothic","Yu Gothic UI","Hiragino Sans",system-ui,sans-serif;
   --font-table:"BIZ UDPGothic","Noto Sans JP","Yu Gothic UI",sans-serif;
@@ -26,7 +35,7 @@ header p{margin:0;color:var(--muted);font-size:14px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 label{font-weight:800;font-size:13px;color:#3a342e;display:block;margin:10px 0 5px}
 input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid #d8d0c5;border-radius:12px;padding:9px 10px;background:#fff;color:var(--ink)}
-textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padding:10px 12px;font-weight:900;cursor:pointer}.btn{background:var(--accent);color:#fff}.btn2{background:#fff;border:1px solid var(--line);color:var(--ink)}.btnDanger{background:#fff1f1;color:#9b2222;border:1px solid #f1c7c7}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}.small{font-size:12px;color:var(--muted)}
+textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padding:10px 12px;font-weight:900;cursor:pointer}.btn{background:var(--accent);color:#fff}.btn2{background:#fff;border:1px solid var(--line);color:var(--ink)}.btnDanger{background:#fff1f1;color:#9b2222;border:1px solid #f1c7c7}.btnCaution{background:var(--gdb);color:var(--gd);border:1px solid var(--gdl)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}.small{font-size:12px;color:var(--muted)}
 .staffItem{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px;margin:12px 0;box-shadow:0 1px 3px rgba(60,50,40,.06);transition:background .15s,box-shadow .15s,border-color .15s}
 /* 折りたたみ＝白カード（余白＋影＋ホバーで境界を表現）／展開＝テーマのセージ系で“編集中”を強調 */
 .staffItem.collapsed{background:#fff}
@@ -69,7 +78,7 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 .staffCardClickable:hover .staffOpenHint{background:var(--accent);color:#fff;border-color:var(--accent)}.staffHead{display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center}.staffMeta{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.weekdayChecks{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px}.weekdayChecks label{margin:0;text-align:center;justify-content:center}.weekdayChecks input{width:auto;margin-right:3px}.roleBadge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:900;background:#fff1dc;color:#7a4b00;margin-top:3px}.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:var(--soft);color:var(--accent2);margin:2px}
 .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tabs button{background:#fff;border:1px solid var(--line)}.tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .summary{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:10px;margin-bottom:12px}.metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px}.metric b{display:block;font-size:22px}.metric span{font-size:12px;color:var(--muted)}
-.legend{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.pill{border-radius:999px;padding:4px 8px;font-size:12px;font-weight:900;display:inline-block}.pE{background:#fff3de;color:#935d00}.pM{background:#e8f2fc;color:#265f8d}.pL{background:#f2eafd;color:#5d398c}.pOff{background:#eee9e2;color:#64584e}.pDept{background:#eef4ff;color:#315c8b}.pGlobal{background:#edf7ed;color:#285c2b}
+.legend{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.pill{border-radius:999px;padding:4px 8px;font-size:12px;font-weight:900;display:inline-block}.pE{background:var(--erb);color:var(--erl)}.pM{background:var(--mdb);color:var(--mdl)}.pL{background:var(--ltb);color:var(--ltl)}.pOff{background:#eee9e2;color:#64584e}.pDept{background:#eef4ff;color:#315c8b}.pGlobal{background:#edf7ed;color:#285c2b}
 .warn{background:#fff6ea;border:1px solid #f5d19a;color:#7a4b00;border-radius:14px;padding:10px;margin:8px 0}.bad{background:#fdf2f1;border:1px solid #ecc9c5;color:#9c4844;border-radius:14px;padding:10px;margin:8px 0}.ok{background:#edf7ed;border:1px solid #cde8cd;color:#285c2b;border-radius:14px;padding:10px;margin:8px 0}
 .tableWrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;max-height:72vh}table{border-collapse:separate;border-spacing:0;min-width:1080px;width:100%}th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top;font-size:13px}th{background:#f4f0e9;position:sticky;top:0;z-index:3;text-align:center;white-space:nowrap}.sticky1,.sticky2{position:sticky;z-index:2;background:#fffaf4}.sticky1{left:0}.sticky2{left:110px}.headSticky1{left:0;z-index:4;background:#eee7dc}.headSticky2{left:110px;z-index:4;background:#eee7dc}.deptCol{min-width:110px;width:110px}.staffCol{min-width:150px;width:150px;font-weight:900;text-align:left}.dateCol{min-width:72px;width:72px;text-align:center}.sumCol{min-width:58px;text-align:center;background:#fffdf8}.dateNum{font-weight:900}.sun{color:#c83535}.sat{color:#2865a8}.holiday{color:#c83535}.closedHead{background:#eee9e2}.closureHead{background:#fbe7e4}.editableSelect{font-size:12px;padding:5px 6px;border-radius:9px;min-width:54px}.shift-E{background:#fff3de;border-color:#f2c87b}.shift-M{background:#e8f2fc;border-color:#a8cceb}.shift-L{background:#f2eafd;border-color:#c5ade7}.shift-OFF{background:#eee9e2;border-color:#d2c7ba}.shortage{color:#fff;background:var(--bad);border-radius:8px;padding:2px 6px;font-size:11px;font-weight:900;display:inline-block;margin:1px}.over{color:#7a4b00;background:#fff6db;border:1px solid #efd08a;border-radius:8px;padding:1px 5px;font-size:11px;font-weight:900;display:inline-block;margin:1px}.lock{font-size:10px;color:#855e00;background:#fff6db;border:1px solid #efd08a;border-radius:8px;padding:1px 4px;margin-top:3px;display:inline-block}.sideStack{display:flex;flex-direction:column;gap:14px}.hidden{display:none}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.footerNote{font-size:12px;color:var(--muted);margin-top:10px}.prefGrid{display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;margin:6px 0}.prefGrid input{padding:7px 8px}.countTable{min-width:760px}.countTable td:first-child,.countTable th:first-child{position:static;background:#fff}.countTable th{position:static}.deptNeedTable{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}.deptNeedTable table{min-width:620px}.deptNeedTable th,.deptNeedTable td{position:static;text-align:center;padding:6px}.deptNeedTable td:first-child,.deptNeedTable th:first-child{text-align:left;font-weight:900;background:#fffaf4}.miniInput{padding:6px 7px;border-radius:9px;text-align:center}.periodBox{background:#fffaf4;border:1px solid var(--line);border-radius:14px;padding:10px;margin-top:10px}.periodBox b{font-size:14px}.subtleHr{height:1px;background:var(--line);margin:12px 0}.filterBar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.deptTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0 10px}.deptTabs button{background:#fff;border:1px solid var(--line);color:var(--ink);padding:8px 6px;border-radius:12px}.deptTabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}.staffToolbar{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 12px}.staffAddButton{background:var(--accent);color:#fff;border:0;font-size:14px;padding:12px 14px;box-shadow:0 8px 18px rgba(72,111,78,.16)}.staffAddForm{display:none;border:1px solid var(--line);border-radius:16px;background:#fffaf4;padding:12px;margin-top:8px}.staffAddForm.active{display:block}.shiftLegend{margin-top:10px;border:1px solid var(--line);background:#fffaf4;border-radius:14px;padding:10px}.shiftLegend h4{margin:0 0 8px}.shiftLegendGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px}.shiftLegendItem{border:1px solid var(--line);background:#fff;border-radius:10px;padding:5px 7px;font-size:12px}.shiftLegendItem b{font-size:14px;margin-right:6px}.staffCount{font-size:11px;opacity:.85;margin-left:4px}.prefDeptControl{display:grid;grid-template-columns:220px 1fr;gap:10px;align-items:end;margin:10px 0 12px;padding:10px;border:1px solid var(--line);background:#fffaf4;border-radius:14px}.prefDeptControl label{margin:0 0 5px}.prefStaffTabWrap{display:flex;gap:8px;flex-wrap:wrap}.prefStaffTabWrap button{background:#fff;border:1px solid var(--line)}.prefStaffTabWrap button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .shiftCodeGrid{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
@@ -83,9 +92,9 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 
 .weekendCol{background:#fff0f4!important}
 th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f4!important}
-.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:#ffd43a!important;border:2.5px solid #e8b000!important;color:#5c3d00!important}
-.shiftView.shiftGroup-M,.editableSelect.shiftGroup-M{background:#e7f1ea!important;border-color:#bcd6c2!important;color:#3f6f55!important}
-.shiftView.shiftGroup-L,.editableSelect.shiftGroup-L{background:#f2eafd!important;border-color:#c5ade7!important;color:#5d398c!important}
+.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:var(--erb)!important;border:2.5px solid var(--erl)!important;color:var(--erl)!important}
+.shiftView.shiftGroup-M,.editableSelect.shiftGroup-M{background:var(--mdb)!important;border-color:var(--mdn)!important;color:var(--mdl)!important}
+.shiftView.shiftGroup-L,.editableSelect.shiftGroup-L{background:var(--ltb)!important;border-color:var(--ltn)!important;color:var(--ltl)!important}
 .shiftView.shiftGroup-OFF,.editableSelect.shiftGroup-OFF{background:#2f6fd0!important;border:2.5px solid #2f6fd0!important;color:#fff!important}
 .shiftView,.editableSelect{box-sizing:border-box}
 .shiftView.shiftGroup-PAID,.editableSelect.shiftGroup-PAID{background:#fff4a8!important;border-color:#e1c642!important;color:#6a5600!important}
@@ -250,8 +259,8 @@ button,input,select{font-size:15px}
 th.dayCountErr{background:#fbe3e2!important;box-shadow:inset 0 0 0 2px #c96b68}
 td.dayCountErr{border-left:2px solid #e6b6b3;border-right:2px solid #e6b6b3}
 .dayErrMark{font-size:9px;color:#b04f4b;line-height:1}
-.dowSun,.dowSun span,.dowSun .small{color:#c83535!important}
-.dowSat,.dowSat span,.dowSat .small{color:#2865a8!important}
+.dowSun,.dowSun span,.dowSun .small{color:#BD544B!important}
+.dowSat,.dowSat span,.dowSat .small{color:#3F6184!important}
 th.allowedDayCountErr{background:#edf8ed!important;box-shadow:inset 0 0 0 2px #72b678}
 td.allowedDayCountErr{background:#edf8ed!important;border-left:2px solid #9dce9f;border-right:2px solid #9dce9f}
 .allowedDayCountErr .dayErrMark{color:#237a3a}
@@ -274,7 +283,7 @@ td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 
 .cellQuickMenu .cqClear{color:var(--muted)}
 .cellQuickMenu .cqCodes{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:3px 0}
 .cellQuickMenu .cqCodes button{margin:0;font-size:12px;padding:6px 7px}
-td.cellRangeSel{outline:2px solid var(--accent);outline-offset:-2px}
+td.cellRangeSel{outline:2px solid var(--sel);outline-offset:-2px}
 td.cellRangeSel:not(.errorCell):not(.allowedErrorCell){background:#eaf2ea!important}
 body.cellSelecting{-webkit-user-select:none;user-select:none}
 body.cellSelecting .editableSelect{cursor:cell}
@@ -4797,8 +4806,8 @@ th{background:#f1ece2;font-weight:800}
 .weekendCol{background:#fbeef2!important}th.weekendCol{background:#f6e2e9!important}
 .closedHead{background:#eae4da!important}.closureHead{background:#f7ddd8!important}
 .dateNum{font-weight:800;font-size:7.6pt;letter-spacing:.2pt}
-.dowSun,.dowSun span,.dowSun .small{color:#c83535!important}
-.dowSat,.dowSat span,.dowSat .small{color:#2865a8!important}
+.dowSun,.dowSun span,.dowSun .small{color:#BD544B!important}
+.dowSat,.dowSat span,.dowSat .small{color:#3F6184!important}
 th.dateCol .dateNum{display:block;border-bottom:0.45pt solid #bdb2a6;margin:0 -0.5pt 1pt;padding-bottom:1pt}
 .dateSub{display:flex;align-items:center;justify-content:center;gap:1pt;white-space:nowrap}
 .dateSub .small{font-size:5.5pt;line-height:1}
