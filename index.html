@@ -230,6 +230,12 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .sapChk{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;white-space:nowrap}
 .sapChk input{width:auto}
 .sapTag{margin-left:6px;font-size:10px;font-weight:900;color:var(--gd);background:var(--gdb);border:1px solid var(--gdl);border-radius:999px;padding:1px 7px}
+.morningCleanMark{display:block;margin-top:2px;font-size:9px;font-weight:900;border:1px solid;border-radius:5px;padding:0 3px;line-height:1.5;text-align:center;white-space:nowrap}
+.mcGroup{margin:8px 0}
+.mcLabel{font-size:12px;font-weight:900;color:var(--ink2);margin-bottom:4px}
+.mcRow{display:flex;flex-wrap:wrap;gap:6px 14px}
+.mcChk{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;white-space:nowrap}
+.mcChk input{width:auto}
 .dangerZone h3{margin:0 0 6px;color:#9b2222}
 .metricBad{color:var(--bad)}
 .metricLink{cursor:pointer}
@@ -545,6 +551,9 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <h3>シフト区分</h3>
         <div class="small">区分名・時間・平日/土日祝の早中遅割り当てを編集できます。</div>
         <div id="shiftDefEditor"></div>
+        <div class="subtleHr"></div>
+        <h3>朝掃除タグ <span class="small">早番の勤務に自動で表示。下の条件に当てはまる場合は付けません</span></h3>
+        <div id="morningCleanSettings"></div>
       </div>
       <div id="basicDeptPane" style="display:none">
         <h3>部署別ルール</h3>
@@ -1178,9 +1187,11 @@ function defaultState(){
     preferencesByPeriod: {},
     scheduleTags: DEFAULT_SCHEDULE_TAGS.slice(), // 全体スケジュールタグ一覧
     recurringSchedules: [],                       // 定期スケジュール（毎月/月末/毎週/第N/最終）
-    scheduleEventsByPeriod: {}                     // 全体予定（締め月ごと）
+    scheduleEventsByPeriod: {},                    // 全体予定（締め月ごと）
+    morningCleanExclude: defaultMorningCleanExclude() // 朝掃除タグを付けない条件
   };
 }
+function defaultMorningCleanExclude(){ return { depts:['管理'], events:[], weekdays:[] }; } // 既定：管理部署は除外
 function normalizeState(){
   invalidateStaffIndex();
   if(!state.closeDay) state.closeDay = 15;
@@ -1222,6 +1233,8 @@ function normalizeState(){
   }
   state.shiftDefs = normalizeShiftDefs(state.shiftDefs);
   if(!state.shiftAppearance || typeof state.shiftAppearance!=='object' || Array.isArray(state.shiftAppearance)) state.shiftAppearance = {};
+  if(!state.morningCleanExclude || typeof state.morningCleanExclude!=='object' || Array.isArray(state.morningCleanExclude)) state.morningCleanExclude = defaultMorningCleanExclude();
+  for(const f of ['depts','events','weekdays']){ if(!Array.isArray(state.morningCleanExclude[f])) state.morningCleanExclude[f]=[]; }
   if(!state.generationSeeds || typeof state.generationSeeds !== 'object') state.generationSeeds = {};
   rebuildShiftRuntime();
   // タグマスタ（旧:役職）。未定義なら既定タグで初期化。
@@ -1466,7 +1479,7 @@ function renderInputs(){
   document.getElementById('periodDisplay').innerHTML = periodLabelHtml();
   updateCurrentPeriodBadge();
   document.getElementById('closedWeekdays').innerHTML = WD.map((w,i)=>`<label class="badge"><input class="closedWd" type="checkbox" value="${i}" ${state.closedWeekdays.includes(i)?'checked':''} style="width:auto">${w}</label>`).join('');
-  renderBasicDeptTabs(); renderBasicDeptRulePanel(); renderTagManager(); renderScheduleTagManager(); renderRecurringSchedule(); renderShiftDefEditor(); renderDeptBuildPanel(); renderStaffDeptTabs(); renderStaffList(); renderPrefList();
+  renderBasicDeptTabs(); renderBasicDeptRulePanel(); renderTagManager(); renderScheduleTagManager(); renderRecurringSchedule(); renderShiftDefEditor(); renderMorningCleanSettings(); renderDeptBuildPanel(); renderStaffDeptTabs(); renderStaffList(); renderPrefList();
   document.querySelectorAll('input,textarea,select').forEach(el=>{
     // JSONバックアップ読込用のfile inputまで共通onchangeで上書きすると、復元処理が一切動かなくなるため除外する。
     // menuYear/menuMonth（メニューの締め月バッジ）は専用ハンドラを使うため共通配線しない。
@@ -2522,7 +2535,7 @@ function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(sch
 function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
 function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} }
 // バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
-function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance])); }catch(e){ return String(Math.random()); } }
+function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance, state.morningCleanExclude])); }catch(e){ return String(Math.random()); } }
 // 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
 function stepsDone(){
   const req = requiredDepartments();
@@ -4114,6 +4127,56 @@ function shortageDetails(days=getDays(), out=schedule, deptOut=assignDept){
 }
 function preferenceForStaffDay(staffName, day){ return activePreferences().find(p=>p.staff===staffName && preferenceAppliesToDay(p, day)); }
 function hopeMarkHtml(staffName, day, v){ const p=preferenceForStaffDay(staffName, day); if(!p) return ''; const ps=normalizeStoredShift(p.shift); const label=isRestShift(ps)?`${shiftLabel(ps)}希望`:'希望'; return `<span class="desiredOffMark">${label}</span>`; }
+// ===== 朝掃除タグ =====
+// 区分の実効の見た目（当日のグループ色を反映）。朝掃除タグの色合わせに使う。
+function effectiveAppearanceForDay(v, day){
+  const k=appearanceKey(v); const over=state.shiftAppearance&&state.shiftAppearance[k];
+  if(over) return {...defaultAppearanceForKey(k), ...over};
+  const g = (k==='OFF'||k==='PAID'||k==='OTHER') ? k : (groupOfShift(v, day)||codeWeekGroup(k));
+  return {...(APPEARANCE_DEFAULTS[g]||APPEARANCE_DEFAULTS.M)};
+}
+// 朝掃除の自動判定：早番の勤務に付ける。除外条件に当たる場合は付けない（所属部署で判定）。
+function morningCleanAuto(day, v, dept){
+  if(!isWorkingShift(v) || !isEarlyGroup(v, day)) return false;
+  const ex=state.morningCleanExclude||{};
+  if((ex.depts||[]).includes(dept)) return false;                       // 除外部署（既定：管理）
+  if((ex.weekdays||[]).includes(day.wd)) return false;                  // 除外曜日
+  if(day.holiday && (ex.weekdays||[]).includes('hol')) return false;    // 祝を除外
+  const tags=scheduleTagsForDay(day);
+  if((ex.events||[]).some(t=>tags.includes(t))) return false;           // 除外する全体予定
+  if(dept==='用品' && tags.some(t=>String(t).includes('納品'))) return false; // 組み込み：納品×用品
+  return true;
+}
+// 朝掃除タグの実効状態（フェーズ3で手動上書きを加味する）
+function morningCleanActive(staffName, day, v){ const st=findStaff(staffName); return morningCleanAuto(day, v, st?st.dept:''); }
+// セル下に表示する朝掃除タグ（色は該当区分の色に合わせる）
+function morningCleanMarkHtml(staffName, day, v){
+  if(!morningCleanActive(staffName, day, v)) return '';
+  const a=effectiveAppearanceForDay(v, day);
+  return `<span class="morningCleanMark" style="background:${a.bg};color:${a.fg};border-color:${a.border}">朝掃除</span>`;
+}
+function renderMorningCleanSettings(){
+  const box=document.getElementById('morningCleanSettings'); if(!box) return;
+  const ex=state.morningCleanExclude||defaultMorningCleanExclude();
+  const chk=(field,val,label)=>{ const v=String(val); return `<label class="mcChk"><input type="checkbox" data-field="${field}" data-val="${escAttr(v)}" ${(ex[field]||[]).map(String).includes(v)?'checked':''} onchange="toggleMorningCleanExclude(this)">${esc(label)}</label>`; };
+  const deptChks=DEPTS.map(d=>chk('depts', d, d)).join('');
+  const evChks=(state.scheduleTags||[]).length ? (state.scheduleTags||[]).map(t=>chk('events', t, t)).join('') : '<span class="small">全体スケジュールタグが未登録です</span>';
+  const wdChks=WD.map((n,i)=>chk('weekdays', i, n)).join('') + chk('weekdays','hol','祝');
+  box.innerHTML = `<div class="mcGroup"><div class="mcLabel">除外する部署</div><div class="mcRow">${deptChks}</div></div>`+
+    `<div class="mcGroup"><div class="mcLabel">除外する全体予定（その日に該当タグがある日）</div><div class="mcRow">${evChks}</div></div>`+
+    `<div class="mcGroup"><div class="mcLabel">除外する曜日</div><div class="mcRow">${wdChks}</div></div>`+
+    `<div class="small">組み込みルール：「納品」予定がある日の<b>用品</b>部署は自動で対象外です（上の設定とは別に常に適用）。</div>`;
+}
+function toggleMorningCleanExclude(el){
+  const field=el.dataset.field; let val=el.dataset.val; const on=!!el.checked;
+  if(field==='weekdays' && val!=='hol') val=parseInt(val,10);
+  pullInputs();
+  if(!state.morningCleanExclude) state.morningCleanExclude=defaultMorningCleanExclude();
+  if(!Array.isArray(state.morningCleanExclude[field])) state.morningCleanExclude[field]=[];
+  const arr=state.morningCleanExclude[field]; const i=arr.findIndex(x=>x===val);
+  if(on && i<0) arr.push(val); else if(!on && i>=0) arr.splice(i,1);
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+}
 function explainShortage(out, days, day, dept, sh){
   const offMap=fixedWeeklyOffMap(days); const prefMap=buildPreferenceMap(days);
   const reasons={}; let ok=0;
@@ -4331,10 +4394,10 @@ function renderDeptShiftPreview(){
       if(closureWork){ err='臨時休業日に出勤が入っています。休業日のため通常は休みです。'; errCls='errorCell'; }
       const colErr=dayCountIssueClass(dayIssues.get(day.key)||[]);
       if(editable && !lockedLabel){
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }else{
         const title=lockedLabel?`${lockedLabel} のため編集不可`:err;
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }
     }
     const dc=getStaffDeptCounts(st.name, activeBuildDept, days, schedule, assignDept);
@@ -4450,10 +4513,10 @@ function renderCalendar(){
       const lockMark='';
       const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'allowedErrorCell':'errorCell'):'';
       if(calendarEditMode && !confirmed){
-        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }else{
         const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
-        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }
     }
     html+=`<td class="sumCol"><b>${c.total}</b></td><td class="sumCol">${c.E||0}</td><td class="sumCol">${c.M||0}</td><td class="sumCol">${c.L||0}</td></tr>`;
@@ -5057,6 +5120,7 @@ tr.pbBefore{break-before:page;page-break-before:always}
 .shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}
 .shiftGroup-OTHER{background:#fdf0f0!important;border-color:#dcb3b1!important;color:#8b3a38!important}
 .desiredOffMark{display:block;margin-top:1pt;font-size:5pt;color:#2f7d6d;font-weight:800}
+.morningCleanMark{display:block;margin-top:0.5pt;font-size:5pt;font-weight:800;border:0.4pt solid;border-radius:2pt;padding:0 1pt;line-height:1.2;text-align:center;white-space:nowrap}
 .pill,.roleBadge,.limitBadge{font-size:5.5pt;padding:0.5pt 2pt;border-radius:6pt;background:#fff;border:0.5pt solid #c4b9a8;display:inline-block}
 .roleBadge{background:#fff1dc!important;color:#7a4b00!important;border:0.5pt solid #e6cfa6!important}
 .roleBadge.leaderTag{background:#f2eafd!important;color:#5d398c!important;border:0.5pt solid #d9c6f0!important}
