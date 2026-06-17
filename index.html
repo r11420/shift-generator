@@ -4497,7 +4497,7 @@ function applyCellQuickValue(sel, value){ sel.value=value; sel.dispatchEvent(new
 let cellSel=new Set();        // 選択中セルのキー集合（keystaff）
 let cellSelTable=null;        // 選択が属するtable要素（表をまたがない）
 let cellSelAnchor=null;       // Shift+矢印/ドラッグの起点select
-let _cellDragging=false, _cellDragAnchor=null, _cellDragLast=null, _cellDidDrag=false, _cellJustDragged=false;
+let _cellDragging=false, _cellDragAnchor=null, _cellDragLast=null, _cellDidDrag=false, _cellJustDragged=false, _cellDragScroller=null, _cellDragMX=0, _cellDragMY=0, _cellAutoRAF=0;
 function cellKeyOf(sel){ return (sel.dataset.key||'') + '' + decodeURIComponent(sel.dataset.staff||''); }
 function clearCellSelection(){ cellSel.clear(); cellSelAnchor=null; cellSelTable=null; document.querySelectorAll('td.cellRangeSel').forEach(td=>td.classList.remove('cellRangeSel')); }
 function paintCellSelection(extra){
@@ -4579,6 +4579,40 @@ function cellGridKeydown(e){
     cellSelTable=table; cellSel=rectKeys(table, cellSelAnchor, target); target.focus(); paintCellSelection();
   } else { clearCellSelection(); target.focus(); }
 }
+// Shift+ドラッグ中に表の端へカーソルを寄せると、表が自動でスクロールして選択を表の外まで伸ばせる（部署別シフト確認の表）。
+// 全体シフト表は独自の横スクロール連動があるため対象外。
+function _cellScrollParent(sel){ return (sel && sel.closest && sel.closest('#deptShiftPreview')) ? sel.closest('.tableWrap') : null; }
+function _cellAutoScrollStop(){ if(_cellAutoRAF){ cancelAnimationFrame(_cellAutoRAF); _cellAutoRAF=0; } }
+// カーソル直下の編集セルを返す。合計列・固定列・固定ヘッダ・スクロールバーに当たった場合は、
+// まず同じ行を保ったまま横方向へ、それでも無ければ縦方向へ、表の内側へ寄せて最寄りの編集セルを探す。
+function _cellSampleAt(cx, cy, r){
+  const tcx=(r.left+r.right)/2, tcy=(r.top+r.bottom)/2;
+  const hit=(x,y)=>{ const el=document.elementFromPoint(x,y); const s=(el&&el.closest)?el.closest('select.editableSelect'):null; return (s && s.closest('table')===cellSelTable)?s:null; };
+  let s=hit(cx,cy); if(s) return s;
+  let x=cx; for(let i=0;i<14 && Math.abs(x-tcx)>4;i++){ x+=(tcx-x)*0.16; s=hit(x,cy); if(s) return s; }
+  let y=cy; for(let i=0;i<10 && Math.abs(y-tcy)>4;i++){ y+=(tcy-y)*0.16; s=hit(x,y); if(s) return s; }
+  return null;
+}
+function _cellAutoScrollTick(){
+  if(!_cellDragging || !_cellDragScroller){ _cellAutoRAF=0; return; }
+  const sc=_cellDragScroller, r=sc.getBoundingClientRect(), EDGE=40, MAX=22;
+  let dx=0, dy=0;
+  if(_cellDragMX < r.left+EDGE)        dx=-MAX*Math.min(1,(r.left+EDGE-_cellDragMX)/EDGE);
+  else if(_cellDragMX > r.right-EDGE)  dx= MAX*Math.min(1,(_cellDragMX-(r.right-EDGE))/EDGE);
+  if(_cellDragMY < r.top+EDGE)         dy=-MAX*Math.min(1,(r.top+EDGE-_cellDragMY)/EDGE);
+  else if(_cellDragMY > r.bottom-EDGE) dy= MAX*Math.min(1,(_cellDragMY-(r.bottom-EDGE))/EDGE);
+  if(!dx && !dy){ _cellAutoRAF=0; return; } // 端から離れた→停止
+  const sx=sc.scrollLeft, sy=sc.scrollTop;
+  sc.scrollLeft=sx+dx; sc.scrollTop=sy+dy;
+  // スクロールバーを避け、カーソル直下（表内にクランプ）のセルを選択先に更新する
+  const sbV=sc.offsetWidth-sc.clientWidth, sbH=sc.offsetHeight-sc.clientHeight;
+  const cx=Math.max(r.left+4, Math.min(_cellDragMX, r.right-sbV-4));
+  const cy=Math.max(r.top+4,  Math.min(_cellDragMY, r.bottom-sbH-4));
+  const s=_cellSampleAt(cx, cy, r);
+  if(s){ if(s!==_cellDragAnchor) _cellDidDrag=true; _cellDragLast=s; paintCellSelection(rectKeys(cellSelTable,_cellDragAnchor,s)); }
+  _cellAutoRAF=requestAnimationFrame(_cellAutoScrollTick);
+}
+function _cellAutoScrollMaybe(){ if(_cellDragging && _cellDragScroller && !_cellAutoRAF){ _cellAutoRAF=requestAnimationFrame(_cellAutoScrollTick); } }
 // Shift+ドラッグ＝矩形を加算 / Shift+クリック＝1セルずつトグル（飛び飛び）。通常クリックはプルダウンを開く。
 // セルは <select> のため、Shiftなしの素のドラッグはネイティブ操作と競合する。Shift時のみ範囲選択に割り当てる。
 if(typeof document!=='undefined' && typeof document.addEventListener==='function' && !document._cellMenuBound){
@@ -4592,17 +4626,20 @@ if(typeof document!=='undefined' && typeof document.addEventListener==='function
       const table=sel.closest('table');
       if(cellSelTable && cellSelTable!==table) clearCellSelection(); // 表をまたいだら作り直し
       cellSelTable=table; _cellDragging=true; _cellDidDrag=false; _cellDragAnchor=sel; _cellDragLast=sel; cellSelAnchor=sel;
+      _cellDragScroller=_cellScrollParent(sel); _cellDragMX=e.clientX; _cellDragMY=e.clientY;
       if(document.body) document.body.classList.add('cellSelecting');
       paintCellSelection(new Set([cellKeyOf(sel)])); // 押した位置を一時表示
       try{ sel.focus({preventScroll:true}); }catch(_){}
     }
   });
+  document.addEventListener('mousemove', e=>{ if(!_cellDragging) return; _cellDragMX=e.clientX; _cellDragMY=e.clientY; _cellAutoScrollMaybe(); }, {passive:true});
   document.addEventListener('mouseover', e=>{ if(!_cellDragging) return; const sel=e.target.closest && e.target.closest('select.editableSelect'); if(!sel || sel.closest('table')!==cellSelTable) return; if(sel!==_cellDragAnchor) _cellDidDrag=true; _cellDragLast=sel; paintCellSelection(rectKeys(cellSelTable, _cellDragAnchor, sel)); });
   document.addEventListener('mouseup', ()=>{
     if(!_cellDragging) return;
     if(_cellDidDrag && _cellDragLast){ const r=rectKeys(cellSelTable, _cellDragAnchor, _cellDragLast); for(const k of r) cellSel.add(k); _cellJustDragged=true; } // ドラッグ＝矩形を加算（直後のclickで解除されないよう印）
     else { toggleCellInSelection(_cellDragAnchor); } // クリック＝トグル（飛び飛び）
     _cellDragging=false; _cellDragAnchor=null; _cellDragLast=null;
+    _cellAutoScrollStop(); _cellDragScroller=null;
     if(document.body) document.body.classList.remove('cellSelecting');
     if(cellSel.size===0) cellSelTable=null;
     paintCellSelection();
