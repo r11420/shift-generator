@@ -307,8 +307,12 @@ button,input,select{font-size:15px}
 /* メイン機能（シフト作成）をメニュー内でさりげなく強調 */
 
 /* バックアップ推奨の固定文言 */
-.backupHint{display:block;width:100%;text-align:left;background:#fff6e8;border:1px solid #ecd9b0;color:#7a5b22;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:700;line-height:1.5;cursor:pointer}
+.backupHint{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:#fff6e8;border:1px solid #ecd9b0;color:#7a5b22;border-radius:12px;padding:10px 12px;cursor:pointer}
 .backupHint:hover{background:#fdefd8}
+.backupHintBody{display:flex;flex-direction:column;gap:3px;min-width:0}
+.backupHintTitle{font-size:24px;font-weight:900;line-height:1.15}
+.backupHintText{font-size:12px;font-weight:700;line-height:1.55}
+.backupHintIcon{width:22px;height:22px;margin-top:2px;flex:none}
 .backupNudge{background:#fff6e8;border:1px solid #ecd9b0;color:#7a5b22;border-radius:12px;padding:8px 10px;font-size:12.5px;font-weight:700;margin-top:10px}
 .monthlyBox{margin-top:14px}
 .monthlyBox .panelHead{margin-bottom:8px}
@@ -481,7 +485,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
   <nav class="menuRail noPrint" aria-label="メニュー一覧">
     <div class="menuTitle">メニュー</div>
     <div id="currentPeriodBadge" class="currentPeriodBadge">締め月を読み込み中...</div>
-    <button type="button" class="backupHint" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">シフトやスタッフを編集したら、こまめなバックアップをおすすめします（クリックでバックアップ取得）</button>
+    <button type="button" class="backupHint" onclick="downloadJSON()"><img class="appicon backupHintIcon" src="assets/icons/svg/action-backup-save.svg" alt=""><span class="backupHintBody"><span class="backupHintTitle">バックアップ取得</span><span class="backupHintText">シフトやスタッフを編集したら、こまめなバックアップをおすすめします</span></span></button>
     <div class="menuGroup">よく使う</div>
     <button class="menuItem active" data-panel="calendar" onclick="showMenuPanel('calendar')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-overall-shift.svg" alt=""></span><span class="menuLabelWrap"><span>全体シフト表</span><small>全体をながめる・編集</small></span></button>
     <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動作成→確定</small></span></button>
@@ -697,7 +701,8 @@ let activeBasicDept = 'トリマー';
 let activePrefStaff = '全体';
 let activePrefDept = 'トリマー';
 let prefsTab = 'request'; // シフト希望・全体予定パネルのタブ: request（シフト希望）/ event（全体予定）
-let shiftAppearanceOpen = false; // 基本ルール：区分の見た目「詳細編集」の開閉
+let shiftAppearanceOpen = false; // 基本ルール：区分の見た目「詳細設定」の開閉
+let shiftDefOpen = false; // 基本ルール：シフト区分の折りたたみ
 let basicTab = 'common'; // 基本ルールパネルのタブ: common（共通ルール）/ dept（部署別ルール）
 let activePrefEditIndex = null;
 let generationRunning = false;
@@ -1582,14 +1587,19 @@ function renderShiftDefEditor(){
   const box=document.getElementById('shiftDefEditor'); if(!box) return;
   bindShiftAppearanceDelegation();
   const defs=normalizeShiftDefs(state.shiftDefs);
-  let html='<div class="shiftDefEditor"><div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>操作</th></tr></thead><tbody>';
-  html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
-  html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
-  html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" data-sapact="toggle">${shiftAppearanceOpen?'▼':'▶'} 区分の見た目を詳細編集（背景・文字・枠・太字・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
+  let html='<div class="shiftDefEditor">';
+  html += `<button type="button" class="btn2 sapToggle" data-sapact="defToggle">${shiftDefOpen?'▼':'▶'} シフト区分を編集（区分名・時間・割当）</button>`;
+  if(shiftDefOpen){
+    html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>操作</th></tr></thead><tbody>';
+    html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
+    html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
+  }
+  html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" data-sapact="toggle">${shiftAppearanceOpen?'▼':'▶'} 区分の見た目を詳細設定（背景・文字・枠・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
   html += '</div>';
   box.innerHTML=html;
 }
 function toggleShiftAppearanceEditor(){ pullInputs(); shiftAppearanceOpen=!shiftAppearanceOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
+function toggleShiftDefEditor(){ pullInputs(); shiftDefOpen=!shiftDefOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
 function appearancePreviewClass(key){ return (key==='OFF')?'shiftGroup-OFF':(key==='PAID')?'shiftGroup-PAID':(key==='OTHER')?'shiftGroup-OTHER':('shiftGroup-'+codeWeekGroup(key)); }
 function shiftAppearanceRowsHtml(){
   const codes=[...new Set((state.shiftDefs||[]).map(d=>d.code).filter(Boolean))];
@@ -1620,6 +1630,7 @@ function bindShiftAppearanceDelegation(){
     if(act==='toggle') toggleShiftAppearanceEditor();
     else if(act==='reset-all') resetAllShiftAppearance();
     else if(act==='reset-row') resetShiftAppearanceRow(t);
+    else if(act==='defToggle') toggleShiftDefEditor();
   });
 }
 function updateShiftAppearanceRow(el){
@@ -1818,6 +1829,14 @@ function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if
 // ===== 定期予定（基本ルール：毎月/月末/毎週/第N/最終）=====
 function scheduleTagOptionsHtml(sel=''){ return (state.scheduleTags||[]).map(t=>`<option value="${esc(t)}" ${sel===t?'selected':''}>${esc(t)}</option>`).join('')+`<option value="__OTHER__" ${sel==='__OTHER__'?'selected':''}>その他（自由入力）</option>`; }
 function onRecAxisChange(){ const ax=document.getElementById('recAxis')?.value; const d=document.getElementById('recDateOpts'), w=document.getElementById('recWdOpts'); if(d) d.style.display = ax==='date'?'':'none'; if(w) w.style.display = ax==='wd'?'':'none'; }
+// 月に応じた「日」の選択肢（2月は29日まで・4/6/9/11月は30日まで・他と毎月は31日まで／末尾に月末）
+function recDayOptionsHtml(month, selDay){
+  const m=+month; let max=31;
+  if(month==='2'||m===2) max=29; else if([4,6,9,11].includes(m)) max=30;
+  let h=''; for(let i=1;i<=max;i++) h+=`<option value="${i}" ${String(selDay)===String(i)?'selected':''}>${i}日</option>`;
+  h+=`<option value="end" ${selDay==='end'?'selected':''}>月末</option>`; return h;
+}
+function onRecMonthChange(){ const ms=document.getElementById('recMonth'), ds=document.getElementById('recDay'); if(!ms||!ds) return; const cur=ds.value; ds.innerHTML=recDayOptionsHtml(ms.value, cur); }
 function onRecTagChange(){ const t=document.getElementById('recTag')?.value; const o=document.getElementById('recTagOther'); if(o) o.style.display = t==='__OTHER__'?'':'none'; }
 // 曜日チェック＋回数チェックの入力ブロック（定期予定・全体予定で共用）。occ に 'last' を出すかは withLast で切替。
 function wdOccCheckboxesHtml(prefix, withLast){
@@ -1846,7 +1865,7 @@ function renderRecurringSchedule(){
         <select id="recTag" onchange="onRecTagChange()" title="タグ">${scheduleTagOptionsHtml()}</select>
         <input id="recTagOther" placeholder="その他の内容" style="display:none">
         <select id="recAxis" onchange="onRecAxisChange()" title="指定方法"><option value="date">日付で指定</option><option value="wd">曜日で指定</option></select>
-        <span id="recDateOpts"><select id="recMonth" title="月"><option value="every">毎月</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('')}</select> <select id="recDay" title="日">${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${i===0?'selected':''}>${i+1}日</option>`).join('')}<option value="end">月末</option></select></span>
+        <span id="recDateOpts"><select id="recMonth" title="月" onchange="onRecMonthChange()"><option value="every">毎月</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('')}</select> <select id="recDay" title="日">${recDayOptionsHtml('every','1')}</select></span>
       </div>
       <div id="recWdOpts" class="recWdBlock" style="display:none">${wdOccCheckboxesHtml('rec', true)}</div>
       <div class="recFormRow"><button type="button" class="btn" onclick="addRecurringSchedule()">＋ 追加</button></div>
@@ -4195,7 +4214,6 @@ function morningCleanAuto(day, v, dept){
       if(r.type==='wd' && morningCleanWdMatch(r, day)) return false;       // 曜日＋回数
     }
   }
-  if(dept==='用品' && tags.some(t=>String(t).includes('納品'))) return false; // 組み込み：納品×用品
   return true;
 }
 // 曜日＋回数ルールにこの日が該当するか（祝は別枠で常に該当）
@@ -4279,8 +4297,7 @@ function morningCleanDeptHtml(dept){
     : '<div class="small" style="margin-top:8px">除外ルールは未登録です（この部署は早番すべてに朝そうじが付きます）。</div>';
   return `<div class="subtleHr"></div><h3>朝そうじタグの除外設定</h3>`+
     `<div class="small">早番の勤務に自動表示される「朝そうじ」を、この部署で付けない条件をルールとして登録します。いずれかのルールに当てはまる日は付けません。</div>`+
-    builder + list +
-    `<div class="small">組み込みルール：「納品」予定がある日の<b>用品</b>部署は自動で対象外です（設定とは別に常に適用）。</div>`;
+    builder + list;
 }
 function bindMorningCleanDelegation(){
   if(typeof document==='undefined' || document._mcBound) return; document._mcBound=true;
