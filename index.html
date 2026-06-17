@@ -98,10 +98,10 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 
 .weekendCol{background:#fff0f4!important}
 th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f4!important}
-.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:var(--erb)!important;border:2.5px solid var(--erl)!important;color:var(--erl)!important}
+.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:#FBE7CE!important;border:2.5px solid #E59A3A!important;color:#8A4E12!important}
 .shiftView.shiftGroup-M,.editableSelect.shiftGroup-M{background:var(--mdb)!important;border-color:var(--mdn)!important;color:var(--mdl)!important}
 .shiftView.shiftGroup-L,.editableSelect.shiftGroup-L{background:var(--ltb)!important;border-color:var(--ltn)!important;color:var(--ltl)!important}
-.shiftView.shiftGroup-OFF,.editableSelect.shiftGroup-OFF{background:#2f6fd0!important;border:2.5px solid #2f6fd0!important;color:#fff!important}
+.shiftView.shiftGroup-OFF,.editableSelect.shiftGroup-OFF{background:#E7E7EC!important;border:1.5px solid #CBCBD3!important;color:#5C5C66!important}
 .shiftView,.editableSelect{box-sizing:border-box}
 .shiftView.shiftGroup-PAID,.editableSelect.shiftGroup-PAID{background:#fff4a8!important;border-color:#e1c642!important;color:#6a5600!important}
 .shiftView.shiftGroup-OTHER,.editableSelect.shiftGroup-OTHER{background:#fdecec!important;border-color:#e5b6b6!important;color:#8b2c2c!important}
@@ -219,6 +219,17 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .dangerZone{border:1px solid #f1c7c7;background:#fffafa;border-radius:14px;padding:12px;margin-top:14px}
 .safeZone{border:1px solid var(--ln);background:var(--iv);border-radius:14px;padding:12px;margin-top:14px}
 .safeZone h3,.dangerZone h3{margin:0 0 4px}
+.shiftAppearanceWrap{margin-top:12px}
+.sapToggle{font-weight:800}
+.sapPanel{margin-top:10px;border:1px solid var(--ln);border-radius:14px;background:var(--iv);padding:12px}
+.sapActions{margin:8px 0}
+.sapTable{font-size:13px}
+.sapTable th,.sapTable td{padding:6px 8px;text-align:center;white-space:nowrap}
+.sapTable td:first-child{text-align:left}
+.sapTable input[type=color]{width:42px;height:28px;padding:0;border:1px solid var(--ln);border-radius:6px;background:#fff;cursor:pointer}
+.sapChk{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;white-space:nowrap}
+.sapChk input{width:auto}
+.sapTag{margin-left:6px;font-size:10px;font-weight:900;color:var(--gd);background:var(--gdb);border:1px solid var(--gdl);border-radius:999px;padding:1px 7px}
 .dangerZone h3{margin:0 0 6px;color:#9b2222}
 .metricBad{color:var(--bad)}
 .metricLink{cursor:pointer}
@@ -668,6 +679,7 @@ let activeBasicDept = 'トリマー';
 let activePrefStaff = '全体';
 let activePrefDept = 'トリマー';
 let prefsTab = 'request'; // シフト希望・全体予定パネルのタブ: request（シフト希望）/ event（全体予定）
+let shiftAppearanceOpen = false; // 基本ルール：区分の見た目「詳細編集」の開閉
 let basicTab = 'common'; // 基本ルールパネルのタブ: common（共通ルール）/ dept（部署別ルール）
 let activePrefEditIndex = null;
 let generationRunning = false;
@@ -793,6 +805,37 @@ function isLateGroup(v, dayObj=null){ return groupOfShift(v, dayObj)==='L'; }
 function groupLabel(g){ return GROUP_LABEL[g] || g || ''; }
 function groupKeyFromLabel(label){ const hit=Object.entries(GROUP_LABEL).find(([,v])=>v===label); return hit ? hit[0] : label; }
 function shiftGroupClass(v, dayObj=null){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'shiftGroup-OFF'; if(v===PAID_LEAVE) return 'shiftGroup-PAID'; if(isCustomShift(v)) return 'shiftGroup-OTHER'; const g=groupOfShift(v, dayObj); return g ? `shiftGroup-${g}` : ''; }
+// ===== シフト区分の見た目（区分コード別の上書き） =====
+const APPEARANCE_DEFAULTS = {
+  E:{bg:'#FBE7CE',fg:'#8A4E12',border:'#E59A3A',bold:false,thick:true},
+  M:{bg:'#E9EFE8',fg:'#566E5C',border:'#CFDACE',bold:false,thick:false},
+  L:{bg:'#EFE9F5',fg:'#6B5894',border:'#DACFE7',bold:false,thick:false},
+  OFF:{bg:'#E7E7EC',fg:'#5C5C66',border:'#CBCBD3',bold:false,thick:false},
+  PAID:{bg:'#FFF4A8',fg:'#6A5600',border:'#E1C642',bold:false,thick:false},
+  OTHER:{bg:'#FDECEC',fg:'#8B2C2C',border:'#E5B6B6',bold:false,thick:false}
+};
+// 見た目編集・上書きのキー：休=OFF / 有休=PAID / その他=OTHER / 勤務区分はコード文字列
+function appearanceKey(v){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'OFF'; if(v===PAID_LEAVE) return 'PAID'; if(isCustomShift(v)) return 'OTHER'; return v; }
+function saClass(k){ return 'sa'+String(hashString(k)).replace(/[^a-zA-Z0-9_]/g,'_'); }
+// コードの代表グループ（平日割当）。既定の見た目を決めるのに使う。
+function codeWeekGroup(code){ const d=(state.shiftDefs||[]).find(x=>x.code===code); return (d && ['E','M','L'].includes(d.weekGroup)) ? d.weekGroup : 'M'; }
+// あるキーの既定の見た目（未カスタム時に編集UIへ表示する値）
+function defaultAppearanceForKey(key){ const g = (key==='OFF'||key==='PAID'||key==='OTHER') ? key : codeWeekGroup(key); return {...(APPEARANCE_DEFAULTS[g]||APPEARANCE_DEFAULTS.M)}; }
+// あるキーの実効の見た目（上書きがあればマージ、なければ既定）
+function effectiveAppearance(key){ const a=state.shiftAppearance&&state.shiftAppearance[key]; return a ? {...defaultAppearanceForKey(key), ...a} : defaultAppearanceForKey(key); }
+// セルに付ける上書き用クラス（上書きがある時だけ）
+function appearanceClassFor(v){ const k=appearanceKey(v); return (k && state.shiftAppearance && state.shiftAppearance[k]) ? saClass(k) : ''; }
+// セルの区分表示クラス：グループ色（既定）＋区分別上書き
+function shiftCellClasses(v, dayObj=null){ const g=shiftGroupClass(v, dayObj); const a=appearanceClassFor(v); return a ? `${g} ${a}` : g; }
+// 上書きから動的CSSを生成し、<head>へ反映する
+function shiftAppearanceCss(){
+  const a=state.shiftAppearance||{}; let css='';
+  for(const k in a){ const s=a[k]; if(!s||typeof s!=='object') continue; const cls=saClass(k); const eff={...defaultAppearanceForKey(k), ...s};
+    css+=`.shiftView.${cls},.editableSelect.${cls}{background:${eff.bg}!important;color:${eff.fg}!important;border:${eff.thick?3:1.6}px solid ${eff.border}!important;font-weight:${eff.bold?900:700}!important}`;
+  }
+  return css;
+}
+function applyShiftAppearanceStyle(){ if(typeof document==='undefined') return; let el=document.getElementById('shiftAppearanceStyle'); if(!el){ el=document.createElement('style'); el.id='shiftAppearanceStyle'; (document.head||document.documentElement).appendChild(el); } el.textContent=shiftAppearanceCss(); }
 function dayColClass(day){ return day.closure ? 'closureHead' : (day.closed ? 'closedHead' : (day.holType ? 'weekendCol' : '')); }
 // ===== 全体スケジュール（定期スケジュール＋全体予定）：シフト表の日付下にタグ表示 =====
 const WD_FULL = WD; // 曜日ラベルは WD と同一（重複定義を避けて一元化）
@@ -1127,6 +1170,7 @@ function defaultState(){
     deptMaxNeeds: defaultDeptMaxNeeds(),
     deptGroupEnabled: defaultDeptGroupEnabled(),
     shiftDefs: defaultShiftDefs(),
+    shiftAppearance: {},                          // 区分コード別の見た目上書き {code:{bg,fg,border,bold,thick}}
     generationSeeds: {},
     tags: DEFAULT_TAGS.slice(),
     staff: [],
@@ -1177,6 +1221,7 @@ function normalizeState(){
     }
   }
   state.shiftDefs = normalizeShiftDefs(state.shiftDefs);
+  if(!state.shiftAppearance || typeof state.shiftAppearance!=='object' || Array.isArray(state.shiftAppearance)) state.shiftAppearance = {};
   if(!state.generationSeeds || typeof state.generationSeeds !== 'object') state.generationSeeds = {};
   rebuildShiftRuntime();
   // タグマスタ（旧:役職）。未定義なら既定タグで初期化。
@@ -1493,8 +1538,51 @@ function renderShiftDefEditor(){
   const defs=normalizeShiftDefs(state.shiftDefs);
   let html='<div class="shiftDefEditor"><div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>操作</th></tr></thead><tbody>';
   html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
-  html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div></div>';
+  html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
+  html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" onclick="toggleShiftAppearanceEditor()">${shiftAppearanceOpen?'▼':'▶'} 区分の見た目を詳細編集（背景・文字・枠・太字・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
+  html += '</div>';
   box.innerHTML=html;
+}
+function toggleShiftAppearanceEditor(){ pullInputs(); shiftAppearanceOpen=!shiftAppearanceOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
+function appearancePreviewClass(key){ return (key==='OFF')?'shiftGroup-OFF':(key==='PAID')?'shiftGroup-PAID':(key==='OTHER')?'shiftGroup-OTHER':('shiftGroup-'+codeWeekGroup(key)); }
+function shiftAppearanceRowsHtml(){
+  const codes=[...new Set((state.shiftDefs||[]).map(d=>d.code).filter(Boolean))];
+  const keys=codes.concat(['OFF','PAID','OTHER']);
+  const labelFor=k=>k==='OFF'?'休':k==='PAID'?'有休':k==='OTHER'?'その他':k;
+  return keys.map(k=>{ const eff=effectiveAppearance(k); const idk=saClass(k); const over=!!(state.shiftAppearance&&state.shiftAppearance[k]);
+    return `<tr class="sapRow"><td><span class="shiftView ${appearancePreviewClass(k)} ${over?idk:''}">${esc(labelFor(k))}</span>${over?'<span class="sapTag">変更</span>':''}</td>`+
+      `<td><input type="color" data-k="${escAttr(k)}" id="bg_${idk}" value="${eff.bg}" onchange="updateShiftAppearanceRow(this)" title="背景色"></td>`+
+      `<td><input type="color" data-k="${escAttr(k)}" id="fg_${idk}" value="${eff.fg}" onchange="updateShiftAppearanceRow(this)" title="文字色"></td>`+
+      `<td><input type="color" data-k="${escAttr(k)}" id="bd_${idk}" value="${eff.border}" onchange="updateShiftAppearanceRow(this)" title="枠色"></td>`+
+      `<td><label class="sapChk"><input type="checkbox" data-k="${escAttr(k)}" id="bold_${idk}" ${eff.bold?'checked':''} onchange="updateShiftAppearanceRow(this)">太字</label></td>`+
+      `<td><label class="sapChk"><input type="checkbox" data-k="${escAttr(k)}" id="thick_${idk}" ${eff.thick?'checked':''} onchange="updateShiftAppearanceRow(this)">太枠</label></td>`+
+      `<td><button type="button" class="btn2" data-k="${escAttr(k)}" onclick="resetShiftAppearanceRow(this)" ${over?'':'disabled'}>既定</button></td></tr>`;
+  }).join('');
+}
+function renderShiftAppearancePanelHtml(){
+  return `<div class="sapPanel"><div class="small">区分ごとに背景・文字・枠の色、太字・太枠を設定できます。設定は全体シフト表・部署別シフト・印刷／PDFに反映されます（既定：早番＝オレンジ、休＝グレー）。</div>`+
+    `<div class="sapActions"><button type="button" class="btnCaution" onclick="resetAllShiftAppearance()">全区分を既定に戻す</button></div>`+
+    `<div class="tableWrap"><table class="sapTable"><thead><tr><th>区分</th><th>背景</th><th>文字</th><th>枠</th><th>太字</th><th>太枠</th><th>操作</th></tr></thead><tbody>${shiftAppearanceRowsHtml()}</tbody></table></div></div>`;
+}
+function updateShiftAppearanceRow(el){
+  const key=el.dataset.k; if(key===undefined) return; const idk=saClass(key); const g=id=>document.getElementById(id);
+  const bg=g('bg_'+idk)?.value, fg=g('fg_'+idk)?.value, bd=g('bd_'+idk)?.value;
+  const bold=!!g('bold_'+idk)?.checked, thick=!!g('thick_'+idk)?.checked;
+  if(!bg||!fg||!bd) return;
+  pullInputs();
+  if(!state.shiftAppearance||typeof state.shiftAppearance!=='object') state.shiftAppearance={};
+  state.shiftAppearance[key]={bg,fg,border:bd,bold,thick};
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+}
+function resetShiftAppearanceRow(el){
+  const key=el.dataset.k; if(key===undefined||!state.shiftAppearance) return;
+  pullInputs(); delete state.shiftAppearance[key];
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+}
+function resetAllShiftAppearance(){
+  if(!confirm('すべての区分の見た目を既定（早番＝オレンジ、休＝グレー、ほかは標準）に戻しますか？')) return;
+  pullInputs(); state.shiftAppearance={};
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
 function pullShiftDefsFromInputs(){
   const rows=[...document.querySelectorAll('.shiftDefRow')];
@@ -2434,7 +2522,7 @@ function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(sch
 function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
 function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} }
 // バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
-function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs])); }catch(e){ return String(Math.random()); } }
+function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance])); }catch(e){ return String(Math.random()); } }
 // 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
 function stepsDone(){
   const req = requiredDepartments();
@@ -4243,10 +4331,10 @@ function renderDeptShiftPreview(){
       if(closureWork){ err='臨時休業日に出勤が入っています。休業日のため通常は休みです。'; errCls='errorCell'; }
       const colErr=dayCountIssueClass(dayIssues.get(day.key)||[]);
       if(editable && !lockedLabel){
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" title="${escAttr(err)}"><select class="editableSelect ${shiftGroupClass(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }else{
         const title=lockedLabel?`${lockedLabel} のため編集不可`:err;
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" title="${escAttr(title)}"><span class="shiftView ${shiftGroupClass(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }
     }
     const dc=getStaffDeptCounts(st.name, activeBuildDept, days, schedule, assignDept);
@@ -4318,7 +4406,7 @@ function setShiftValue(key, staffName, value, targetDept, markLock=true, noRende
   if(noRender) return; // バッチ適用：呼び出し側で最後に1回だけ描画する
   persist(); renderAll(); restoreScrollState(pos);
 }
-function renderAll(){ renderDeptBuildPanel(); renderSummary(); renderCalendar(); renderMonthlyView(); renderStats(); renderObicView(); }
+function renderAll(){ applyShiftAppearanceStyle(); renderDeptBuildPanel(); renderSummary(); renderCalendar(); renderMonthlyView(); renderStats(); renderObicView(); }
 function renderSummary(){
   const days=getDays(); const warnings=validate(schedule,days); const shortageList=shortageDetails(days, schedule, assignDept); const shortage=shortageList.reduce((a,s)=>a+s.lack,0); const hard=warnings.filter(w=>w.level==='bad').length; const soft=warnings.filter(w=>w.level==='warn').length; const deptCount=DEPTS.filter(d=>state.staff.some(s=>s.dept===d)).length;
   document.getElementById('summary').innerHTML = `<div class="metric"><b>${days.length}</b><span>対象日数</span></div><div class="metric"><b>${formatPeriodShort()}</b><span>15日締め期間</span></div><div class="metric"><b>${state.staff.length}</b><span>スタッフ数</span></div><div class="metric"><b>${deptCount}</b><span>登録部署数</span></div><div class="metric"><b>${confirmedDeptList().length}</b><span>確定部署</span></div><div class="metric metricLink" role="button" tabindex="0" title="クリックで集計・警告を開く" onclick="showMenuPanel('stats')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showMenuPanel('stats');}"><b class="${shortage?'metricBad':''}">${shortage}</b><span>不足枠（必要人数未達）</span></div>`;
@@ -4353,7 +4441,7 @@ function renderCalendar(){
     const lockedLabel=staffLockedLabel(st);
     html+=`<tr><td class="deptCol sticky1"><span class="pill pDept">${esc(deptLabel(st.dept))}</span></td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); html+=`<td class="dateCol closureHead${work?' errorCell':''}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で変更可）'}">${work?`<span class="shiftView ${shiftGroupClass(ov, day)}">${esc(shiftLabel(ov))}</span>`:`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); html+=`<td class="dateCol closureHead${work?' errorCell':''}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で変更可）'}">${work?`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`:`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
@@ -4362,10 +4450,10 @@ function renderCalendar(){
       const lockMark='';
       const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'allowedErrorCell':'errorCell'):'';
       if(calendarEditMode && !confirmed){
-        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftGroupClass(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }else{
         const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
-        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" title="${escAttr(title)}"><span class="shiftView ${shiftGroupClass(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }
     }
     html+=`<td class="sumCol"><b>${c.total}</b></td><td class="sumCol">${c.E||0}</td><td class="sumCol">${c.M||0}</td><td class="sumCol">${c.L||0}</td></tr>`;
@@ -4444,7 +4532,7 @@ function renderMonthlyView(){
       const mini=(isWorkingShift(v)&&dep===MONTHLY_DEPT&&st.dept!==MONTHLY_DEPT)?'<div class="miniBadge">兼務</div>':'';
       const pref=preferenceForStaffMonthly(st.name, day);
       const hope=pref?`<span class="desiredOffMark">${isRestShift(pref.shift)?`${shiftLabel(pref.shift)}希望`:'希望'}</span>`:'';
-      html+=`<td class="dateCol ${dayColClass(day)}"><span class="shiftView ${show?shiftGroupClass(v, day):''}">${esc(show)}</span>${mini}${hope}</td>`;
+      html+=`<td class="dateCol ${dayColClass(day)}"><span class="shiftView ${show?shiftCellClasses(v, day):''}">${esc(show)}</span>${mini}${hope}</td>`;
     }
     const dc=getStaffDeptCounts(st.name, MONTHLY_DEPT, days, schedule, assignDept);
     html+=`<td class="sumCol"><b>${dc.total}</b></td><td class="sumCol">${dc.E||0}</td><td class="sumCol">${dc.M||0}</td><td class="sumCol">${dc.L||0}</td></tr>`;
@@ -4962,10 +5050,10 @@ thead{display:table-row-group}
 tr,td,th{break-inside:avoid;page-break-inside:avoid}
 tr.pbBefore{break-before:page;page-break-before:always}
 .shiftView{display:inline-block;min-width:16pt;border-radius:4pt;padding:1pt 2pt;font-weight:800;border:0.6pt solid #c4b9a8;background:#fff}
-.shiftGroup-E{background:#ffd43a!important;border:1pt solid #e8b000!important;color:#5c3d00!important}
+.shiftGroup-E{background:#FBE7CE!important;border:1pt solid #E59A3A!important;color:#8A4E12!important}
 .shiftGroup-M{background:#e7f1ea!important;border-color:#bcd6c2!important;color:#3f6f55!important}
 .shiftGroup-L{background:#f2eafd!important;border-color:#bda3e0!important;color:#5d398c!important}
-.shiftGroup-OFF{background:#2f6fd0!important;border:1pt solid #2f6fd0!important;color:#fff!important}
+.shiftGroup-OFF{background:#E7E7EC!important;border:1pt solid #CBCBD3!important;color:#5C5C66!important}
 .shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}
 .shiftGroup-OTHER{background:#fdf0f0!important;border-color:#dcb3b1!important;color:#8b3a38!important}
 .desiredOffMark{display:block;margin-top:1pt;font-size:5pt;color:#2f7d6d;font-weight:800}
@@ -5000,7 +5088,7 @@ tr.pbBefore{break-before:page;page-break-before:always}
   const toolbar = `<div class="printToolbar noprint"><button type="button" onclick="__doPrint()">印刷する</button><span class="printScaleControl"><label for="printScaleSel">ページ調整</label><select id="printScaleSel" onchange="__applyPrintScale(this.value)"><option value="balanced">見やすく分割（推奨・等倍）</option><option value="fit">1ページに収める（縮小）</option><option value="100">100%</option><option value="90">90%</option><option value="80">80%</option><option value="70">70%</option></select></span><span id="printPageNote" class="printNote"></span><span class="printNote">「見やすく分割」＝文字を縮小せず、行を切らずにページを分けます。プレビューの<b>緑の点線</b>がページの区切りです（A4横向き想定）。</span></div>`;
   // 印刷可能領域の高さは「幅 × 用紙の縦横比」で同一px尺に換算できる（表は width:100% で用紙幅いっぱいに描画されるため）。
   const fitScript = "(function(){var root=document.getElementById('printRoot');if(!root)return;function proxyH(){return root.clientWidth*(202/289);}function clearBreaks(){var rs=root.querySelectorAll('tr.pbBefore');for(var i=0;i<rs.length;i++){rs[i].classList.remove('pbBefore');}}function setScale(sc){if(sc<1){root.style.transform='scale('+sc+')';root.style.width=(100/sc)+'%';}else{root.style.transform='';root.style.width='';}}function note(txt){var n=document.getElementById('printPageNote');if(n)n.textContent=txt;}function balanced(){clearBreaks();setScale(1);var contentH=root.scrollHeight,pageH=proxyH();var pages=Math.max(1,Math.ceil(contentH/pageH));var table=root.querySelector('table');var rows=table?[].slice.call(table.querySelectorAll('tbody > tr')):[];if(pages>1&&rows.length>1){var per=Math.ceil(rows.length/pages);for(var i=per;i<rows.length;i+=per){rows[i].classList.add('pbBefore');}}note('等倍・推定 '+pages+'ページ（前ページの続きから・ヘッダー繰り返しなし）');}function fitOne(){clearBreaks();setScale(1);var sc=Math.max(0.5,Math.min(1,proxyH()/root.scrollHeight));setScale(sc);note((sc<1?('縮小 '+Math.round(sc*100)+'%・'):'等倍・')+'1ページ');}function fixed(sc){clearBreaks();setScale(sc);var pages=Math.max(1,Math.ceil((root.scrollHeight*sc)/proxyH()));note((sc<1?('縮小 '+Math.round(sc*100)+'%・'):'等倍・')+'推定 '+pages+'ページ');}window.__applyPrintScale=function(mode){if(mode==='balanced')balanced();else if(mode==='fit')fitOne();else fixed(parseInt(mode,10)/100);};window.__doPrint=function(){window.print();};setTimeout(function(){window.__applyPrintScale('balanced');},60);})();";
-  w.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${printCss}</style></head><body>${toolbar}<div id="printRoot"><h1>${esc(title)}</h1>${bodyHtml}</div><scr`+`ipt>${fitScript}</scr`+`ipt></body></html>`);
+  w.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${printCss}\n${shiftAppearanceCss()}</style></head><body>${toolbar}<div id="printRoot"><h1>${esc(title)}</h1>${bodyHtml}</div><scr`+`ipt>${fitScript}</scr`+`ipt></body></html>`);
   w.document.close(); w.focus();
 }
 function printableTableHtml(table, removeSums=false, blankEmptyCells=false){
@@ -5009,7 +5097,7 @@ function printableTableHtml(table, removeSums=false, blankEmptyCells=false){
   clone.querySelectorAll('.noPrintOutput,.manualText,.dayErrMark').forEach(el=>el.remove());
   // 印刷・PDFでは合計・早・中・遅カラムを省き、日付列を広く使う
   if(removeSums) clone.querySelectorAll('.sumCol').forEach(el=>el.remove());
-  clone.querySelectorAll('select').forEach(sel=>{ const span=document.createElement('span'); span.className='shiftView '+shiftGroupClass(sel.value); span.textContent=shiftLabel(sel.value)||''; sel.replaceWith(span); });
+  clone.querySelectorAll('select').forEach(sel=>{ const span=document.createElement('span'); span.className='shiftView '+shiftCellClasses(sel.value); span.textContent=shiftLabel(sel.value)||''; sel.replaceWith(span); });
   // 空欄セルは枠（空のピル）を出さず、出力後に手書き記入できる余白にする
   if(blankEmptyCells) clone.querySelectorAll('.shiftView').forEach(el=>{ if(!el.textContent.trim()) el.remove(); });
   let prevMonth='';
