@@ -236,6 +236,11 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .mcRow{display:flex;flex-wrap:wrap;gap:6px 14px}
 .mcChk{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;white-space:nowrap}
 .mcChk input{width:auto}
+.mcCountRow td{background:#FBF4E8;font-weight:800}
+.mcCountRow .staffCol{color:#8A4E12}
+.mcCountCell{text-align:center}
+.cqDivider{height:1px;background:var(--ln);margin:5px 2px}
+.cqMorning{background:#FBE7CE!important;color:#8A4E12!important;border:1px solid #E59A3A!important;font-weight:900}
 .dangerZone h3{margin:0 0 6px;color:#9b2222}
 .metricBad{color:var(--bad)}
 .metricLink{cursor:pointer}
@@ -1188,7 +1193,8 @@ function defaultState(){
     scheduleTags: DEFAULT_SCHEDULE_TAGS.slice(), // 全体スケジュールタグ一覧
     recurringSchedules: [],                       // 定期スケジュール（毎月/月末/毎週/第N/最終）
     scheduleEventsByPeriod: {},                    // 全体予定（締め月ごと）
-    morningCleanExclude: defaultMorningCleanExclude() // 朝掃除タグを付けない条件
+    morningCleanExclude: defaultMorningCleanExclude(), // 朝掃除タグを付けない条件
+    morningCleanOverrideByPeriod: {}                  // 朝掃除タグのセル別手動上書き（締め月ごと、key=dateKey|staff → true/false）
   };
 }
 function defaultMorningCleanExclude(){ return { depts:['管理'], events:[], weekdays:[] }; } // 既定：管理部署は除外
@@ -1235,6 +1241,7 @@ function normalizeState(){
   if(!state.shiftAppearance || typeof state.shiftAppearance!=='object' || Array.isArray(state.shiftAppearance)) state.shiftAppearance = {};
   if(!state.morningCleanExclude || typeof state.morningCleanExclude!=='object' || Array.isArray(state.morningCleanExclude)) state.morningCleanExclude = defaultMorningCleanExclude();
   for(const f of ['depts','events','weekdays']){ if(!Array.isArray(state.morningCleanExclude[f])) state.morningCleanExclude[f]=[]; }
+  if(!state.morningCleanOverrideByPeriod || typeof state.morningCleanOverrideByPeriod!=='object' || Array.isArray(state.morningCleanOverrideByPeriod)) state.morningCleanOverrideByPeriod = {};
   if(!state.generationSeeds || typeof state.generationSeeds !== 'object') state.generationSeeds = {};
   rebuildShiftRuntime();
   // タグマスタ（旧:役職）。未定義なら既定タグで初期化。
@@ -2535,7 +2542,7 @@ function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(sch
 function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
 function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} }
 // バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
-function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance, state.morningCleanExclude])); }catch(e){ return String(Math.random()); } }
+function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance, state.morningCleanExclude, state.morningCleanOverrideByPeriod])); }catch(e){ return String(Math.random()); } }
 // 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
 function stepsDone(){
   const req = requiredDepartments();
@@ -4147,13 +4154,44 @@ function morningCleanAuto(day, v, dept){
   if(dept==='用品' && tags.some(t=>String(t).includes('納品'))) return false; // 組み込み：納品×用品
   return true;
 }
-// 朝掃除タグの実効状態（フェーズ3で手動上書きを加味する）
-function morningCleanActive(staffName, day, v){ const st=findStaff(staffName); return morningCleanAuto(day, v, st?st.dept:''); }
+// 朝掃除タグの実効状態（手動上書きを加味）。勤務シフトのみ対象。
+function morningCleanActive(staffName, day, v){
+  if(!isWorkingShift(v)) return false;
+  const st=findStaff(staffName); const dept=st?st.dept:'';
+  const pk=periodKeyForDate(day.y, day.m, day.day);
+  const store=state.morningCleanOverrideByPeriod && state.morningCleanOverrideByPeriod[pk];
+  const ovr=store ? store[day.key+'|'+staffName] : undefined;
+  if(ovr===true) return true;   // 手動ON（勤務時のみ）
+  if(ovr===false) return false; // 手動OFF
+  return morningCleanAuto(day, v, dept);
+}
+// 全体シフト編集モード／部署別シフトのセルから、朝掃除を手動でON/OFF（付与・削除とも確認）。
+function toggleMorningCleanOverride(dayKey, staffName){
+  const day=dayByKey(getDays(), dayKey); if(!day) return;
+  const v=normalizeStoredShift(schedule[dayKey]?.[staffName]||'');
+  if(!isWorkingShift(v)){ alert('勤務シフトのセルにのみ朝掃除を付けられます。'); return; }
+  const st=findStaff(staffName); const cur=morningCleanActive(staffName, day, v); const want=!cur;
+  if(!confirm(`${staffName} の ${day.m}/${day.day} に朝掃除を${want?'付け':'外し'}ますか？`)) return;
+  const auto=morningCleanAuto(day, v, st?st.dept:''); const pk=periodKeyForDate(day.y, day.m, day.day);
+  if(!state.morningCleanOverrideByPeriod) state.morningCleanOverrideByPeriod={};
+  if(!state.morningCleanOverrideByPeriod[pk]) state.morningCleanOverrideByPeriod[pk]={};
+  const store=state.morningCleanOverrideByPeriod[pk], key=dayKey+'|'+staffName;
+  if(want===auto) delete store[key]; else store[key]=want; // 自動と一致するなら上書きを残さない
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+}
 // セル下に表示する朝掃除タグ（色は該当区分の色に合わせる）
 function morningCleanMarkHtml(staffName, day, v){
   if(!morningCleanActive(staffName, day, v)) return '';
   const a=effectiveAppearanceForDay(v, day);
   return `<span class="morningCleanMark" style="background:${a.bg};color:${a.fg};border-color:${a.border}">朝掃除</span>`;
+}
+// 全体シフト表の下に「朝掃除」日別合計行を作る（その日に朝掃除タグが付く人数）
+function renderMorningCleanRow(days, displaySchedule, staffList){
+  let total=0; const cells=days.map(day=>{
+    let n=0; for(const st of staffList){ const v=displaySchedule[day.key]?.[st.name]||''; if(morningCleanActive(st.name, day, v)) n++; }
+    total+=n; return `<td class="dateCol ${dayColClass(day)} mcCountCell">${n||''}</td>`;
+  }).join('');
+  return `<tr class="mcCountRow"><td class="deptCol sticky1"></td><td class="staffCol sticky2">朝掃除</td>${cells}<td class="sumCol"><b>${total}</b></td><td class="sumCol"></td><td class="sumCol"></td><td class="sumCol"></td></tr>`;
 }
 function renderMorningCleanSettings(){
   const box=document.getElementById('morningCleanSettings'); if(!box) return;
@@ -4521,6 +4559,7 @@ function renderCalendar(){
     }
     html+=`<td class="sumCol"><b>${c.total}</b></td><td class="sumCol">${c.E||0}</td><td class="sumCol">${c.M||0}</td><td class="sumCol">${c.L||0}</td></tr>`;
   }
+  html += renderMorningCleanRow(days, displaySchedule, sortedStaff);
   html += renderNeedRows(days, displaySchedule, displayAssignDept);
   html+='</tbody>'; tbl.innerHTML=html; const calLegend=document.getElementById('calendarShiftLegend'); if(calLegend) calLegend.innerHTML=shiftLegendHtml();
   requestAnimationFrame(updateCalendarHScroll);
@@ -4701,6 +4740,18 @@ function openCellQuickMenu(e, sel){
   for(const c of codes) wrap.appendChild(mkBtn(c+'：'+(SHIFT_TIMES[c]||''), c));
   m.appendChild(wrap);
   m.appendChild(mkBtn('その他（自由入力）…','__OTHER__'));
+  // 朝掃除タグの手動ON/OFF（単一セルのみ。勤務シフトに限る）
+  if(!batch){
+    const dayKey=sel.dataset.key, day=dayByKey(getDays(), dayKey), cv=normalizeStoredShift(schedule[dayKey]?.[staff]||'');
+    if(day && isWorkingShift(cv)){
+      const on=morningCleanActive(staff, day, cv);
+      const div=document.createElement('div'); div.className='cqDivider'; m.appendChild(div);
+      const tb=document.createElement('button'); tb.type='button'; tb.className='cqMorning'; tb.textContent=on?'朝掃除を外す':'朝掃除をつける';
+      tb.addEventListener('mousedown',ev=>ev.preventDefault());
+      tb.addEventListener('click',()=>{ closeCellQuickMenu(); toggleMorningCleanOverride(dayKey, staff); });
+      m.appendChild(tb);
+    }
+  }
   m.style.display='block';
   const mw=m.offsetWidth||180, mh=m.offsetHeight||260;
   let x=e.clientX, y=e.clientY;
