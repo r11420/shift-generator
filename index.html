@@ -12,7 +12,7 @@
   --e:#f0a63a; --m:#6fa8dc; --l:#a37ad6; --off:#d9d1c5; --bad:#c0605e; --warn:#b06a00;
   --mint:#e2f4ee; --mintInk:#2f7d6d;
   /* リデザイン用トークン（§3.1）。既存varは温存し、要所にこれらを適用する */
-  --sf:#FFFFFF; --iv:#FAF7EF; --bg2:#F5EEE0; --ink2:#6E6253; --ink3:#9C8F7D; --ln:#E6DCCB;
+  --sf:#FFFFFF; --iv:#FAF7EF; --mlk:#EFE6D5; --bg2:#F5EEE0; --ink2:#6E6253; --ink3:#9C8F7D; --ln:#E6DCCB;
   --sg:#6E9081; --sgd:#52735F; --sgs:#E7F0EA; --sgl:#C2D3C7;
   --rd:#BD544B; --rdb:#FBEDEB; --rdl:#E8C4BF;
   --gd:#A9781F; --gdb:#FAF2DE; --gdl:#E6D2A0;
@@ -25,17 +25,17 @@
   --font-table:"BIZ UDPGothic","Noto Sans JP","Yu Gothic UI",sans-serif;
 }
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(135deg,#f7f4ee,#eef3ec);color:var(--ink);font-family:var(--font-ui);font-weight:500;letter-spacing:.005em;font-size:15px;line-height:1.6}
+body{margin:0;background:var(--iv);color:var(--ink);font-family:var(--font-ui);font-weight:500;letter-spacing:.005em;font-size:15px;line-height:1.6}
 header{padding:22px 18px 12px;max-width:1500px;margin:auto}
 h1{font-size:26px;margin:0 0 6px;font-weight:900;letter-spacing:.02em}
 header p{margin:0;color:var(--muted);font-size:14px}
 .wrap{max-width:1500px;margin:auto;padding:0 18px 36px;display:grid;grid-template-columns:430px 1fr;gap:18px}
-.card{background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px}
 .card h2{font-size:17px;margin:0 0 12px}.card h3{font-size:14px;margin:14px 0 8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 label{font-weight:800;font-size:13px;color:#3a342e;display:block;margin:10px 0 5px}
 input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid #d8d0c5;border-radius:12px;padding:9px 10px;background:#fff;color:var(--ink)}
-textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padding:10px 12px;font-weight:900;cursor:pointer}.btn{background:var(--accent);color:#fff}.btn2{background:#fff;border:1px solid var(--line);color:var(--ink)}.btnDanger{background:#fff1f1;color:#9b2222;border:1px solid #f1c7c7}.btnCaution{background:var(--gdb);color:var(--gd);border:1px solid var(--gdl)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}.small{font-size:12px;color:var(--muted)}
+textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padding:10px 12px;font-weight:900;cursor:pointer}.btn{background:var(--sgd);color:#fff}.btn2{background:#fff;border:1px solid var(--line);color:var(--ink)}.btnDanger{background:#fff1f1;color:#9b2222;border:1px solid #f1c7c7}.btnCaution{background:var(--gdb);color:var(--gd);border:1px solid var(--gdl)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}.small{font-size:12px;color:var(--muted)}
 .staffItem{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px;margin:12px 0;box-shadow:0 1px 3px rgba(60,50,40,.06);transition:background .15s,box-shadow .15s,border-color .15s}
 /* 折りたたみ＝白カード（余白＋影＋ホバーで境界を表現）／展開＝テーマのセージ系で“編集中”を強調 */
 .staffItem.collapsed{background:#fff}
@@ -109,7 +109,7 @@ th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f
 
 
 .appLayout{max-width:1500px;margin:auto;padding:0 18px 36px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
-.menuRail{position:sticky;top:14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:7px}
+.menuRail{position:sticky;top:14px;background:var(--mlk);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:7px}
 .menuTitle{font-size:13px;font-weight:900;color:var(--muted);padding:4px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .menuItem{width:100%;text-align:left;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
 .menuItem span{font-weight:900;font-size:13px}.menuItem small{font-size:11px;color:var(--muted);font-weight:700;line-height:1.35}.menuItem.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 10px 24px rgba(72,111,78,.18)}.menuItem.active small{color:rgba(255,255,255,.86)}
@@ -549,7 +549,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
       <div class="footerNote">CSV出力・印刷・PDF保存は「全体シフト表」「✨ 部署別シフト作成」（トリマー月次表もこの中）に集約しています。この画面ではバックアップ取得・復元だけを扱います。</div>
       <div class="row" style="margin-top:8px">
         <button class="btn" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">バックアップ取得（JSON保存）</button>
-        <button class="btn2" onclick="openBackupFilePicker()"><img class="appicon" src="assets/icons/svg/action-restore.svg" alt="">バックアップから復元</button>
+        <button class="btnCaution" onclick="openBackupFilePicker()"><img class="appicon" src="assets/icons/svg/action-restore.svg" alt="">バックアップから復元</button>
         <input id="jsonFile" type="file" accept="application/json" class="hidden">
       </div>
       <div class="dangerZone">
