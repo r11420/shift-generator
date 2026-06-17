@@ -514,9 +514,8 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
       <div id="calendarModeBox" class="calendarHelp"></div>
       <div class="summary" id="summary"></div>
       <div class="legend">
-        <span class="pill pDept">部署別必要人数</span><span class="pill pGlobal">全体早/遅</span>
-        <span class="pill pE">早番</span><span class="pill pM">中番</span><span class="pill pL">遅番</span><span class="pill pOff">休/公休</span>
-        <span class="small">行＝スタッフ、列＝日付。全体表で編集した内容は同じデータとして部署別シフトにも反映されます。</span>
+        <span class="small" style="font-weight:800;align-self:center">区分の色：</span><span class="shiftView shiftGroup-E">早番</span><span class="shiftView shiftGroup-M">中番</span><span class="shiftView shiftGroup-L">遅番</span>
+        <span class="small" style="align-self:center">行＝スタッフ、列＝日付。色は「基本ルール＞シフト区分＞区分デザイン設定」で変更できます。全体表で編集した内容は同じデータとして部署別シフトにも反映されます。</span>
       </div>
       <div id="messages"></div>
       <div id="viewCalendar"><div class="tableWrap" id="calendarTableWrap"><table id="calendarTable"></table></div><div id="calendarShiftLegend"></div></div>
@@ -701,7 +700,7 @@ let activeBasicDept = 'トリマー';
 let activePrefStaff = '全体';
 let activePrefDept = 'トリマー';
 let prefsTab = 'request'; // シフト希望・全体予定パネルのタブ: request（シフト希望）/ event（全体予定）
-let shiftAppearanceOpen = false; // 基本ルール：区分の見た目「詳細設定」の開閉
+let shiftAppearanceOpen = false; // 基本ルール：区分デザイン設定の開閉
 let shiftDefOpen = false; // 基本ルール：シフト区分の折りたたみ
 let basicTab = 'common'; // 基本ルールパネルのタブ: common（共通ルール）/ dept（部署別ルール）
 let activePrefEditIndex = null;
@@ -828,7 +827,7 @@ function isLateGroup(v, dayObj=null){ return groupOfShift(v, dayObj)==='L'; }
 function groupLabel(g){ return GROUP_LABEL[g] || g || ''; }
 function groupKeyFromLabel(label){ const hit=Object.entries(GROUP_LABEL).find(([,v])=>v===label); return hit ? hit[0] : label; }
 function shiftGroupClass(v, dayObj=null){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'shiftGroup-OFF'; if(v===PAID_LEAVE) return 'shiftGroup-PAID'; if(isCustomShift(v)) return 'shiftGroup-OTHER'; const g=groupOfShift(v, dayObj); return g ? `shiftGroup-${g}` : ''; }
-// ===== シフト区分の見た目（区分コード別の上書き） =====
+// ===== 区分デザイン設定（グループ別の見た目上書き） =====
 const APPEARANCE_DEFAULTS = {
   E:{bg:'#FBE7CE',fg:'#8A4E12',border:'#E59A3A',thick:true},
   M:{bg:'#E9EFE8',fg:'#566E5C',border:'#CFDACE',thick:false},
@@ -837,24 +836,25 @@ const APPEARANCE_DEFAULTS = {
   PAID:{bg:'#FFF4A8',fg:'#6A5600',border:'#E1C642',thick:false},
   OTHER:{bg:'#FDECEC',fg:'#8B2C2C',border:'#E5B6B6',thick:false}
 };
-// 見た目編集・上書きのキー：休=OFF / 有休=PAID / その他=OTHER / 勤務区分はコード文字列
-function appearanceKey(v){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'OFF'; if(v===PAID_LEAVE) return 'PAID'; if(isCustomShift(v)) return 'OTHER'; return v; }
+// 区分デザインはグループ単位：早番=E / 中番=M / 遅番=L / 休=OFF / 有休=PAID / その他=OTHER
+const APPEARANCE_GROUPS=['E','M','L','OFF','PAID','OTHER'];
+const APPEARANCE_GROUP_LABEL={E:'早番',M:'中番',L:'遅番',OFF:'休',PAID:'有休',OTHER:'その他'};
+// 区分値→デザイングループ（休=OFF / 有休=PAID / その他=OTHER / 勤務はその日の早中遅）
+function appearanceKey(v, dayObj=null){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'OFF'; if(v===PAID_LEAVE) return 'PAID'; if(isCustomShift(v)) return 'OTHER'; return groupOfShift(v, dayObj) || 'M'; }
 function saClass(k){ return 'sa'+String(hashString(k)).replace(/[^a-zA-Z0-9_]/g,'_'); }
-// コードの代表グループ（平日割当）。既定の見た目を決めるのに使う。
+// コードの代表グループ（平日割当）。旧データのグループ移行などに使う。
 function codeWeekGroup(code){ const d=(state.shiftDefs||[]).find(x=>x.code===code); return (d && ['E','M','L'].includes(d.weekGroup)) ? d.weekGroup : 'M'; }
-// あるキーの既定の見た目（未カスタム時に編集UIへ表示する値）
-function defaultAppearanceForKey(key){ const g = (key==='OFF'||key==='PAID'||key==='OTHER') ? key : codeWeekGroup(key); return {...(APPEARANCE_DEFAULTS[g]||APPEARANCE_DEFAULTS.M)}; }
-// あるキーの実効の見た目（上書きがあればマージ、なければ既定）
-function effectiveAppearance(key){ const a=state.shiftAppearance&&state.shiftAppearance[key]; return a ? {...defaultAppearanceForKey(key), ...a} : defaultAppearanceForKey(key); }
-// セルに付ける上書き用クラス（上書きがある時だけ）
-function appearanceClassFor(v){ const k=appearanceKey(v); return (k && state.shiftAppearance && state.shiftAppearance[k]) ? saClass(k) : ''; }
-// セルの区分表示クラス：グループ色（既定）＋区分別上書き
-function shiftCellClasses(v, dayObj=null){ const g=shiftGroupClass(v, dayObj); const a=appearanceClassFor(v); return a ? `${g} ${a}` : g; }
-// 上書きから動的CSSを生成し、<head>へ反映する
+// グループの既定デザイン
+function defaultAppearanceForKey(group){ return {...(APPEARANCE_DEFAULTS[group]||APPEARANCE_DEFAULTS.M)}; }
+// グループの実効デザイン（上書きがあればマージ、なければ既定）
+function effectiveAppearance(group){ const a=state.shiftAppearance&&state.shiftAppearance[group]; return a ? {...defaultAppearanceForKey(group), ...a} : defaultAppearanceForKey(group); }
+// セルの区分表示クラス：グループ色（区分デザイン設定が反映される）
+function shiftCellClasses(v, dayObj=null){ return shiftGroupClass(v, dayObj); }
+// グループ別デザインの上書きから動的CSSを生成し、<head>へ反映する（同じグループの全区分にまとめて適用）
 function shiftAppearanceCss(){
   const a=state.shiftAppearance||{}; let css='';
-  for(const k in a){ const s=a[k]; if(!s||typeof s!=='object') continue; const cls=saClass(k); const eff={...defaultAppearanceForKey(k), ...s};
-    css+=`.shiftView.${cls},.editableSelect.${cls}{background:${eff.bg}!important;color:${eff.fg}!important;border:${eff.thick?3:1.6}px solid ${eff.border}!important}`;
+  for(const g of APPEARANCE_GROUPS){ const s=a[g]; if(!s||typeof s!=='object') continue; const eff={...defaultAppearanceForKey(g), ...s};
+    css+=`.shiftView.shiftGroup-${g},.editableSelect.shiftGroup-${g}{background:${eff.bg}!important;color:${eff.fg}!important;border:${eff.thick?3:1.6}px solid ${eff.border}!important}`;
   }
   return css;
 }
@@ -1197,7 +1197,7 @@ function defaultState(){
     deptMaxNeeds: defaultDeptMaxNeeds(),
     deptGroupEnabled: defaultDeptGroupEnabled(),
     shiftDefs: defaultShiftDefs(),
-    shiftAppearance: {},                          // 区分コード別の見た目上書き {code:{bg,fg,border,bold,thick}}
+    shiftAppearance: {},                          // 区分デザイン設定：グループ別の上書き {E|M|L|OFF|PAID|OTHER:{bg,fg,border,thick}}
     generationSeeds: {},
     tags: DEFAULT_TAGS.slice(),
     staff: [],
@@ -1252,6 +1252,9 @@ function normalizeState(){
   }
   state.shiftDefs = normalizeShiftDefs(state.shiftDefs);
   if(!state.shiftAppearance || typeof state.shiftAppearance!=='object' || Array.isArray(state.shiftAppearance)) state.shiftAppearance = {};
+  // 区分デザインはグループ別（E/M/L/OFF/PAID/OTHER）。旧・区分コード別の設定はグループへ移行する。
+  { const VALID=['E','M','L','OFF','PAID','OTHER']; const src=state.shiftAppearance;
+    if(Object.keys(src).some(k=>!VALID.includes(k))){ const out={}; for(const k in src){ const v=src[k]; if(!v||typeof v!=='object') continue; const g=VALID.includes(k)?k:codeWeekGroup(k); if(VALID.includes(g)&&!out[g]) out[g]=v; } state.shiftAppearance=out; } }
   if(!state.morningCleanExclude || typeof state.morningCleanExclude!=='object' || Array.isArray(state.morningCleanExclude)) state.morningCleanExclude = defaultMorningCleanExclude();
   // 旧形式（depts/events/weekdays のフラット指定）→ 部署別（byDept）へ移行
   if(!state.morningCleanExclude.byDept){
@@ -1594,19 +1597,16 @@ function renderShiftDefEditor(){
     html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
     html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
   }
-  html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" data-sapact="toggle">${shiftAppearanceOpen?'▼':'▶'} 区分の見た目を詳細設定（背景・文字・枠・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
+  html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" data-sapact="toggle">${shiftAppearanceOpen?'▼':'▶'} 区分デザイン設定（背景・文字・枠・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
   html += '</div>';
   box.innerHTML=html;
 }
 function toggleShiftAppearanceEditor(){ pullInputs(); shiftAppearanceOpen=!shiftAppearanceOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
 function toggleShiftDefEditor(){ pullInputs(); shiftDefOpen=!shiftDefOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
-function appearancePreviewClass(key){ return (key==='OFF')?'shiftGroup-OFF':(key==='PAID')?'shiftGroup-PAID':(key==='OTHER')?'shiftGroup-OTHER':('shiftGroup-'+codeWeekGroup(key)); }
+function appearancePreviewClass(group){ return 'shiftGroup-'+group; }
 function shiftAppearanceRowsHtml(){
-  const codes=[...new Set((state.shiftDefs||[]).map(d=>d.code).filter(Boolean))];
-  const keys=codes.concat(['OFF','PAID','OTHER']);
-  const labelFor=k=>k==='OFF'?'休':k==='PAID'?'有休':k==='OTHER'?'その他':k;
-  return keys.map(k=>{ const eff=effectiveAppearance(k); const idk=saClass(k); const over=!!(state.shiftAppearance&&state.shiftAppearance[k]);
-    return `<tr class="sapRow"><td><span class="shiftView ${appearancePreviewClass(k)} ${over?idk:''}">${esc(labelFor(k))}</span>${over?'<span class="sapTag">変更</span>':''}</td>`+
+  return APPEARANCE_GROUPS.map(k=>{ const eff=effectiveAppearance(k); const idk=saClass(k); const over=!!(state.shiftAppearance&&state.shiftAppearance[k]); const label=APPEARANCE_GROUP_LABEL[k]||k;
+    return `<tr class="sapRow"><td><span class="shiftView ${appearancePreviewClass(k)}">${esc(label)}</span>${over?'<span class="sapTag">変更</span>':''}</td>`+
       `<td><input type="color" class="sapCtl" data-k="${escAttr(k)}" id="bg_${idk}" value="${eff.bg}" title="背景色"></td>`+
       `<td><input type="color" class="sapCtl" data-k="${escAttr(k)}" id="fg_${idk}" value="${eff.fg}" title="文字色"></td>`+
       `<td><input type="color" class="sapCtl" data-k="${escAttr(k)}" id="bd_${idk}" value="${eff.border}" title="枠色"></td>`+
@@ -1615,9 +1615,9 @@ function shiftAppearanceRowsHtml(){
   }).join('');
 }
 function renderShiftAppearancePanelHtml(){
-  return `<div class="sapPanel"><div class="small">区分ごとに背景・文字・枠の色、太枠を設定できます。設定は全体シフト表・部署別シフト・印刷／PDFに反映されます（既定：早番＝オレンジ、休＝グレー）。</div>`+
-    `<div class="sapActions"><button type="button" class="btnCaution" data-sapact="reset-all">全区分を既定に戻す</button></div>`+
-    `<div class="tableWrap"><table class="sapTable"><thead><tr><th>区分</th><th>背景</th><th>文字</th><th>枠</th><th>太枠</th><th>操作</th></tr></thead><tbody>${shiftAppearanceRowsHtml()}</tbody></table></div></div>`;
+  return `<div class="sapPanel"><div class="small"><b>早番・中番・遅番・休・有休・その他</b>の6グループごとに背景・文字・枠の色、太枠を設定します。同じグループのすべての区分（例：早番ならE・Iなど）にまとめて反映されます。設定は全体シフト表・部署別シフト・印刷／PDFに反映されます（既定：早番＝オレンジ、休＝グレー）。</div>`+
+    `<div class="sapActions"><button type="button" class="btnCaution" data-sapact="reset-all">全グループを既定に戻す</button></div>`+
+    `<div class="tableWrap"><table class="sapTable"><thead><tr><th>グループ</th><th>背景</th><th>文字</th><th>枠</th><th>太枠</th><th>操作</th></tr></thead><tbody>${shiftAppearanceRowsHtml()}</tbody></table></div></div>`;
 }
 // 見た目編集はイベント委譲で処理（動的生成の input でも確実に発火させる）
 function bindShiftAppearanceDelegation(){
@@ -1643,7 +1643,7 @@ function updateShiftAppearanceRow(el){
   applyShiftAppearanceStyle();
   // 入力欄は作り直さず、行内のプレビュー・操作だけ更新（色選択中の値が戻る問題を防ぐ）
   const row=el.closest('.sapRow');
-  if(row){ const prev=row.querySelector('.shiftView'); if(prev){ prev.className='shiftView '+appearancePreviewClass(key)+' '+idk; if(!prev.parentNode.querySelector('.sapTag')){ const tag=document.createElement('span'); tag.className='sapTag'; tag.textContent='変更'; prev.parentNode.appendChild(tag); } }
+  if(row){ const prev=row.querySelector('.shiftView'); if(prev){ prev.className='shiftView '+appearancePreviewClass(key); if(!prev.parentNode.querySelector('.sapTag')){ const tag=document.createElement('span'); tag.className='sapTag'; tag.textContent='変更'; prev.parentNode.appendChild(tag); } }
     const rb=row.querySelector('[data-sapact="reset-row"]'); if(rb) rb.disabled=false; }
   persist(); renderAll();
 }
@@ -1653,7 +1653,7 @@ function resetShiftAppearanceRow(el){
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
 function resetAllShiftAppearance(){
-  if(!confirm('すべての区分の見た目を既定（早番＝オレンジ、休＝グレー、ほかは標準）に戻しますか？')) return;
+  if(!confirm('すべてのグループの区分デザインを既定（早番＝オレンジ、休＝グレー、ほかは標準）に戻しますか？')) return;
   pullInputs(); state.shiftAppearance={};
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
@@ -4196,12 +4196,7 @@ function preferenceForStaffDay(staffName, day){ return activePreferences().find(
 function hopeMarkHtml(staffName, day, v){ const p=preferenceForStaffDay(staffName, day); if(!p) return ''; const ps=normalizeStoredShift(p.shift); const label=isRestShift(ps)?`${shiftLabel(ps)}希望`:'希望'; return `<span class="desiredOffMark">${label}</span>`; }
 // ===== 朝そうじタグ =====
 // 区分の実効の見た目（当日のグループ色を反映）。朝そうじタグの色合わせに使う。
-function effectiveAppearanceForDay(v, day){
-  const k=appearanceKey(v); const over=state.shiftAppearance&&state.shiftAppearance[k];
-  if(over) return {...defaultAppearanceForKey(k), ...over};
-  const g = (k==='OFF'||k==='PAID'||k==='OTHER') ? k : (groupOfShift(v, day)||codeWeekGroup(k));
-  return {...(APPEARANCE_DEFAULTS[g]||APPEARANCE_DEFAULTS.M)};
-}
+function effectiveAppearanceForDay(v, day){ return effectiveAppearance(appearanceKey(v, day)); }
 // 朝そうじの自動判定：早番の勤務に付ける。所属部署ごとの除外条件に当たる場合は付けない。
 function morningCleanAuto(day, v, dept){
   if(!isWorkingShift(v) || !isEarlyGroup(v, day)) return false;
