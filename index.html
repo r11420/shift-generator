@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KJM Shift＋</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><g fill=%22none%22 stroke=%22%2352735F%22 stroke-width=%222.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><rect x=%225%22 y=%227%22 width=%2222%22 height=%2220%22 rx=%223%22/><path d=%22M5 12h22M11 4v5M21 4v5%22/></g></svg>">
 <style>
 :root{
   --bg:#f6f4ef; --panel:#fff; --ink:#27231f; --muted:#6f675e; --line:#e6dfd4;
@@ -414,7 +414,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
 <body>
 <header>
   <div class="headerMain">
-    <h1>🐾 KJM Shift＋</h1>
+    <h1>KJM Shift＋</h1>
     <p>部署ごとに「自動作成 → 確認 → 確定」で全体シフトができあがります。入力した内容はこの端末の中にだけ自動保存され、外部には送信されません。</p>
   </div>
   <div class="manualBtns noPrint">
@@ -546,7 +546,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
       <div class="panelHead noPrint">
         <div><h2><img class="appicon xl" src="assets/icons/svg/nav-backup.svg" alt="">バックアップ</h2><p>すべての締め月の設定・作成済みシフト・希望をまるごと1つのJSONファイルとして取得・復元できます。端末の変更や万一のデータ消失に備えて定期的に取得してください。</p></div>
       </div>
-      <div class="footerNote">CSV出力・印刷・PDF保存は「全体シフト表」「✨ 部署別シフト作成」（トリマー月次表もこの中）に集約しています。この画面ではバックアップ取得・復元だけを扱います。</div>
+      <div class="footerNote">CSV出力・印刷・PDF保存は「全体シフト表」「部署別シフト作成」（トリマー月次表もこの中）に集約しています。この画面ではバックアップ取得・復元だけを扱います。</div>
       <div class="row" style="margin-top:8px">
         <button class="btn" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">バックアップ取得（JSON保存）</button>
         <button class="btnCaution" onclick="openBackupFilePicker()"><img class="appicon" src="assets/icons/svg/action-restore.svg" alt="">バックアップから復元</button>
@@ -1573,7 +1573,7 @@ function staffTagFilterBarHtml(){
 function renderTagManager(){
   const box=document.getElementById('tagManager'); if(!box) return;
   box.innerHTML = `<div class="small">スタッフに付けられるタグを管理します。名前を変更すると付与済みスタッフのタグも一括で変わり、削除すると全スタッフから外れます。◀▶で並び順を変更できます（選択肢・絞り込みの表示順に反映）。</div>
-    <div class="tagChipList">${state.tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveMasterTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameMasterTag(${i})">✎</button><button type="button" class="tagDel" title="削除" onclick="deleteMasterTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveMasterTag(${i},1)" ${i===state.tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
+    <div class="tagChipList">${state.tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveMasterTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameMasterTag(${i})"></button><button type="button" class="tagDel" title="削除" onclick="deleteMasterTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveMasterTag(${i},1)" ${i===state.tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addMasterTag()">＋ タグ追加</button></div>`;
 }
 function moveMasterTag(i, dir){
@@ -1621,7 +1621,7 @@ function renderScheduleTagManager(){
   const box=document.getElementById('scheduleTagManager'); if(!box) return;
   const tags=state.scheduleTags||[];
   box.innerHTML = `<div class="small">「定期スケジュール」「全体予定」で選べるタグを管理します。シフト表の日付の下に表示されます。</div>
-    <div class="tagChipList">${tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveScheduleTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameScheduleTag(${i})">✎</button><button type="button" class="tagDel" title="削除" onclick="deleteScheduleTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveScheduleTag(${i},1)" ${i===tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
+    <div class="tagChipList">${tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveScheduleTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameScheduleTag(${i})"></button><button type="button" class="tagDel" title="削除" onclick="deleteScheduleTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveScheduleTag(${i},1)" ${i===tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addScheduleTag()">＋ タグ追加</button></div>`;
 }
 function moveScheduleTag(i, dir){ pullInputs(); const j=i+dir; if(j<0||j>=state.scheduleTags.length) return; const t=state.scheduleTags[i]; state.scheduleTags[i]=state.scheduleTags[j]; state.scheduleTags[j]=t; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
@@ -1729,7 +1729,7 @@ function renderStaffList(){
           <div class="staffSummaryName"><b>${esc(s.name||'未入力スタッフ')}</b>${s.kana?`<span class="summaryKana">${esc(s.kana)}</span>`:''}</div>
           <div class="staffSummaryMeta">${isValidEmpNo(s.empNo)?`<span class="empNoBadge">No.${esc(s.empNo)}</span>`:'<span class="empNoBadge empNoMissing">番号未設定</span>'}<span class="pill pDept">${esc(deptLabel(s.dept))}</span>${tagBadgesHtml(s)}${s.maxDays?`<span class="limitBadge">上限${s.maxDays}日</span>`:''}</div>
         </div>
-        <span class="staffOpenHint" aria-hidden="true">✎ 編集</span>
+        <span class="staffOpenHint" aria-hidden="true">編集</span>
       </div>
     </div>`;
     // 姓/名・よみがなは保存済みの分割値を使う。未正規化データは結合文字列から分割して表示（1回だけ算出）。
@@ -1738,7 +1738,7 @@ function renderStaffList(){
     return `
     <div class="staffItem" data-i="${i}" data-staff-id="${escAttr(s.id)}" data-local-idx="${localIdx}" data-sname="${escAttr(s.name||'未入力スタッフ')}" data-skana="${escAttr(s.kana||'')}">
       <div class="staffHead" onclick="onStaffHeadClick(event,'${escAttr(s.id)}')" title="この見出しエリアをクリックで折りたたみ">
-        <div class="staffNameLine"><input class="stSei stNamePart" id="stSei_${escAttr(s.id)}" value="${esc(enm.sei)}" placeholder="姓 例：山田"><input class="stMei stNamePart" id="stMei_${escAttr(s.id)}" value="${esc(enm.mei)}" placeholder="名 例：太郎"><span class="headTags">${tagBadgesHtml(s)}</span><span class="editingBadge">✎ 編集中</span><span class="collapseHint" aria-hidden="true">▲ 閉じる</span></div>
+        <div class="staffNameLine"><input class="stSei stNamePart" id="stSei_${escAttr(s.id)}" value="${esc(enm.sei)}" placeholder="姓 例：山田"><input class="stMei stNamePart" id="stMei_${escAttr(s.id)}" value="${esc(enm.mei)}" placeholder="名 例：太郎"><span class="headTags">${tagBadgesHtml(s)}</span><span class="editingBadge">編集中</span><span class="collapseHint" aria-hidden="true">▲ 閉じる</span></div>
         <select class="stDept" id="stDept_${escAttr(s.id)}"><option value="" ${s.dept===''?'selected':''}>（部署未設定）</option>${DEPTS.map(d=>`<option value="${esc(d)}" ${s.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
       </div>
       <div class="staffDetails">
@@ -2433,8 +2433,8 @@ function renderDeptBuildPanel(){
         <span class="vDivider" aria-hidden="true"></span>
         <button class="btn2 resetBtn" onclick="resetDeptSchedule(activeBuildDept)" ${generationRunning?'disabled':''} ${isDeptConfirmed(activeBuildDept)?'disabled title="再編集してから実行できます"':'title="この締め月のこの部署のシフトをすべて空欄にします"'}><img class="appicon" src="assets/icons/svg/clear-month.svg" alt="">この締め月のシフトを空欄にする</button>
       </div>
-      ${showErrNote?`<div class="confirmBlockNote">⚠ 未解消のエラーが ${unresolvedBad}件 あります。確定するには、エラーを解消または許容する必要があります（下の「下書きチェック」で確認・許容できます）。</div>`:''}
-      <div class="backupNudge">💾 編集が一段落したら、メニュー「バックアップ」からの取得をおすすめします。</div>
+      ${showErrNote?`<div class="confirmBlockNote">未解消のエラーが ${unresolvedBad}件 あります。確定するには、エラーを解消または許容する必要があります（下の「下書きチェック」で確認・許容できます）。</div>`:''}
+      <div class="backupNudge">編集が一段落したら、メニュー「バックアップ」からの取得をおすすめします。</div>
     </div>`;
   const footerNote = `<div class="footerNote">自動作成では、固定公休日・休希望の日だけ「休」を入れ、それ以外の所属スタッフは「入れるシフト」からいずれかの区分を設定します。エラーが出た場合は、同日や前後の日程で他スタッフとの区分交換・区分変更による自動調整を試み、やむを得ない場合のみ赤いセルと警告でお知らせします（自動では「休」を入れません）。「入れるシフト」が空のスタッフは公休・希望休のみ自動設定し、それ以外は空欄のままにします。前月末の確定シフトとのつながり（連勤・遅番→早番）もチェックします。確定後は、全体シフト表上の該当部署セルが編集不可になります。再編集を押すと再度編集・再生成できます。</div>`;
   // 締め月はメニュー上部のバッジで全ページ共通管理（ここでは表示のみ）
@@ -2442,7 +2442,7 @@ function renderDeptBuildPanel(){
   const periodControl = `<div class="currentPeriodBadge" style="margin:0 0 12px"><div class="periodBadgeTitle">作成対象の締め月</div><div class="periodBig">${state.year}年${state.month}月締め</div><div class="periodRange">対象期間：${pb.start.getFullYear()}/${pb.start.getMonth()+1}/${pb.start.getDate()}〜${pb.end.getFullYear()}/${pb.end.getMonth()+1}/${pb.end.getDate()}　<span class="small">変更はメニューの「締め月」から</span></div></div>`;
   const monthlyBlock = activeBuildDept===MONTHLY_DEPT ? `<div class="deptActionBox monthlyBox">
       <div class="panelHead noPrint">
-        <div><h3 style="margin:0">🐩 トリマー月次表</h3><div class="small">1日〜月末のひと月単位の表示です（下書き・確定をまとめて表示、参照専用）。編集は上の15日締めの表から行ってください。</div></div>
+        <div><h3 style="margin:0">トリマー月次表</h3><div class="small">1日〜月末のひと月単位の表示です（下書き・確定をまとめて表示、参照専用）。編集は上の15日締めの表から行ってください。</div></div>
         <div class="panelActions">${exportMenuHtml([
           {label:'CSV出力', onclick:'exportMonthlyCSV()'},
           {label:'Excel出力', onclick:'exportMonthlyExcel()'},
@@ -2637,7 +2637,7 @@ function toggleDeptConfirm(dept){
     // エラーがない、またはすべて許容されている状態でないと確定できない
     const unresolved=deptUnresolvedBadCount(dept);
     if(unresolved>0){
-      alert(`エラーを解消または許容する必要があります。\n\n${dept} に未解消のエラーが ${unresolved}件 あります。\nシフトを修正して解消するか、「下書きチェック」または「📊 集計・警告」のチェックボックスで許容してから確定してください。`);
+      alert(`エラーを解消または許容する必要があります。\n\n${dept} に未解消のエラーが ${unresolved}件 あります。\nシフトを修正して解消するか、「下書きチェック」または「集計・警告」のチェックボックスで許容してから確定してください。`);
       return;
     }
     confirmedDepts[dept]=true;
@@ -3233,7 +3233,7 @@ async function generateDeptSchedule(dept, options={}){
   if(generationRunning) return;
   pullInputs(); normalizeState();
   if(isDeptConfirmed(dept)){ alert('この部署は確定済みです。再編集してから生成してください。'); return; }
-  if(state.staff.length===0){ alert('スタッフが登録されていません。「👥 スタッフ」からメンバーを登録してください。'); return; }
+  if(state.staff.length===0){ alert('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。'); return; }
   const candidates = state.staff.filter(s=>staffCanDept(s, dept));
   if(!candidates.length){ alert(`${dept} に対応できるスタッフがいません。スタッフの対応できる部署を確認してください。`); return; }
   // 既にシフトが入っている場合のみ、作り直し（上書き）の確認を出す。全空欄なら確認不要で作成する。
@@ -4135,7 +4135,7 @@ function renderDeptShiftPreview(){
   // ただし未生成・全空欄（この締め月のこの部署にシフトが無い）なら、下書きチェックと同条件でエラー検出しない。
   const previewHasData = deptHasAnyAssignment(activeBuildDept);
   const dayIssues=new Map(days.map(d=>[d.key, previewHasData ? deptDayCountIssueList(d, activeBuildDept) : []]));
-  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day)}${issues.length?'<div class="dayErrMark">⚠</div>':''}</th>`; }
+  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day)}${issues.length?'<div class="dayErrMark"></div>':''}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
   for(const st of rows){
@@ -4206,8 +4206,8 @@ function manualSetDept(key, staffName, value, dept){ genDiff=null;
   if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; }
   const st=state.staff.find(x=>x.name===staffName);
   const lockedLabel=staffLockedLabel(st);
-  if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「✨ 部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; }
-  if(isDeptConfirmed(dept)){ alert(`${dept} は確定状態のため編集できません。「✨ 部署別シフト作成」で「再編集」を押してください。`); preserveScroll(()=>renderAll()); return; }
+  if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; }
+  if(isDeptConfirmed(dept)){ alert(`${dept} は確定状態のため編集できません。「部署別シフト作成」で「再編集」を押してください。`); preserveScroll(()=>renderAll()); return; }
   // 既に他部署として入っている勤務は割当部署を保ったまま区分だけ変更する（空欄・休からの新規入力はこのページの部署になる）
   const prev=schedule[key]?.[staffName]||'';
   const prevDept=assignDept[key]?.[staffName]||'';
@@ -4236,10 +4236,10 @@ function renderSummary(){
   document.getElementById('summary').innerHTML = `<div class="metric"><b>${days.length}</b><span>対象日数</span></div><div class="metric"><b>${formatPeriodShort()}</b><span>15日締め期間</span></div><div class="metric"><b>${state.staff.length}</b><span>スタッフ数</span></div><div class="metric"><b>${deptCount}</b><span>登録部署数</span></div><div class="metric"><b>${confirmedDeptList().length}</b><span>確定部署</span></div><div class="metric metricLink" role="button" tabindex="0" title="クリックで集計・警告を開く" onclick="showMenuPanel('stats')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showMenuPanel('stats');}"><b class="${shortage?'metricBad':''}">${shortage}</b><span>不足枠（必要人数未達）</span></div>`;
   const msgBox=document.getElementById('messages');
   const built=Object.keys(schedule).length>0;
-  if(!state.staff.length) msgBox.innerHTML='<div class="warn">ようこそ 🐾 まずは「⚙️ 基本ルール」で必要人数を、「👥 スタッフ」でメンバーを登録してください。そのあと「✨ 部署別シフト作成」からシフトを自動作成できます。</div>';
+  if(!state.staff.length) msgBox.innerHTML='<div class="warn">ようこそ まずは「基本ルール」で必要人数を、「スタッフ」でメンバーを登録してください。そのあと「部署別シフト作成」からシフトを自動作成できます。</div>';
   // 基本ルール違反のアラートはヒント文より優先して必ず表示する
-  else if(hard || soft) msgBox.innerHTML=`<div class="${hard?'bad':'warn'}">警告：重大 ${hard}件 / 軽微 ${soft}件。${built?'':'（未作成の期間・部署があります。「✨ 部署別シフト作成」から作成してください）'}<button type="button" class="statsLinkBtn" onclick="showMenuPanel('stats')">集計・警告タブを開く</button></div>`;
-  else if(!built) msgBox.innerHTML='<div class="warn">準備ができたら「✨ 部署別シフト作成」から部署ごとにシフトを自動作成してください。</div>';
+  else if(hard || soft) msgBox.innerHTML=`<div class="${hard?'bad':'warn'}">警告：重大 ${hard}件 / 軽微 ${soft}件。${built?'':'（未作成の期間・部署があります。「部署別シフト作成」から作成してください）'}<button type="button" class="statsLinkBtn" onclick="showMenuPanel('stats')">集計・警告タブを開く</button></div>`;
+  else if(!built) msgBox.innerHTML='<div class="warn">準備ができたら「部署別シフト作成」から部署ごとにシフトを自動作成してください。</div>';
   else msgBox.innerHTML='<div class="ok">重大なルール違反は検出されていません。必要に応じて手修正・CSV出力してください。</div>';
 }
 function formatPeriodShort(){const {start,end}=getPeriodBounds(); return `${start.getMonth()+1}/${start.getDate()}-${end.getMonth()+1}/${end.getDate()}`;}
@@ -4345,7 +4345,7 @@ function renderMonthlyView(){
   const box=document.getElementById('monthlyView'); if(!box) return;
   const days=getMonthDays(state.monthlyYear, state.monthlyMonth);
   const rows=monthlyStaffRows();
-  if(!rows.length){ box.innerHTML=`<div class="warn">${esc(MONTHLY_DEPT)} のスタッフが未登録です。「👥 スタッフ」から登録すると、ここにひと月分のシフトが表示されます。</div>`; return; }
+  if(!rows.length){ box.innerHTML=`<div class="warn">${esc(MONTHLY_DEPT)} のスタッフが未登録です。「スタッフ」から登録すると、ここにひと月分のシフトが表示されます。</div>`; return; }
   let html=`<div class="tableWrap" style="max-height:64vh"><table id="monthlyTable"><thead><tr><th class="deptCol headSticky1">所属</th><th class="staffCol headSticky2">スタッフ</th>`;
   for(const day of days){ html+=`<th class="dateCol ${dayColClass(day)}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day)}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
@@ -4575,7 +4575,7 @@ function undoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.undo
 function redoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.redo.length){ toast('やり直せる操作はありません。','warn'); return; } st.undo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.redo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('やり直しました。'); }
 function refreshUndoRedoButtons(){ document.querySelectorAll('.shiftUndoBtn').forEach(b=>b.disabled=!shiftCanUndo()); document.querySelectorAll('.shiftRedoBtn').forEach(b=>b.disabled=!shiftCanRedo()); }
 function undoRedoBarHtml(){ return `<span class="undoRedoBar" title="この部署・締め月の中での編集を取り消せます"><button type="button" class="btn2 shiftUndoBtn" onclick="undoShift()" ${shiftCanUndo()?'':'disabled'} title="元に戻す（この部署・締め月の直前の編集を取り消す / Ctrl+Z）">↩ 元に戻す</button><button type="button" class="btn2 shiftRedoBtn" onclick="redoShift()" ${shiftCanRedo()?'':'disabled'} title="取り消した編集をやり直す（Ctrl+Y）">↪ やり直す</button></span>`; }
-function manualSet(key, staffName, value){ value = normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ alert('全体シフト表は参照モードです。編集ボタンを押してから変更してください。'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「✨ 部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
+function manualSet(key, staffName, value){ value = normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ alert('全体シフト表は参照モードです。編集ボタンを押してから変更してください。'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
 function setStatsWarnFilter(f){ statsWarnFilter=f; renderStats(); }
 function renderStats(){
   const days=getDays(); const counts=getCounts(schedule,days,assignDept); let html='<thead><tr><th>部署</th><th>タグ</th><th>スタッフ</th><th>合計</th><th>下限</th><th>上限</th><th>早</th><th>中</th><th>遅</th><th>土日祝</th><th>平日</th><th>休/公休</th></tr></thead><tbody>';
@@ -4764,7 +4764,7 @@ function renderObicView(){
   const reasons = obicExportBlockReasons();
   const blocked = reasons.length>0;
   const msgBox=document.getElementById('obicBlockMsg');
-  if(msgBox){ msgBox.style.display = blocked ? '' : 'none'; msgBox.innerHTML = blocked ? ('⚠ コピー・Excel出力はできません：<ul class="obicBlockList">'+reasons.map(r=>`<li>${esc(r)}</li>`).join('')+'</ul>') : ''; }
+  if(msgBox){ msgBox.style.display = blocked ? '' : 'none'; msgBox.innerHTML = blocked ? ('コピー・Excel出力はできません：<ul class="obicBlockList">'+reasons.map(r=>`<li>${esc(r)}</li>`).join('')+'</ul>') : ''; }
   const copyBtn=document.querySelector('.obicCopyBtn'), xlsBtn=document.querySelector('.obicExcelBtn');
   if(copyBtn){ copyBtn.disabled=blocked; copyBtn.title=blocked?'エラーを解消すると出力できます（下の赤い表示を参照）':'日付セル（休日/空欄）をExcel形式でコピー'; }
   if(xlsBtn){ xlsBtn.disabled=blocked; xlsBtn.title=blocked?'エラーを解消すると出力できます（下の赤い表示を参照）':'全スタッフの休日をExcel形式で保存'; }
@@ -4784,7 +4784,7 @@ function renderObicView(){
 }
 function exportObicExcel(){
   pullInputs();
-  if(!state.staff.length){ alert('スタッフが登録されていません。「👥 スタッフ」から登録してください。'); return; }
+  if(!state.staff.length){ alert('スタッフが登録されていません。「スタッフ」から登録してください。'); return; }
   const reasons=obicExportBlockReasons();
   if(reasons.length){ renderObicView(); alert('Excel出力できません。\n\n・'+reasons.join('\n・')); return; }
   renderObicView();
@@ -4850,10 +4850,10 @@ tr.pbBefore{break-before:page;page-break-before:always}
 .printScaleControl label{font-size:13px;font-weight:700;color:#3a342e}
 .printToolbar select{font-size:13px;font-weight:700;padding:6px 28px 6px 9px;border-radius:8px;border:1px solid #8aa890;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'><path d='M1 1l4 4 4-4' fill='none' stroke='%236d8f72' stroke-width='1.6'/></svg>") no-repeat right 8px center;-webkit-appearance:none;appearance:none;cursor:pointer}
 /* 画面プレビューでは改ページ位置を点線＋目印で可視化（印刷時は非表示） */
-@media screen{tr.pbBefore>td,tr.pbBefore>th{border-top:3px dashed #6d8f72 !important}tr.pbBefore>*:first-child{position:relative}tr.pbBefore>*:first-child::before{content:'✂ ここでページが変わります';position:absolute;top:-8px;left:2px;font-size:8px;font-weight:800;color:#3f6f55;background:#eef4ee;border:1px solid #cfe0cf;border-radius:5px;padding:0 4px;white-space:nowrap;z-index:5}}
+@media screen{tr.pbBefore>td,tr.pbBefore>th{border-top:3px dashed #6d8f72 !important}tr.pbBefore>*:first-child{position:relative}tr.pbBefore>*:first-child::before{content:'ここでページが変わります';position:absolute;top:-8px;left:2px;font-size:8px;font-weight:800;color:#3f6f55;background:#eef4ee;border:1px solid #cfe0cf;border-radius:5px;padding:0 4px;white-space:nowrap;z-index:5}}
 .printNote{color:#857d72;font-size:11px}
 @media print{.printToolbar,.noprint{display:none!important}}`;
-  const toolbar = `<div class="printToolbar noprint"><button type="button" onclick="__doPrint()">🖨 印刷する</button><span class="printScaleControl"><label for="printScaleSel">ページ調整</label><select id="printScaleSel" onchange="__applyPrintScale(this.value)"><option value="balanced">見やすく分割（推奨・等倍）</option><option value="fit">1ページに収める（縮小）</option><option value="100">100%</option><option value="90">90%</option><option value="80">80%</option><option value="70">70%</option></select></span><span id="printPageNote" class="printNote"></span><span class="printNote">💡「見やすく分割」＝文字を縮小せず、行を切らずにページを分けます。プレビューの<b>緑の点線</b>がページの区切りです（A4横向き想定）。</span></div>`;
+  const toolbar = `<div class="printToolbar noprint"><button type="button" onclick="__doPrint()">印刷する</button><span class="printScaleControl"><label for="printScaleSel">ページ調整</label><select id="printScaleSel" onchange="__applyPrintScale(this.value)"><option value="balanced">見やすく分割（推奨・等倍）</option><option value="fit">1ページに収める（縮小）</option><option value="100">100%</option><option value="90">90%</option><option value="80">80%</option><option value="70">70%</option></select></span><span id="printPageNote" class="printNote"></span><span class="printNote">「見やすく分割」＝文字を縮小せず、行を切らずにページを分けます。プレビューの<b>緑の点線</b>がページの区切りです（A4横向き想定）。</span></div>`;
   // 印刷可能領域の高さは「幅 × 用紙の縦横比」で同一px尺に換算できる（表は width:100% で用紙幅いっぱいに描画されるため）。
   const fitScript = "(function(){var root=document.getElementById('printRoot');if(!root)return;function proxyH(){return root.clientWidth*(202/289);}function clearBreaks(){var rs=root.querySelectorAll('tr.pbBefore');for(var i=0;i<rs.length;i++){rs[i].classList.remove('pbBefore');}}function setScale(sc){if(sc<1){root.style.transform='scale('+sc+')';root.style.width=(100/sc)+'%';}else{root.style.transform='';root.style.width='';}}function note(txt){var n=document.getElementById('printPageNote');if(n)n.textContent=txt;}function balanced(){clearBreaks();setScale(1);var contentH=root.scrollHeight,pageH=proxyH();var pages=Math.max(1,Math.ceil(contentH/pageH));var table=root.querySelector('table');var rows=table?[].slice.call(table.querySelectorAll('tbody > tr')):[];if(pages>1&&rows.length>1){var per=Math.ceil(rows.length/pages);for(var i=per;i<rows.length;i+=per){rows[i].classList.add('pbBefore');}}note('等倍・推定 '+pages+'ページ（前ページの続きから・ヘッダー繰り返しなし）');}function fitOne(){clearBreaks();setScale(1);var sc=Math.max(0.5,Math.min(1,proxyH()/root.scrollHeight));setScale(sc);note((sc<1?('縮小 '+Math.round(sc*100)+'%・'):'等倍・')+'1ページ');}function fixed(sc){clearBreaks();setScale(sc);var pages=Math.max(1,Math.ceil((root.scrollHeight*sc)/proxyH()));note((sc<1?('縮小 '+Math.round(sc*100)+'%・'):'等倍・')+'推定 '+pages+'ページ');}window.__applyPrintScale=function(mode){if(mode==='balanced')balanced();else if(mode==='fit')fitOne();else fixed(parseInt(mode,10)/100);};window.__doPrint=function(){window.print();};setTimeout(function(){window.__applyPrintScale('balanced');},60);})();";
   w.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${printCss}</style></head><body>${toolbar}<div id="printRoot"><h1>${esc(title)}</h1>${bodyHtml}</div><scr`+`ipt>${fitScript}</scr`+`ipt></body></html>`);
@@ -5021,7 +5021,7 @@ function loadJSONFile(e){
   reader.onerror=()=>{ alert('ファイルの読み込みに失敗しました。'); e.target.value=''; };
   reader.readAsText(file);
 }
-function resetAll(){ if(confirm('設定・スタッフ・作成済みシフト・締め月別の希望をすべて削除して、まっさらな状態に戻します。\nこの操作は取り消せません。必要であれば先に「💾 バックアップ」で取得してください。\n\n本当に初期化しますか？')){ localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; renderInputs(); renderAll(); } }
+function resetAll(){ if(confirm('設定・スタッフ・作成済みシフト・締め月別の希望をすべて削除して、まっさらな状態に戻します。\nこの操作は取り消せません。必要であれば先に「バックアップ」で取得してください。\n\n本当に初期化しますか？')){ localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; renderInputs(); renderAll(); } }
 
 function showMenuPanel(name){
   if(name === 'csv') name = 'calendar';
