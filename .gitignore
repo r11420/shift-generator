@@ -2,3 +2,4 @@
 node_modules/
 .last-capture-results.json
 .last-extra-results.json
+.last-pdf-build.json
