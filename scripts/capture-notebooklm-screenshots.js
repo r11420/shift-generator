@@ -280,7 +280,8 @@ async function main() {
   // 全部署生成＋一部の警告を誘発（高めの必要人数・連勤・希望未達のダミー）
   await page.evaluate(async () => {
     DEPTS.forEach((d) => { state.deptNeeds[d] = { week: { E: 2, M: 1, L: 2 }, hol: { E: 2, M: 1, L: 2 } }; });
-    state.deptNeeds['用品'] = { week: { E: 3, M: 2, L: 3 }, hol: { E: 3, M: 2, L: 3 } }; // 不足を起こす
+    state.deptNeeds['用品'] = { week: { E: 3, M: 2, L: 3 }, hol: { E: 3, M: 2, L: 3 } }; // 部署別不足を起こす
+    state.globalNeeds = { week: { E: 6, L: 6 }, hol: { E: 6, L: 6 } }; // 全体早遅不足を起こす
     state.maxConsecutive = 5;
     normalizeState();
     for (const d of DEPTS) { try { await generateDeptSchedule(d); } catch (e) {} }
@@ -295,22 +296,32 @@ async function main() {
     persist(); renderAll();
   });
   await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    // 画面内で警告要素をテキストで特定し、中央へスクロールして印を付けるヘルパ
+    window.__markWarn = (kws, tag) => {
+      const root = document.querySelector('.menuPanel[data-panel="stats"]') || document.body;
+      const els = [...root.querySelectorAll('.allowErrorLine, .statsWarn, li, tr, td, p, h3, h4, div')];
+      const matches = els.filter((e) => { const t = (e.textContent || '').trim(); return t.length > 0 && t.length < 300 && kws.every((k) => t.includes(k)); });
+      matches.sort((a, b) => (a.textContent || '').length - (b.textContent || '').length); // 最も内側（短い）要素
+      const hit = matches[0];
+      if (hit) { hit.setAttribute('data-ssw', tag); hit.scrollIntoView({ block: 'center' }); return true; }
+      return false;
+    };
+  });
   await show(page, 'stats');
-  // 集計画面のテキストから警告カテゴリの有無を判定
-  const statsText = await page.evaluate(() => (document.getElementById('viewStats') || document.body).innerText || '');
   await cap('SS-701', async () => ({ note: '集計・警告 画面全体' }));
-  await cap('SS-702', async () => ({ outline: '#viewStats table', note: 'スタッフ別の回数表' }));
-  const warnCap = async (ss, kw, label) => {
-    const present = kw.some((k) => statsText.includes(k));
-    await cap(ss, async () => ({
-      note: present ? (label + 'の警告を確認') : (label + 'はダミーデータで再現できず（画面は撮影済・該当警告は要実機確認）'),
-      status: present ? '撮影済' : '要実機確認',
-    }));
+  await cap('SS-702', async () => { await page.evaluate(() => { const t = document.querySelector('#statsTable, #viewStats table'); if (t) { t.scrollIntoView({ block: 'start' }); window.scrollBy(0, -80); } }); return { outline: '#statsTable, #viewStats table', note: 'スタッフ別の回数表' }; });
+  const warnShot = async (ss, kws, label) => {
+    const tag = ss.replace('-', '');
+    const found = await page.evaluate(({ kws, tag }) => window.__markWarn(kws, tag), { kws, tag });
+    await cap(ss, async () => found
+      ? ({ outline: '[data-ssw="' + tag + '"]', note: label + 'の警告を確認' })
+      : ({ outline: '#warnings', note: label + 'はダミーデータで再現されず（警告一覧は撮影・該当警告は要実機確認）', status: '要実機確認' }));
   };
-  await warnCap('SS-703', ['不足'], '部署別不足');
-  await warnCap('SS-704', ['早番が不足', '遅番が不足', '早遅', '早番', '遅番'], '全体早遅不足');
-  await warnCap('SS-705', ['連勤'], '連勤違反');
-  await warnCap('SS-706', ['希望', '休希望'], '希望未達');
+  await warnShot('SS-703', ['不足'], '部署別不足');
+  await warnShot('SS-704', ['全体', '不足'], '全体早遅不足');
+  await warnShot('SS-705', ['連勤'], '連勤違反');
+  await warnShot('SS-706', ['希望', '未達'], '希望未達');
 
   // ===== フェーズ4: 確定 → 全体シフト表 / ファイル出力 / OBIC =====
   await page.evaluate(() => {
