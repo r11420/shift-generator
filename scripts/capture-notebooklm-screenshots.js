@@ -83,8 +83,8 @@ function subdirFor(ss) {
   if (n <= 899) return '08_obic';
   return '09_manuals';
 }
-// ファイル名に使えない文字をサニタイズ（台帳の "印刷/PDF" の "/" など）
-const safeName = (f) => f.replace(/[\\/:*?"<>|]/g, '／');
+// ファイル名に使えない文字を除去（台帳の "印刷/PDF" → "印刷PDF" に統一）
+const safeName = (f) => f.replace(/[\\/:*?"<>|]/g, '');
 
 // ---- アプリ操作ヘルパ（すべて headless ページ内・ダミー/空状態） ----
 
@@ -197,9 +197,9 @@ async function main() {
   await show(page, 'actions');
   await cap('SS-601', async () => ({ note: 'バックアップ画面全体' }));
   await cap('SS-602', async () => ({ outline: '.menuPanel[data-panel="actions"] .btn', note: 'バックアップ取得(JSON保存)ボタン' }));
-  await cap('SS-603', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnCaution', note: '復元ボタン（押下せず・実行しない）' }));
-  await cap('SS-606', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnDanger', note: 'すべて初期化ボタン（押下せず・実行しない）' }));
-  await cap('SS-607', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnDanger', note: '初期化前の注意文＋ボタン。native確認ダイアログ自体は実機確認', status: '撮影済' }));
+  await cap('SS-603', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnCaution', note: '復元ボタンの表示のみ（復元は実行していない）', status: '撮影済（実行なし）' }));
+  await cap('SS-606', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnDanger', note: 'すべて初期化ボタンの表示のみ（初期化は実行していない）', status: '撮影済（実行なし）' }));
+  await cap('SS-607', async () => ({ outline: '.menuPanel[data-panel="actions"] .btnDanger', note: '初期化前の注意文＋ボタンは撮影済だが、native確認ダイアログ自体は未撮影のため保留', status: '保留' }));
 
   // ===== フェーズ1: ダミースタッフ（スケジュール無し） =====
   await seedDummy(page);
@@ -238,7 +238,7 @@ async function main() {
   await cap('SS-503', async () => ({ outline: '#prefStaffTabs', note: 'スタッフ別タブ' }));
   await setPrefShift('OFF');
   await cap('SS-504', async () => ({ outline: '.prefAddBox', note: '希望休（休）を選んで追加' }));
-  await cap('SS-505', async () => ({ outline: '.prefAddBox', note: '勤務不可も「休」で追加（希望休と同じ操作）' }));
+  await cap('SS-505', async () => ({ outline: '.prefAddBox', note: '勤務不可も「休」で追加。希望休（SS-504）と同じ操作・同等の画面' }));
   await setPrefShift('E');
   await cap('SS-506', async () => ({ outline: '.prefAddBox', note: '早番希望を選んで追加' }));
   await setPrefShift('M');
@@ -315,7 +315,7 @@ async function main() {
     const tag = ss.replace('-', '');
     const found = await page.evaluate(({ kws, tag }) => window.__markWarn(kws, tag), { kws, tag });
     await cap(ss, async () => found
-      ? ({ outline: '[data-ssw="' + tag + '"]', note: label + 'の警告を確認' })
+      ? ({ outline: '[data-ssw="' + tag + '"]', note: label + 'の警告を確認（ダミーデータ警告）' })
       : ({ outline: '#warnings', note: label + 'はダミーデータで再現されず（警告一覧は撮影・該当警告は要実機確認）', status: '要実機確認' }));
   };
   await warnShot('SS-703', ['不足'], '部署別不足');
@@ -339,7 +339,7 @@ async function main() {
   const exBtn = (re) => `.menuPanel[data-panel="calendar"] .exportMenuList >> text=${re}`;
   await openExport(); await cap('SS-105', async () => ({ outline: '.menuPanel[data-panel="calendar"] .exportMenuList button:nth-child(1)', note: 'CSV出力' }));
   await openExport(); await cap('SS-106', async () => ({ outline: '.menuPanel[data-panel="calendar"] .exportMenuList button:nth-child(2)', note: 'Excel出力' }));
-  await openExport(); await cap('SS-107', async () => ({ outline: '.menuPanel[data-panel="calendar"] .exportMenuList button:nth-child(3)', note: '印刷/PDF（ファイル名の"/"は"／"へ置換）' }));
+  await openExport(); await cap('SS-107', async () => ({ outline: '.menuPanel[data-panel="calendar"] .exportMenuList button:nth-child(3)', note: '印刷/PDF。ファイル名は「印刷PDF」に統一（"/"はファイル名に使えないため）' }));
 
   await page.evaluate(() => { showMenuPanel('obic'); renderAll(); window.scrollTo(0, 0); });
   await page.waitForTimeout(300);
@@ -364,7 +364,7 @@ async function main() {
   writeLog(results);
 
   const finalStatus = (r) => r.status || (r.ok ? '撮影済' : '未撮影');
-  const ok = results.filter((r) => finalStatus(r) === '撮影済').length;
+  const ok = results.filter((r) => finalStatus(r).startsWith('撮影済')).length;
   const need = results.filter((r) => finalStatus(r) === '要実機確認' || finalStatus(r) === '保留').length;
   const fail = results.filter((r) => finalStatus(r) === '未撮影').length;
   console.log('\n完了: 撮影済 ' + ok + ' / 要実機確認・保留 ' + need + ' / 未撮影(失敗) ' + fail + '（ログ: ' + rel(LOG_PATH) + '）');
@@ -380,7 +380,8 @@ function writeLog(results) {
     '実行のたびに、撮影条件と結果（撮影済／要実機確認／保留／未撮影）を1ブロックずつ追記します。\n';
   let block = '\n## 実行: ' + nowStamp() + '\n\n';
   block += '- 撮影条件: viewport ' + VIEWPORT.width + 'x' + VIEWPORT.height + ' / deviceScaleFactor ' + DEVICE_SCALE_FACTOR +
-    ' / PNG / 新規コンテキスト（空 localStorage・実データなし・ダミーデータ使用）\n\n';
+    ' / PNG / 新規コンテキスト（空 localStorage・実データなし・ダミーデータ使用）\n';
+  block += '- 注釈状態: 対象すべて「未対応」（赤丸・番号などの注釈は今回未実施。画面状態の撮影のみ。注釈は人間確認後の別フェーズ）\n\n';
   block += '| SS番号 | ファイル名 | 撮影結果 | 保存先 | 備考 |\n|---|---|---|---|---|\n';
   for (const r of results) {
     const status = r.status || (r.ok ? '撮影済' : '未撮影');
