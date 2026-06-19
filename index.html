@@ -301,6 +301,12 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .sapChk input{width:auto}
 .sapTag{margin-left:6px;font-size:10px;font-weight:900;color:var(--gd);background:var(--gdb);border:1px solid var(--gdl);border-radius:999px;padding:1px 7px}
 .morningCleanMark{display:table;margin:2px auto 0;font-size:9px;font-weight:900;border:1px solid;border-radius:5px;padding:0 4px;line-height:1.5;text-align:center;white-space:nowrap}
+/* シフトセル内：①区分エリア／②コメント・タグエリアの固定2段構造。
+   コメントの有無で区分の縦位置がズレないよう、区分行は固定高で上揃え、コメント行は常に高さを確保する。 */
+.shiftCellContent{display:grid;grid-template-rows:auto auto;align-items:start;justify-items:center;width:100%;row-gap:1px}
+.shiftCodeRow{min-height:24px;display:flex;align-items:center;justify-content:center;width:100%}
+.shiftNoteRow{min-height:13px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;width:100%;text-align:center;line-height:1.15;overflow:visible}
+.shiftNoteRow>*{margin:0!important}
 .mcGroup{margin:10px 0}
 .mcLabel{font-size:12px;font-weight:900;color:var(--ink2);margin-bottom:4px}
 .mcRow{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
@@ -374,6 +380,12 @@ button,input,select{font-size:15px}
 .dateSub{display:flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap}
 .dayEvents{display:flex;flex-direction:column;align-items:stretch;gap:1px;margin-top:2px}
 .dayEvent{font-size:9px;font-weight:800;background:#eef4fb;color:#2f5b93;border:1px solid #cdddf0;border-radius:5px;padding:0 2px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 日付ヘッダーの全体予定タグ：タグ名＋削除アイコン。タグ名は省略せず折り返して全文表示する。 */
+.dayEvents .dayEvent{display:inline-flex;align-items:center;justify-content:center;gap:2px;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%}
+.dayEventName{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.dayEventDel{flex:0 0 auto;width:14px;height:14px;padding:0;margin:0;border:0;background:transparent;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#7f9486;opacity:.72;transition:opacity .12s,background .12s,color .12s}
+.dayEventDel:hover,.dayEventDel:focus-visible{opacity:1;background:var(--rdb);color:var(--rd);outline:none}
+.dayEventDelIcon{width:11px;height:11px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .dateSub .holiday{font-size:10px;line-height:1}
 .small{font-size:13px;line-height:1.7;color:var(--ink2);font-weight:500}
 .footerNote{color:var(--ink2)}
@@ -1072,16 +1084,26 @@ function scheduleTagsForDay(day){ // この日に表示する全体予定のタ�
   for(const ev of scheduleEventsForKey(pk)){ if(periodEventMatchesDay(ev, day)) out.push(ev.tag); }
   return [...new Set(out.filter(Boolean))];
 }
-function dateHeaderInner(day){
+function dateHeaderInner(day, opts){
+  // opts.editable=true のとき、全体予定タグに削除アイコンを表示する（編集モード/編集可能な部署のみ）。
+  opts = opts || {};
   // 日付・曜日・祝の文字色：日曜・祝日=赤、土曜=青（背景色は従来どおり）
   const dow = (day.holiday || day.wd===0) ? 'dowSun' : (day.wd===6 ? 'dowSat' : '');
   const closeMark = day.closure ? '<span class="small closureMark">臨休</span>' : (day.closed ? '<span class="small">休業</span>' : '');
   const evTags = scheduleTagsForDay(day);
   const cMemo = day.closure ? closureMemo(day.key) : '';
   const closureBadge = day.closure ? `<span class="dayClosure" title="臨時休業${cMemo?'：'+esc(cMemo):''}">臨時休業${cMemo?'：'+esc(cMemo):''}</span>` : '';
+  const canDel = !!opts.editable;
+  const dk = escAttr(day.key);
+  // 削除アイコン（ごみ箱）。印刷/PDF・Excelには出さないよう noPrintOutput を付ける。
+  const trashSvg = '<svg class="dayEventDelIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>';
+  const tagsHtml = evTags.map(t=>{
+    const del = canDel ? `<button type="button" class="dayEventDel noPrintOutput" title="この全体予定を削除" aria-label="${escAttr(`${t}（${day.m}/${day.day}）をこの日から削除`)}" onclick="event.stopPropagation();deleteDayScheduleEvent('${dk}','${escAttr(t)}')">${trashSvg}</button>` : '';
+    return `<span class="dayEvent${canDel?' hasDel':''}"><span class="dayEventName">${esc(t)}</span>${del}</span>`;
+  }).join('');
   // タグ表示エリア（.dayEvents）はタグの有無に関わらず常に確保する。
   // これにより、印刷/PDFで「日付・曜日」の縦位置が全日で揃い、タグだけが下段に追加される構造になる。
-  const evHtml = `<div class="dayEvents">${closureBadge}${evTags.map(t=>`<span class="dayEvent">${esc(t)}</span>`).join('')}</div>`;
+  const evHtml = `<div class="dayEvents">${closureBadge}${tagsHtml}</div>`;
   return `<div class="dateNum ${dow}">${day.m}/${day.day}</div><div class="dateSub ${dow}"><span>${day.wdName}</span>${day.holiday?`<span class="small holiday">祝</span>`:''}${closeMark}</div>${evHtml}`;
 }
 let state; rebuildShiftRuntime(); state = defaultState(); rebuildShiftRuntime();
@@ -2342,6 +2364,43 @@ async function addScheduleEvent(){
   toast('全体予定を追加しました。');
 }
 async function deleteScheduleEvent(i){ pullInputs(); const ev=activeScheduleEvents()[i]; if(!ev) return; if(!await showConfirmModal({title:'全体予定を削除しますか？', message:`${ev.tag}（${periodEventRuleText(ev)}）を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; activeScheduleEvents().splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('全体予定を削除しました。'); }
+// 日付ヘッダーのタグから、その日付に紐づく「全体予定（日付指定）」だけを削除する。
+// ・タグ定義そのものは削除しない（一覧の「チーフMTG」は残す）
+// ・同じタグが別の日付にある場合、その別日の予定は残す
+// ・定期予定／曜日くり返し由来で表示されているタグは、この場では削除せず案内を出す（誤って全体を消さないため）
+async function deleteDayScheduleEvent(dayKey, tag){
+  pullInputs();
+  const day = dayByKey(getDays(), dayKey); if(!day) return;
+  const pk = periodKeyForDate(day.y, day.m, day.day);
+  const events = (state.scheduleEventsByPeriod && Array.isArray(state.scheduleEventsByPeriod[pk])) ? state.scheduleEventsByPeriod[pk] : [];
+  const isDateEvent = ev => ev && ev.tag===tag && ev.axis==='date' && ev.date===dayKey;
+  const hasDateEvent = events.some(isDateEvent);
+  // 定期予定 or 曜日くり返しの全体予定からこの日に出ているか（＝ルール由来）
+  const fromRecurring = (state.recurringSchedules||[]).some(rs=>rs.tag===tag && recurringMatchesDay(rs, day));
+  const fromWdEvent = events.some(ev=>ev.tag===tag && ev.axis==='wd' && periodEventMatchesDay(ev, day));
+  const dateLabel = `${day.y}年${day.m}月${day.day}日`;
+  if(fromRecurring || fromWdEvent){
+    // ルール由来：この場では消さず、「シフト希望・全体予定」での編集へ誘導する
+    const go = await showConfirmModal({
+      title:'定期予定から表示されています',
+      message:`「${tag}」は定期予定（くり返し）から表示されています。\n\n日付：${dateLabel}\n予定：${tag}\n\nこの予定を変更・削除する場合は、「シフト希望・全体予定」画面で定期予定を編集してください。`,
+      confirmText:'全体予定を開く', cancelText:'キャンセル', variant:'primary'
+    });
+    if(go){ showMenuPanel('prefs'); setPrefsTab('event'); }
+    return;
+  }
+  if(!hasDateEvent) return;
+  const ok = await showConfirmModal({
+    title:'全体予定を削除しますか？',
+    message:`この日付に設定されている全体予定を削除します。\n\n日付：${dateLabel}\n予定：${tag}`,
+    confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除するとこの日付の予定は元に戻せません（タグ定義そのものは残ります）。'
+  });
+  if(!ok) return;
+  const arr = state.scheduleEventsByPeriod[pk];
+  for(let i=arr.length-1;i>=0;i--){ if(isDateEvent(arr[i])) arr.splice(i,1); }
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  toast('全体予定を削除しました。');
+}
 async function addClosureDate(){
   pullInputs();
   const key=document.getElementById('closureDate')?.value||'';
@@ -4897,6 +4956,12 @@ function setDeptPreviewSize(size){
   preserveScroll(()=>{ renderDeptShiftPreview(); });
 }
 function toggleDeptPreviewSize(){ setDeptPreviewSize(deptPreviewSize==='small' ? 'medium' : (deptPreviewSize==='medium' ? 'large' : 'small')); }
+// シフトセルの中身を「①区分エリア／②コメント・タグエリア」の固定2段構造にする。
+// コメント（朝そうじ・希望・兼務バッジ等）の有無に関わらず区分の縦位置を全セルで揃え、
+// コメントが無いセルでもコメント欄の高さを確保する（高さ制御はCSS .shiftCellContent / .shiftNoteRow）。
+function shiftCellInner(codeHtml, notesHtml){
+  return `<div class="shiftCellContent"><div class="shiftCodeRow">${codeHtml||''}</div><div class="shiftNoteRow">${notesHtml||''}</div></div>`;
+}
 function renderDeptShiftPreview(){
   const box=document.getElementById('deptShiftPreview'); if(!box) return;
   const days=getDays();
@@ -4907,7 +4972,7 @@ function renderDeptShiftPreview(){
   // ただし未生成・全空欄（この締め月のこの部署にシフトが無い）なら、下書きチェックと同条件でエラー検出しない。
   const previewHasData = deptHasAnyAssignment(activeBuildDept);
   const dayIssues=new Map(days.map(d=>[d.key, previewHasData ? deptDayCountIssueList(d, activeBuildDept) : []]));
-  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" data-day="${day.key}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day)}${issues.length?'<div class="dayErrMark"></div>':''}</th>`; }
+  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" data-day="${day.key}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day, {editable})}${issues.length?'<div class="dayErrMark"></div>':''}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
   for(const st of rows){
@@ -4926,11 +4991,12 @@ function renderDeptShiftPreview(){
       let errInfo=cellErrorInfo(day.key, st.name, schedule, assignDept, days, offMapShared, prefMapShared); let err=errInfo.reason; let errCls=err?(errInfo.allowed?'allowedErrorCell':'errorCell'):'';
       if(closureWork){ err='臨時休業日に出勤が入っています。休業日のため通常は休みです。'; errCls='errorCell'; }
       const colErr=dayCountIssueClass(dayIssues.get(day.key)||[]);
+      const deptNotes=`${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}`;
       if(editable && !lockedLabel){
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>`, deptNotes)}</td>`;
       }else{
         const title=lockedLabel?`${lockedLabel} のため編集不可`:err;
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}">${shiftCellInner(`<span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>`, deptNotes)}</td>`;
       }
     }
     const dc=getStaffDeptCounts(st.name, activeBuildDept, days, schedule, assignDept);
@@ -5039,7 +5105,7 @@ function renderCalendar(){
   if(editBtn){ editBtn.innerHTML = (calendarEditMode ? '<img class="appicon" src="assets/icons/svg/nav-overall-shift.svg" alt="">参照モードに戻す' : '<img class="appicon" src="assets/icons/svg/edit-mode.svg" alt="">編集モードにする'); editBtn.className = calendarEditMode ? 'btn' : 'btn2'; }
   if(modeBox){ const un=unsetDeptStaff().length; if(un) modeBox.insertAdjacentHTML('beforeend', `<div class="unsetNotice">部署が未設定のスタッフが <b>${un}名</b> います。スタッフ画面で所属部署を確認してください。<button type="button" class="btn2 unsetNoticeBtn" onclick="showMenuPanel('staff')">スタッフ画面へ</button></div>`); }
   let html='<thead><tr><th class="deptCol headSticky1">部署</th><th class="staffCol headSticky2">スタッフ</th>';
-  for(const day of days){ const cls=dayColClass(day); html+=`<th class="dateCol ${cls}" data-day="${day.key}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day)}</th>`; }
+  for(const day of days){ const cls=dayColClass(day); html+=`<th class="dateCol ${cls}" data-day="${day.key}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day, {editable:calendarEditMode})}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const sortedStaff=orderedStaff();
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
@@ -5049,7 +5115,7 @@ function renderCalendar(){
     const deptPill = st.dept ? `<span class="pill pDept">${esc(deptLabel(st.dept))}</span>` : `<span class="pill pDeptUnset" title="部署が未設定です。スタッフ画面で所属部署を設定してください。">部署未設定</span>`;
     html+=`<tr${st.dept?'':' class="unsetRow"'}><td class="deptCol sticky1">${deptPill}</td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で空欄・休・有休に変更可）'}">${showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で空欄・休・有休に変更可）'}">${shiftCellInner(showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`, '')}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
@@ -5057,11 +5123,12 @@ function renderCalendar(){
       const deptMini=(isWorkingShift(v)&&adep!==st.dept)?`<div class="miniBadge">${esc(adep)}</div>`:'';
       const lockMark='';
       const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'':'errorCell'):''; /* 全体シフト表では許容済みの緑表示は出さない */
+      const calNotes=`${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}`;
       if(calendarEditMode && !confirmed){
-        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>`, calNotes)}</td>`;
       }else{
         const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
-        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}">${shiftCellInner(`<span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>`, calNotes)}</td>`;
       }
     }
     html+=`<td class="sumCol"><b>${c.total}</b></td><td class="sumCol">${c.E||0}</td><td class="sumCol">${c.M||0}</td><td class="sumCol">${c.L||0}</td></tr>`;
@@ -5150,7 +5217,7 @@ function renderMonthlyView(){
       const mini=(isWorkingShift(v)&&dep===MONTHLY_DEPT&&st.dept!==MONTHLY_DEPT)?'<div class="miniBadge">兼務</div>':'';
       const pref=preferenceForStaffMonthly(st.name, day);
       const hope=pref?`<span class="desiredOffMark">${isRestShift(pref.shift)?`${shiftLabel(pref.shift)}希望`:'希望'}</span>`:'';
-      html+=`<td class="dateCol ${dayColClass(day)}"><span class="shiftView ${show?shiftCellClasses(v, day):''}">${esc(show)}</span>${mini}${hope}</td>`;
+      html+=`<td class="dateCol ${dayColClass(day)}">${shiftCellInner(`<span class="shiftView ${show?shiftCellClasses(v, day):''}">${esc(show)}</span>`, `${mini}${hope}`)}</td>`;
     }
     const dc=getStaffDeptCounts(st.name, MONTHLY_DEPT, days, schedule, assignDept);
     html+=`<td class="sumCol"><b>${dc.total}</b></td><td class="sumCol">${dc.E||0}</td><td class="sumCol">${dc.M||0}</td><td class="sumCol">${dc.L||0}</td></tr>`;
@@ -5744,6 +5811,12 @@ th{background:#f1ece2;font-weight:800}
 /* 日付ヘッダーは上揃え。日付→曜日→タグの3段で、タグは下段に積む（タグ有無で日付・曜日がズレない）。
    タグは重要情報のため省略せず全件表示するので、セルを縦に伸ばせるよう overflow:visible にする。 */
 th.dateCol{vertical-align:top;overflow:visible}
+/* 本体のシフトセルも上揃え＋2段構造で、コメント有無による区分位置のズレを防ぐ（印刷/PDF） */
+td.dateCol{vertical-align:top}
+.shiftCellContent{display:grid;grid-template-rows:auto auto;align-items:start;justify-items:center;width:100%;row-gap:0.3pt}
+.shiftCodeRow{min-height:11pt;display:flex;align-items:center;justify-content:center;width:100%}
+.shiftNoteRow{min-height:5pt;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0.3pt;width:100%;text-align:center;line-height:1.1;overflow:visible}
+.shiftNoteRow>*{margin:0!important}
 th.dateCol .dateNum{display:block;border-bottom:0.45pt solid #bdb2a6;margin:0 -0.5pt 1pt;padding-bottom:1pt}
 .dateSub{display:flex;align-items:center;justify-content:center;gap:1pt;white-space:nowrap}
 .dateSub .small{font-size:5.5pt;line-height:1}
