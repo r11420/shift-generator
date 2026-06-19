@@ -82,8 +82,11 @@ textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padd
 .tagStdBadge{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:900;background:var(--bg2);color:var(--ink3);border:1px solid var(--ln)}
 .tagStdBadge svg{width:11px;height:11px}
 .tagOrphanWarn{background:var(--gdb);border:1px solid var(--gdl);border-left:5px solid var(--gd);border-radius:12px;padding:9px 12px;margin:8px 0;font-size:12px;font-weight:700;color:#6a5320;line-height:1.55}
-.tagOrphanWarn ul{margin:5px 0 0;padding-left:1.3em}
-.tagOrphanWarn li{margin:2px 0;font-weight:600}
+.tagOrphanWarn ul{margin:5px 0 6px;padding-left:1.3em}
+.tagOrphanWarn li{margin:6px 0;font-weight:700}
+.tagOrphanWarn .orphanHow{margin:4px 0 2px;font-weight:600}
+.tagOrphanWarn .orphanUse{font-weight:600;margin:1px 0 1px 1em;font-size:11.5px}
+.tagOrphanWarn .orphanBtn{width:auto;margin-top:5px;font-size:11.5px;padding:5px 11px}
 .progressRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
 .genCancelBtn{width:auto;background:#fff;border:1px solid var(--bad);color:var(--bad);font-weight:800;padding:6px 12px;border-radius:9px}
 .genCancelBtn:disabled{opacity:.5}
@@ -1969,9 +1972,17 @@ function orphanStaffTagRefs(){
   for(const s of state.staff) for(const t of (s.tags||[])) if(t && !known.has(t)) seen.set(t,(seen.get(t)||0)+1);
   return seen;
 }
+// 孤児タグを「同じ名前でタグ一覧に追加し直す」ことで解消（参照側が有効なタグを指すようになる）。
+function readdOrphanTag(kind, name){ pullInputs(); if(kind==='master'){ if(!state.tags.includes(name)) state.tags.push(name); } else { if(!state.scheduleTags.includes(name)) state.scheduleTags.push(name); } preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast(`「${name}」をタグ一覧に追加しました。`,'success'); }
 function orphanWarnHtml(kind){
-  if(kind==='master'){ const m=orphanStaffTagRefs(); if(!m.size) return ''; const items=[...m.entries()].map(([nm,n])=>`<li>「${esc(nm)}」：スタッフ${n}名</li>`).join(''); return `<div class="tagOrphanWarn"><b>一覧に無いタグが使われています（孤児データ）。</b>同じ名前のタグを追加し直すか、対象スタッフのタグを外してください。<ul>${items}</ul></div>`; }
-  const m=orphanScheduleRefs(); if(!m.size) return ''; const items=[...m.entries()].map(([nm,locs])=>`<li>「${esc(nm)}」：${esc([...locs].join('・'))}</li>`).join(''); return `<div class="tagOrphanWarn"><b>一覧に無いタグが予定で使われています（孤児データ）。</b>同じ名前のタグを追加し直すか、該当の予定を削除してください。<ul>${items}</ul></div>`;
+  if(kind==='master'){
+    const names=[...orphanStaffTagRefs().keys()]; if(!names.length) return '';
+    const blocks=names.map(nm=>{ const who=state.staff.filter(s=>(s.tags||[]).includes(nm)).map(s=>s.name); const list=who.slice(0,6).join('・')+(who.length>6?` 他${who.length-6}名`:''); return `<li><b>「${esc(nm)}」</b><div class="orphanUse">スタッフ：${esc(list)}</div><button type="button" class="btn2 orphanBtn" onclick="readdOrphanTag('master','${escAttr(nm)}')">「${esc(nm)}」をタグ一覧に追加</button></li>`; }).join('');
+    return `<div class="tagOrphanWarn"><b>タグ一覧にないタグが使われています。</b><div class="orphanHow">対応方法：同じ名前のタグを追加し直すか、該当スタッフのタグを外してください。</div><ul>${blocks}</ul><div><button type="button" class="btn2 orphanBtn" onclick="showMenuPanel('staff')">スタッフ画面へ</button></div></div>`;
+  }
+  const names=[...orphanScheduleRefs().keys()]; if(!names.length) return '';
+  const blocks=names.map(nm=>{ const reasons=scheduleTagUsageReasons(nm); const list=reasons.slice(0,6).map(r=>`<div class="orphanUse">${esc(r)}</div>`).join('')+(reasons.length>6?`<div class="orphanUse">他 ${reasons.length-6} 件</div>`:''); return `<li><b>「${esc(nm)}」</b>${list}<button type="button" class="btn2 orphanBtn" onclick="readdOrphanTag('schedule','${escAttr(nm)}')">「${esc(nm)}」をタグ一覧に追加</button></li>`; }).join('');
+  return `<div class="tagOrphanWarn"><b>タグ一覧にないタグが予定で使われています。</b><div class="orphanHow">対応方法：同じ名前のタグを追加し直すか、下の「定期予定」「全体予定」「朝そうじ除外設定」から該当の予定を削除してください。</div><ul>${blocks}</ul></div>`;
 }
 async function commitTagEdit(kind, index){
   const list=tagListFor(kind); const cur=list[index]; const inp=document.getElementById('tagEditInput');
