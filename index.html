@@ -210,6 +210,10 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .manualOpenBtn:hover .appicon{filter:brightness(0) invert(1)}
 .backupHint{justify-content:flex-start;align-items:flex-start}.backupHint .appicon{margin-top:1px}
 .menuIcon{display:inline-flex;align-items:center;justify-content:center}
+.menuAsk .menuAskTitle{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.menuAsk .extLinkIcon{width:12px;height:12px;flex:0 0 auto;color:var(--sgd);opacity:.9}
+.menuAsk .menuAskService{font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.02em}
+.menuAskNote{margin:1px 2px 3px;padding:7px 10px;background:var(--iv);border:1px dashed var(--sgl);border-radius:12px;font-size:10.5px;font-weight:700;line-height:1.5;color:var(--ink2)}
 .menuFootNote{font-size:11px;color:var(--muted);line-height:1.5;padding:8px 6px 2px;border-top:1px solid var(--line);margin-top:4px}
 .vDivider{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
 .monthNav{display:flex;gap:6px;align-items:center}
@@ -450,7 +454,7 @@ body.cellSelecting .editableSelect{cursor:cell}
 @media (max-width:1100px){
   .appLayout{display:block;padding:0 12px 32px}
   .menuRail{position:sticky;top:0;z-index:60;flex-direction:row;overflow-x:auto;gap:6px;padding:8px;margin-bottom:12px;border-radius:0 0 16px 16px;-webkit-overflow-scrolling:touch}
-  .menuRail .menuTitle,.menuRail .currentPeriodBadge,.menuRail .menuFootNote,.menuRail .backupHint{display:none}
+  .menuRail .menuTitle,.menuRail .currentPeriodBadge,.menuRail .menuFootNote,.menuRail .backupHint,.menuRail .menuAskNote{display:none}
   .menuItem{flex:0 0 auto;width:auto;padding:9px 12px;border-radius:999px}
   .menuItem small{display:none}
   .panelActions{justify-content:flex-start}
@@ -490,8 +494,11 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <button class="menuItem active" data-panel="calendar" onclick="showMenuPanel('calendar')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-overall-shift.svg" alt=""></span><span class="menuLabelWrap"><span>全体シフト表</span><small>全体をながめる・編集</small></span></button>
     <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動作成→確定</small></span></button>
     <button class="menuItem" data-panel="prefs" onclick="showMenuPanel('prefs')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-requests.svg" alt=""></span><span class="menuLabelWrap"><span>シフト希望・全体予定</span><small>希望休・全体の予定</small></span></button>
-    <button type="button" class="menuItem menuLink" onclick="window.open('manual.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/manual-guide.svg" alt=""></span><span class="menuLabelWrap"><span>使い方マニュアル</span><small>くわしい手順・別タブで開く</small></span></button>
+    <div class="menuGroup">使い方・困ったとき</div>
     <button type="button" class="menuItem menuLink" onclick="window.open('quick.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/quick-manual.svg" alt=""></span><span class="menuLabelWrap"><span>クイックマニュアル</span><small>よく使う操作の早わかり・別タブ</small></span></button>
+    <button type="button" class="menuItem menuLink" onclick="window.open('manual.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/manual-guide.svg" alt=""></span><span class="menuLabelWrap"><span>使い方マニュアル</span><small>くわしい手順・別タブで開く</small></span></button>
+    <button type="button" class="menuItem menuLink menuAsk" onclick="window.open('https://notebooklm.google.com/notebook/1a89e4f2-5381-4d3b-b95c-002ebfe9e0b8','_blank','noopener')" aria-describedby="menuAskNote"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/ask-chat.svg" alt=""></span><span class="menuLabelWrap"><span class="menuAskTitle">使い方を質問する<svg class="extLinkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5"/><path d="M19 5l-7.5 7.5"/><path d="M18 13.8V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h4.2"/></svg></span><small>操作方法を質問・別タブ</small><small class="menuAskService">外部サービス（NotebookLM）</small></span></button>
+    <p id="menuAskNote" class="menuAskNote">回答回数には上限があります。まずはクイックマニュアル・使い方マニュアルを確認してください。</p>
     <div class="menuGroup">管理者向け<svg class="menuLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
     <button class="menuItem" data-panel="basic" onclick="showMenuPanel('basic')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-rules.svg" alt=""></span><span class="menuLabelWrap"><span>基本ルール</span><small>連勤・休業日・必要人数</small></span></button>
     <button class="menuItem" data-panel="staff" onclick="showMenuPanel('staff')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-staff.svg" alt=""></span><span class="menuLabelWrap"><span>スタッフ</span><small>登録・タグ・並び替え</small></span></button>
