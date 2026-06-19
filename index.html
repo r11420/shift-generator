@@ -25,8 +25,9 @@
   --font-table:"BIZ UDPGothic","Noto Sans JP","Yu Gothic UI",sans-serif;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--iv);color:var(--ink);font-family:var(--font-ui);font-weight:500;letter-spacing:.005em;font-size:15px;line-height:1.6}
-header{padding:22px 18px 12px;max-width:1500px;margin:auto}
+body{margin:0;background:var(--iv);color:var(--ink);font-family:var(--font-ui);font-weight:500;letter-spacing:.005em;font-size:15px;line-height:1.6;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+/* 画面全体を100vhに収め、ヘッダーは上部固定。左メニューと右操作画面はそれぞれ内部スクロール（.appLayout参照）。 */
+header{padding:16px 18px 10px;max-width:1500px;width:100%;margin:0 auto;flex:0 0 auto}
 h1{font-size:26px;margin:0 0 6px;font-weight:900;letter-spacing:.02em}
 header p{margin:0;color:var(--muted);font-size:14px}
 .brandClover{width:28px;height:28px;vertical-align:-5px;margin-right:8px}
@@ -149,12 +150,24 @@ th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f
 .staffDetails{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}.staffItem.collapsed .staffDetails{display:none}.staffNameLine{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.staffCollapseTools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.otherShiftBox{margin-top:5px}.otherShiftBox input{padding:5px 6px;border-radius:8px;font-size:12px}.prefConditionGrid{display:grid;grid-template-columns:130px 1fr 1fr;gap:8px;align-items:start}.prefWeekdayWrap{grid-column:2 / -1}
 
 
-.appLayout{max-width:1500px;margin:auto;padding:0 18px 36px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
-.menuRail{position:sticky;top:14px;background:var(--mlk);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:7px}
+/* 残り高さ（100vh - header）を埋め、左右2カラムをそれぞれ内部スクロールにする。
+   grid-template-rows:minmax(0,1fr) と各カラムの min-height:0 で、はみ出しを各カラム内スクロールに閉じ込める。 */
+.appLayout{flex:1 1 auto;min-height:0;max-width:1500px;width:100%;margin:0 auto;padding:0 18px 14px;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:18px}
+/* 左メニューは固定列。メニューが画面高を超えたら、この中だけスクロールする。 */
+.menuRail{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;background:var(--mlk);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:7px}
 .menuTitle{font-size:13px;font-weight:900;color:var(--muted);padding:4px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .menuItem{width:100%;text-align:left;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
 .menuItem span{font-weight:900;font-size:13px}.menuItem small{font-size:11px;color:var(--muted);font-weight:700;line-height:1.35}.menuItem.active{background:var(--sgs);border-color:var(--sgl);color:var(--ink);box-shadow:inset 3px 0 0 var(--sgd)}.menuItem.active small{color:var(--ink2)}.menuGroup{font-size:11px;font-weight:900;color:var(--ink3);letter-spacing:.04em;padding:12px 8px 3px;display:flex;align-items:center;gap:5px}.menuGroup:first-of-type{padding-top:2px}.menuLockIcon{width:13px;height:13px;flex:none;opacity:.85}
-.contentArea{min-width:0}.menuPanel{display:none}.menuPanel.active{display:block}.panelHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.panelHead h2{margin:0 0 4px}.panelHead p{margin:0;color:var(--ink2);font-size:13px}.panelActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.panelActions button{white-space:nowrap}
+/* 右操作画面。ここだけが縦スクロールし、左メニューとはスクロールが干渉しない（overscroll-behavior:contain）。
+   横に長い表は各表の .tableWrap 内で横スクロールするため、ここは縦のみ。 */
+.contentArea{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:2px 6px 24px 2px}.menuPanel{display:none}.menuPanel.active{display:block}
+/* スクロール領域のスクロールバーをトンマナ（セージ／アイボリー）に合わせ、チープに見せない。 */
+.contentArea,.menuRail,.tableWrap,.deptPvWrap{scrollbar-width:thin;scrollbar-color:var(--sgl) transparent}
+.contentArea::-webkit-scrollbar,.menuRail::-webkit-scrollbar,.tableWrap::-webkit-scrollbar,.deptPvWrap::-webkit-scrollbar{width:11px;height:11px}
+.contentArea::-webkit-scrollbar-thumb,.menuRail::-webkit-scrollbar-thumb,.tableWrap::-webkit-scrollbar-thumb,.deptPvWrap::-webkit-scrollbar-thumb{background:var(--sgl);border-radius:9px;border:3px solid var(--iv);background-clip:padding-box}
+.contentArea::-webkit-scrollbar-thumb:hover,.menuRail::-webkit-scrollbar-thumb:hover,.tableWrap::-webkit-scrollbar-thumb:hover,.deptPvWrap::-webkit-scrollbar-thumb:hover{background:var(--sg)}
+.contentArea::-webkit-scrollbar-track,.menuRail::-webkit-scrollbar-track,.tableWrap::-webkit-scrollbar-track,.deptPvWrap::-webkit-scrollbar-track{background:transparent}
+.menuRail::-webkit-scrollbar-thumb{border-color:var(--mlk)}.panelHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.panelHead h2{margin:0 0 4px}.panelHead p{margin:0;color:var(--ink2);font-size:13px}.panelActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.panelActions button{white-space:nowrap}
 
 
 .checkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.checkGrid label{margin:0;text-align:center;justify-content:center}.checkGrid input{width:auto;margin-right:3px}.deptCheckGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.deptCheckGrid label{margin:0;text-align:center;justify-content:center}.deptCheckGrid input{width:auto;margin-right:3px}.ruleGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.miniBadge{display:inline-flex;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:900;background:#eef4ff;color:#315c8b;margin-top:3px}.reason{font-size:11px;color:#6c4a00;margin-top:4px}.leaderBadge{display:inline-flex;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:900;background:#f2eafd;color:#5d398c;border:1px solid #d9c6f0;margin-left:4px}.limitBadge{display:inline-flex;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:900;background:#f4f0e9;color:#64584e;margin-top:3px}
@@ -219,7 +232,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .bulkAssignBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0 14px}.bulkAssignBox h3{margin:0 0 8px}.bulkWeekdayActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bulkWeekdays{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.bulkWeekdays label{margin:0;text-align:center}.bulkWeekdays input{width:auto;margin-right:3px}.otherShiftInput{margin-top:6px}
 
 @media (max-width:1100px){.wrap{grid-template-columns:1fr}.appLayout{grid-template-columns:1fr}.calendarControl{grid-template-columns:1fr}.menuRail{position:static}.contentArea{min-width:0}.summary{grid-template-columns:repeat(2,1fr)}header{padding-top:16px}.card{padding:13px}.tableWrap{max-height:none}.staffHead{grid-template-columns:1fr 96px}.deptTabs{grid-template-columns:repeat(2,1fr)}.staffToolbar{grid-template-columns:1fr}.sticky2,.headSticky2{left:92px}.deptCol{min-width:92px;width:92px}.staffCol{min-width:130px;width:130px}}
-@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
+@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52;height:auto;overflow:visible;display:block}.contentArea{overflow:visible;height:auto;min-height:0;padding:0}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
 .shiftText{display:none}
 
 /* 操作性・視認性の改善 */
@@ -566,11 +579,14 @@ body.cellSelecting .editableSelect{cursor:cell}
 .hScrollProxy>div{height:1px}
 
 @media (max-width:1100px){
-  .appLayout{display:block;padding:0 12px 32px}
-  .menuRail{position:sticky;top:0;z-index:60;flex-direction:row;overflow-x:auto;gap:6px;padding:8px;margin-bottom:12px;border-radius:0 0 16px 16px;-webkit-overflow-scrolling:touch}
+  /* 狭い画面（モバイル等）はPC用の100vh個別スクロールを解除し、従来どおりウィンドウ全体でスクロールする。 */
+  body{height:auto;min-height:100vh;overflow:visible;display:block}
+  .appLayout{display:block;padding:0 12px 32px;min-height:0;grid-template-rows:none}
+  .menuRail{position:sticky;top:0;z-index:60;flex-direction:row;overflow-x:auto;overflow-y:visible;gap:6px;padding:8px;margin-bottom:12px;border-radius:0 0 16px 16px;-webkit-overflow-scrolling:touch}
   .menuRail .menuTitle,.menuRail .currentPeriodBadge,.menuRail .menuFootNote,.menuRail .backupHint,.menuRail .menuAskNote{display:none}
   .menuItem{flex:0 0 auto;width:auto;padding:9px 12px;border-radius:999px}
   .menuItem small{display:none}
+  .contentArea{overflow:visible;min-height:0}
   .panelActions{justify-content:flex-start}
 }
 /* ===== 使い方マニュアル（オーバーレイ：既存処理に非干渉） ===== */
@@ -4953,7 +4969,9 @@ function initCalendarHScroll(){
   proxy.addEventListener('scroll', ()=>{ if(_hScrollSyncing) return; _hScrollSyncing = true; wrap.scrollLeft = proxy.scrollLeft; _hScrollSyncing = false; });
   wrap.addEventListener('scroll', ()=>{ if(_hScrollSyncing) return; _hScrollSyncing = true; proxy.scrollLeft = wrap.scrollLeft; _hScrollSyncing = false; });
   window.addEventListener('resize', updateCalendarHScroll, {passive:true});
-  window.addEventListener('scroll', updateCalendarHScroll, {passive:true});
+  // 右操作画面（.contentArea）など内部コンテナのスクロールにも追従させるため capture:true で受ける
+  // （ページ全体ではなく個別スクロールになったため、window直のscrollだけでは発火しない）。
+  window.addEventListener('scroll', updateCalendarHScroll, {passive:true, capture:true});
 }
 async function manualSetDept(key, staffName, value, dept){ genDiff=null;
   value = await normalizeManualShiftValue(value);
