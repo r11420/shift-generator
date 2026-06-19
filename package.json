@@ -4,7 +4,8 @@
   "private": true,
   "description": "KJM Shift＋（静的なシフト作成ツール）と、NotebookLM 用スクリーンショット撮影ツール",
   "scripts": {
-    "screenshot:notebooklm": "node scripts/capture-notebooklm-screenshots.js"
+    "screenshot:notebooklm": "node scripts/capture-notebooklm-screenshots.js",
+    "screenshot:manual": "node scripts/capture-manual.js"
   },
   "devDependencies": {
     "playwright": "^1.56.1"

@@ -78,12 +78,12 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
 
   <section class="qflow" id="q-basic" style="--role:#52735F;--roleD:#3f6f55">
     <div class="qflowHead"><img class="qflowIcon" src="assets/icons/svg/person.svg" alt=""><div><div class="qflowTitle">基本（全員）</div><div class="qflowSub">毎月のシフト作成は、この8ステップだけ。上から順に進めれば完成します。</div></div></div>
-    <div class="qchips"><span class="qchip">締め月を確認</span><span class="qchipArrow">›</span><span class="qchip">希望休</span><span class="qchipArrow">›</span><span class="qchip">全体予定</span><span class="qchipArrow">›</span><span class="qchip">自動作成</span><span class="qchipArrow">›</span><span class="qchip">確認</span><span class="qchipArrow">›</span><span class="qchip">編集</span><span class="qchipArrow">›</span><span class="qchip">確定</span><span class="qchipArrow">›</span><span class="qchip">バックアップ</span></div>
+    <div class="qchips"><span class="qchip">締め月を確認</span><span class="qchipArrow">›</span><span class="qchip">希望休</span><span class="qchipArrow">›</span><span class="qchip">全体予定</span><span class="qchipArrow">›</span><span class="qchip">自動生成</span><span class="qchipArrow">›</span><span class="qchip">確認</span><span class="qchipArrow">›</span><span class="qchip">編集</span><span class="qchipArrow">›</span><span class="qchip">確定</span><span class="qchipArrow">›</span><span class="qchip">バックアップ</span></div>
     <div class="qsteps">
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">1</span><span class="qact">操作対象の月（締め月）を確認する</span></div>
-        <p class="qdesc">左メニューの上にある締め月バッジが、作りたい月になっているか確認します。ちがうときは <span class="qkbd">◀</span> <span class="qkbd">▶</span> で合わせます。<br><span class="qhint">※このツールは「15日締め」。例：<b>8月度＝7/16〜8/15</b>。作りたい月度の「◯月締め」に合わせます。</span></p>
-        <figure class="qfig"><img src="assets/manual/m-period.png" alt="締め月バッジ" loading="lazy" width="276" height="174" style="max-width:276px"></figure>
+        <p class="qdesc">画面上部の<b>作業バー</b>にある締め月が、作りたい月になっているか確認します。ちがうときは <span class="qkbd">◀</span> <span class="qkbd">▶</span> で合わせます。<br><span class="qhint">※このツールは「15日締め」。例：<b>8月度＝7/16〜8/15</b>。作りたい月度の「◯月締め」に合わせます。作業バーはどの画面でも上に出ています。</span></p>
+        <figure class="qfig"><img src="assets/manual/m-period.png" alt="画面上部の作業バー。締め月・対象期間・◀▶・バックアップ取得" loading="lazy" width="820" style="max-width:820px"></figure>
       </div>
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">2</span><span class="qact">希望休を登録する（あれば）</span></div>
@@ -97,8 +97,8 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
       </div>
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">4</span><span class="qact">部署別に自動生成する</span></div>
-        <p class="qdesc">「部署別シフト作成」を開き、<b>①</b>作る部署のカードを選んで <b>②</b>「この部署だけ自動作成」を押します。（確定はまだ。手順7で行います）</p>
-        <figure class="qfig"><img src="assets/manual/q-deptgen.png" alt="部署のカードを選び自動作成を押す" loading="lazy" width="1200" height="479" style="max-width:1200px"></figure>
+        <p class="qdesc">「部署別シフト作成」を開き、<b>①</b>作る部署のカードを選んで <b>②</b>「この部署だけ自動生成」を押します。（確定はまだ。手順7で行います）</p>
+        <figure class="qfig"><img src="assets/manual/q-deptgen.png" alt="部署のカードを選び自動生成を押す" loading="lazy" width="1200" height="479" style="max-width:1200px"></figure>
       </div>
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">5</span><span class="qact">生成されたシフトを確認する</span></div>
@@ -117,7 +117,7 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
       </div>
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">8</span><span class="qact">バックアップを取る</span></div>
-        <p class="qdesc">「バックアップ」を開き、<b>緑の「バックアップ取得（JSON保存）」</b>を押します。<b>保存先を選ぶ画面</b>が出たら、<b>デスクトップの「KJM Shift＋バックアップ」フォルダ</b>を選んで「保存」を押します（下の画像）。<br><b>同じ画面の赤い「すべて初期化」と「バックアップから復元」は押さないでください</b>（押すのは緑の取得だけ）。</p>
+        <p class="qdesc">いちばん早いのは、<b>画面上部の作業バーの「バックアップ取得」</b>です（どの画面からでもOK。シフトを直すと「編集後のバックアップ未取得」と出ます）。または「バックアップ」画面の<b>緑の「バックアップ取得（JSON保存）」</b>。<b>保存先を選ぶ画面</b>が出たら、<b>デスクトップの「KJM Shift＋バックアップ」フォルダ</b>を選んで「保存」を押します（下の画像）。<br><b>「バックアップ」画面の赤い「すべて初期化」と「バックアップから復元」は押さないでください</b>（押すのは緑の取得だけ）。</p>
         <figure class="qfig"><img src="assets/manual/q-backup-get.png" alt="バックアップ取得ボタン" loading="lazy" width="615" height="96" style="max-width:615px"></figure><figure class="qfig"><img src="assets/manual/m-backup-save.png" alt="保存先に「KJM Shift＋バックアップ」フォルダを選んで保存" loading="lazy" width="688" height="516" style="max-width:688px"></figure>
       </div>
     </div>
@@ -183,7 +183,7 @@ body{margin:0;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Noto S
       </div>
       <div class="qstep">
         <div class="qstepHead"><span class="qnum">3</span><span class="qact">バックアップを取る</span></div>
-        <p class="qdesc">「バックアップ」→<b>緑の「バックアップ取得（JSON保存）」</b>（赤枠）。保存ファイルを「KJM Shift＋バックアップ」フォルダへ。<br>※赤い「すべて初期化」「バックアップから復元」は押さないでください。</p>
+        <p class="qdesc">画面上部の作業バーの<b>「バックアップ取得」</b>、または「バックアップ」画面の<b>緑の「バックアップ取得（JSON保存）」</b>（赤枠）。保存ファイルを「KJM Shift＋バックアップ」フォルダへ。<br>※「バックアップ」画面の赤い「すべて初期化」「バックアップから復元」は押さないでください。</p>
         <figure class="qfig"><img src="assets/manual/q-backup-get.png" alt="バックアップ取得ボタン" loading="lazy" width="615" height="96" style="max-width:615px"></figure>
       </div>
       <div class="qstep">
