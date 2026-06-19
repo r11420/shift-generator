@@ -392,12 +392,18 @@ td.allowedDayCountErr{background:#edf8ed!important;border-left:2px solid #9dce9f
 td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 0 0 2px #dcaaa6!important}
 .confirmBlockNote{background:#fdf2f1;border:1px solid #ecc9c5;color:#9c4844;border-radius:12px;padding:8px 10px;font-size:12.5px;font-weight:700;margin-top:10px}
 .availBlock{background:#fdf2f1;border:1px solid #ecc9c5;border-left:5px solid #c0504a;border-radius:12px;padding:9px 12px;margin:8px 0 0;color:#8a2c2c;font-weight:700;font-size:12.5px;line-height:1.6}
+/* 注意（金）：未確定・出力できるデータなし等。エラーではないが今は実行できない */
+.availBlock.avail-caution{background:var(--gdb);border-color:var(--gdl);border-left-color:var(--gd);color:#7a4b00}
+/* 案内（セージ）：確定済みでロック中など。エラーではなく状態のお知らせ */
+.availBlock.avail-info{background:var(--sgs);border-color:var(--sgl);border-left-color:var(--sg);color:var(--sgd)}
 .availBlock .availTitle{font-size:13px;font-weight:900}
 .availBlock .availSub{margin-top:2px;font-weight:800}
 .availBlock ul.availList{margin:4px 0 0;padding-left:1.3em}
 .availBlock li{margin:3px 0}
 .availInline{display:inline-flex;align-items:center;gap:6px;color:#9c4844;font-weight:700;font-size:12px}
 .availInline::before{content:"";width:8px;height:8px;border-radius:50%;background:#c0504a;flex:0 0 auto}
+.availInline.avail-caution{color:#7a4b00}
+.availInline.avail-caution::before{background:var(--gd)}
 /* ===== エラー→該当箇所ジャンプ：ハイライト・補足ノート・移動ボタン ===== */
 .jumpHL{outline:3px solid var(--rd)!important;box-shadow:0 0 0 6px rgba(189,84,75,.18)!important;border-radius:8px!important;position:relative;z-index:6;transition:outline .15s,box-shadow .15s}
 .jumpHL.warnHL{outline-color:var(--gd)!important;box-shadow:0 0 0 6px rgba(169,120,31,.18)!important}
@@ -489,6 +495,21 @@ body.cellSelecting .editableSelect{cursor:cell}
 .pageSizeSeg{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
 .pageSizeSeg button{width:auto;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:800;font-size:12px}
 .pageSizeSeg button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* 下書きチェック：状態カード・件数チップ・フィルタ・重大/注意/許容バッジ */
+.draftSage{background:var(--sgs);border:1px solid var(--sgl);color:var(--sgd);border-radius:14px;padding:10px;margin:8px 0}
+.draftOkCard b,.draftSage b{font-size:13.5px}
+.draftCountChips{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:2px}
+.draftChip{display:inline-block;background:rgba(0,0,0,.06);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800}
+.draftCrossPage{margin:6px 0 0;font-size:12px;font-weight:800;color:#9c4844;background:#fff;border:1px solid #ecc9c5;border-radius:10px;padding:6px 10px}
+.draftFilterSeg{display:inline-flex;gap:4px}
+.draftFilterSeg button{width:auto;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:800;font-size:12px}
+.draftFilterSeg button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.draftPageOfTotal{margin-left:4px;color:var(--muted);font-weight:700}
+.lvChip{flex:0 0 auto;align-self:flex-start;margin-top:2px;border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.lvChip.lvBad{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl)}
+.lvChip.lvWarn{background:var(--gdb);color:var(--gd);border:1px solid var(--gdl)}
+.lvChip.lvAllowed{background:#e9f6ea;color:#237a3a;border:1px solid #c5e6c8}
+.warnItemRow.isAllowed .msg{opacity:.95}
 
 /* 部署別シフト作成プレビュー：小/中/大の表サイズ */
 .deptPvWrap.pvSmall{max-height:380px}
@@ -574,7 +595,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
 <header>
   <div class="headerMain">
     <h1><img class="brandClover" src="assets/icons/svg/clover.svg" alt="">KJM Shift＋</h1>
-    <p>部署ごとに「自動作成 → 確認 → 確定」で全体シフトができあがります。入力した内容はこの端末の中にだけ自動保存され、外部には送信されません。</p>
+    <p>部署ごとに「自動生成 → 確認 → 確定」で全体シフトができあがります。入力した内容はこの端末の中にだけ自動保存され、外部には送信されません。</p>
   </div>
 </header>
 
@@ -585,7 +606,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <button type="button" class="backupHint" onclick="downloadJSON()"><img class="appicon backupHintIcon" src="assets/icons/svg/action-backup-save.svg" alt=""><span class="backupHintBody"><span class="backupHintTitle">バックアップ取得</span><span class="backupHintText">シフトやスタッフを編集したら、こまめなバックアップをおすすめします</span></span></button>
     <div class="menuGroup">よく使う</div>
     <button class="menuItem active" data-panel="calendar" onclick="showMenuPanel('calendar')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-overall-shift.svg" alt=""></span><span class="menuLabelWrap"><span>全体シフト表</span><small>全体をながめる・編集</small></span></button>
-    <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動作成→確定</small></span></button>
+    <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動生成→確定</small></span></button>
     <button class="menuItem" data-panel="prefs" onclick="showMenuPanel('prefs')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-requests.svg" alt=""></span><span class="menuLabelWrap"><span>シフト希望・全体予定</span><small>希望休・全体の予定</small></span></button>
     <div class="menuGroup">使い方・困ったとき</div>
     <button type="button" class="menuItem menuLink" onclick="window.open('quick.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/quick-manual.svg" alt=""></span><span class="menuLabelWrap"><span>クイックマニュアル</span><small>よく使う操作の早わかり・別タブ</small></span></button>
@@ -637,7 +658,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
           <div><label for="attempts">試行回数 <span class="small">エラー0の案が見つかると自動で早期終了</span></label><input id="attempts" type="text" inputmode="numeric" min="30" max="1500" step="10"></div>
         </div>
         <div class="importantRules" id="importantRules">
-          <div class="impHead"><h3>重要な自動作成ルール</h3><p class="small">シフト自動作成の結果に大きく影響します。通常はどちらも「有効」のままご利用ください。変更するときだけ「変更する」を押してください。</p></div>
+          <div class="impHead"><h3>重要な自動生成ルール</h3><p class="small">シフト自動生成の結果に大きく影響します。通常はどちらも「有効」のままご利用ください。変更するときだけ「変更する」を押してください。</p></div>
           <div class="visuallyHidden" aria-hidden="true"><input id="avoidLateEarly" type="checkbox" tabindex="-1"><input id="holidayAsWeekend" type="checkbox" tabindex="-1"></div>
           <div class="impRuleCard" id="impCard_avoidLateEarly">
             <div class="impRuleMain"><div class="impRuleTitleRow"><span class="impRuleName">遅番の翌日に早番を入れない</span><span class="impBadge on" id="impBadge_avoidLateEarly">有効</span></div><p class="impRuleDesc">遅番の次の日に早番が入らないようにします。原則ONのまま使用してください。</p></div>
@@ -688,7 +709,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     </section>
     <section class="card menuPanel" data-panel="deptBuild">
       <div class="panelHead noPrint">
-        <div><h2><img class="appicon xl" src="assets/icons/svg/nav-department-create.svg" alt="">部署別シフト作成</h2><p>部署を選んで自動作成します。対象の締め月はメニューの「締め月」バッジから変更できます。確定すると全体シフト表に反映された状態で編集不可になります。トリマーを選ぶと月次表もこのページに表示されます。</p></div>
+        <div><h2><img class="appicon xl" src="assets/icons/svg/nav-department-create.svg" alt="">部署別シフト作成</h2><p>部署を選んで自動生成します。対象の締め月はメニューの「締め月」バッジから変更できます。確定すると全体シフト表に反映された状態で編集不可になります。トリマーを選ぶと月次表もこのページに表示されます。</p></div>
         <div class="panelActions"><button class="btn2" onclick="showMenuPanel('calendar')">全体シフト表へ</button></div>
       </div>
       <div id="deptBuildPanel"></div>
@@ -763,7 +784,7 @@ const DEFAULT_SCHEDULE_TAGS = ['納品','Pシェア','SALE最終','チーフMTG'
 function empTagFromNo(no){ const n=parseInt(String(no||'').trim(),10); if(!(n>=0)) return ''; if(n>=10000&&n<=19999) return '社員'; if(n>=50000&&n<=99999) return 'パート'; return ''; }
 function isValidEmpNo(no){ return /^\d{5}$/.test(String(no||'').trim()); }
 const DEPT_UNSET_TAG = '部署未設定';
-// 自動作成ルール「チーフMTGの日はチーフ/園長を遅番に寄せる」が参照するタグ名（名称変更で無効化されないよう一元管理）
+// 自動生成ルール「チーフMTGの日はチーフ/園長を遅番に寄せる」が参照するタグ名（名称変更で無効化されないよう一元管理）
 const MTG_SCHEDULE_TAG = 'チーフMTG';
 const MTG_LATE_STAFF_TAGS = ['チーフ','園長'];
 // 社員番号・部署から自動付与・管理されるタグ（手動付与/改名/削除を禁止する）
@@ -1051,13 +1072,14 @@ let assignDept = {}; // dateKey -> staffName -> assigned department
 let locks = {};    // dateKey -> staffName -> true
 let allowedErrors = {}; // errorKey -> true
 let draftWarningPages = {}; // dept -> 表示中の警告ページ番号
+let draftWarnFilters = {}; // dept -> 'all'|'unresolved'（下書きチェックの表示フィルタ。保存しない一時表示設定）
 let statsWarnFilter = 'all'; // 集計・警告の絞り込み: all / bad / warn / allowed
 let bulkAssignState = {}; // dept -> {staff, shift, other, wds}
 let confirmedDepts = {}; // current period dept -> true
 let confirmedDeptsByPeriod = {}; // periodKey -> {dept:true}
 let activeConfirmedPeriodKey = '';
 let lastScore = null;
-let genDiff = null; // {dept, period, days, staff, prev, after} 自動作成の前案/今回（差分モーダル用）
+let genDiff = null; // {dept, period, days, staff, prev, after} 自動生成の前案/今回（差分モーダル用）
 
 function makeStaffId(){ return 'st_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
 // スタッフ名→オブジェクトの高速索引。自動生成・修復・検証のホットパスにある
@@ -1624,11 +1646,11 @@ function pullInputs(){
     state.staff = nextStaff.filter(st=>{ if(!st.name) return false; if(seen.has(st.id)) return false; seen.add(st.id); return true; });
   }
   // 希望休は追加・保存・削除ボタンでのみ更新する。
-  // 画面遷移や自動作成時のpullInputsで再構築すると、未編集中の希望休が消えるためここでは触らない。
+  // 画面遷移や自動生成時のpullInputsで再構築すると、未編集中の希望休が消えるためここでは触らない。
 }
 
-// 重要な自動作成ルール（誤操作防止カードUI）。実体は非表示チェックボックス（avoidLateEarly / holidayAsWeekend）で、
-// 既存の pullInputs/renderInputs/persist と自動作成ロジックはそのまま利用する。
+// 重要な自動生成ルール（誤操作防止カードUI）。実体は非表示チェックボックス（avoidLateEarly / holidayAsWeekend）で、
+// 既存の pullInputs/renderInputs/persist と自動生成ロジックはそのまま利用する。
 const IMPORTANT_RULES = {
   avoidLateEarly: {
     name: '遅番の翌日に早番を入れない',
@@ -2172,7 +2194,7 @@ function renderStaffList(){
   const scoped = state.staff.map((s,i)=>({s,i})).filter(x=>activeStaffDept==='全体' || x.s.dept===activeStaffDept);
   // 検索は一覧を作り直さず表示/非表示で行う（IME安定・2回目以降も効く）。ここでは全行を描画する。
   const rows = (activeStaffTagFilters.length ? scoped.filter(x=>activeStaffTagFilters.every(t=>(x.s.tags||[]).includes(t))) : scoped) // AND条件
-    .sort((a,b)=> empNoSortVal(a.s)-empNoSortVal(b.s) || kanaSortKey(a.s).localeCompare(kanaSortKey(b.s),'ja') || (a.s.name||'').localeCompare(b.s.name||'','ja')); // OBICと同様に社員番号の昇順で表示（保存順=自動作成順は変えない）
+    .sort((a,b)=> empNoSortVal(a.s)-empNoSortVal(b.s) || kanaSortKey(a.s).localeCompare(kanaSortKey(b.s),'ja') || (a.s.name||'').localeCompare(b.s.name||'','ja')); // OBICと同様に社員番号の昇順で表示（保存順=自動生成順は変えない）
   const curQuery = currentStaffSearch();
   const filterBar = staffTagFilterBarHtml();
   const searchBar = `<div class="staffSearchWrap"><img class="appicon staffSearchIcon" src="assets/icons/svg/ui-search.svg" alt=""><input id="staffSearchInput" class="staffSearchInput" type="search" placeholder="氏名・よみがなで検索" value="${escAttr(curQuery)}" oninput="onStaffSearchInput(event)" oncompositionend="onStaffSearchCommit(event)" autocomplete="off"><button type="button" id="staffSearchClear" class="staffSearchClear" title="検索をクリア" onclick="clearStaffSearch()" style="display:none">×</button><span id="staffSearchCount" class="staffSearchCount" style="display:none"></span></div>`;
@@ -2944,7 +2966,7 @@ function renderDeptBuildPanel(){
   const actionLabel=isDeptConfirmed(activeBuildDept)?'再編集':'確定';
   const actionClass=isDeptConfirmed(activeBuildDept)?'btnCaution':'btn';
   const actionIcon=isDeptConfirmed(activeBuildDept)?'action-reedit':'action-confirm';
-  const variantTitle = isDeptConfirmed(activeBuildDept) ? '再編集してから生成してください' : (deptHasAnyAssignment(activeBuildDept) ? '同じ条件で探索開始位置を変えて、別のシフト案を作成します' : 'まずは「この部署だけ自動作成」でシフトを作成してください');
+  const variantTitle = isDeptConfirmed(activeBuildDept) ? '再編集してから生成してください' : (deptHasAnyAssignment(activeBuildDept) ? '同じ条件で探索開始位置を変えて、別のシフト案を生成します' : 'まずは「この部署だけ自動生成」でシフトを生成してください');
   const diffBtn = (genDiff && genDiff.dept===activeBuildDept && genDiff.period===periodKey()) ? `<button class="btn2" type="button" onclick="openGenDiffModal()" title="前回のシフトと今回の生成結果を並べて比較します">前案と比較</button>` : '';
   const candidates=state.staff.filter(s=>s.dept===activeBuildDept || (s.supportDepts||[]).includes(activeBuildDept));
   const previewDays = getDays();
@@ -2964,12 +2986,12 @@ function renderDeptBuildPanel(){
         <div><b>土日祝必要人数</b><div class="small">早${needHol.E||0} / 中${needHol.M||0} / 遅${needHol.L||0}</div></div>
       </div>
       <div class="row" style="margin-top:10px">
-        <button class="btn genBtn" onclick="generateDeptSchedule(activeBuildDept)" ${(generationRunning||!genAvail.canRun)?'disabled':''} ${(!genAvail.canRun)?'title="今は自動作成できません（下の表示を参照）"':''}><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">この部署だけ自動作成</button>
+        <button class="btn genBtn" onclick="generateDeptSchedule(activeBuildDept)" ${(generationRunning||!genAvail.canRun)?'disabled':''} ${(!genAvail.canRun)?'title="今は自動生成できません（下の表示を参照）"':''}><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">この部署だけ自動生成</button>
         <button class="btn2 genBtn" onclick="generateDeptSchedule(activeBuildDept,{variant:true})" ${(generationRunning||!genAvail.canRun||!deptHasAnyAssignment(activeBuildDept))?'disabled':''} title="${variantTitle}"><img class="appicon" src="assets/icons/svg/regenerate-pattern.svg" alt="">別パターン再生成</button>
         ${diffBtn}
       </div>
-      ${availReasonsHtml(genAvail.reasons)}
-      ${progressFor().generatedAt[activeBuildDept] ? `<div class="small genTime">前回の作成：${new Date(progressFor().generatedAt[activeBuildDept]).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
+      ${availBox(genAvail)}
+      ${progressFor().generatedAt[activeBuildDept] ? `<div class="small genTime">前回の生成：${new Date(progressFor().generatedAt[activeBuildDept]).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
   const bulkTabContent = renderBulkAssignBox(activeBuildDept);
   const actionBox = `<div class="deptActionBox">
       <h3>${esc(activeBuildDept)} の作成・確定</h3>
@@ -2984,14 +3006,14 @@ function renderDeptBuildPanel(){
           {label:'CSV出力', onclick:'exportDeptCSV(activeBuildDept)'},
           {label:'Excel出力', onclick:'exportDeptExcel(activeBuildDept)'},
           {label:'印刷/PDF', onclick:'printDeptView(activeBuildDept)'}
-        ], {disabled:!exportAvail.canRun, title: exportAvail.canRun?'':'先に確定すると出力できます'})}${exportAvail.canRun?'':`<span class="availInline">${esc(exportAvail.reasons[0])}</span>`}
+        ], {disabled:!exportAvail.canRun, title: exportAvail.canRun?'':'先に確定すると出力できます'})}${exportAvail.canRun?'':`<span class="availInline avail-caution">${esc(reasonText(exportAvail.reasons[0]))}</span>`}
         <span class="vDivider" aria-hidden="true"></span>
         <button class="btn2 resetBtn" onclick="resetDeptSchedule(activeBuildDept)" ${generationRunning?'disabled':''} ${isDeptConfirmed(activeBuildDept)?'disabled title="再編集してから実行できます"':'title="この締め月のこの部署のシフトをすべて空欄にします"'}><img class="appicon" src="assets/icons/svg/clear-month.svg" alt="">この締め月のシフトを空欄にする</button>
       </div>
-      ${confirmBlocked?availReasonsHtml(confirmAvail.reasons):''}
+      ${confirmBlocked?availBox(confirmAvail):''}
       <div class="backupNudge">編集が一段落したら、メニュー「バックアップ」からの取得をおすすめします。</div>
     </div>`;
-  const footerNote = `<div class="footerNote">自動作成では、固定公休日・休希望の日だけ「休」を入れ、それ以外の所属スタッフは「入れるシフト」からいずれかの区分を設定します。エラーが出た場合は、同日や前後の日程で他スタッフとの区分交換・区分変更による自動調整を試み、やむを得ない場合のみ赤いセルと警告でお知らせします（自動では「休」を入れません）。「入れるシフト」が空のスタッフは公休・希望休のみ自動設定し、それ以外は空欄のままにします。前月末の確定シフトとのつながり（連勤・遅番→早番）もチェックします。確定後は、全体シフト表上の該当部署セルが編集不可になります。再編集を押すと再度編集・再生成できます。</div>`;
+  const footerNote = `<div class="footerNote">自動生成では、固定公休日・休希望の日だけ「休」を入れ、それ以外の所属スタッフは「入れるシフト」からいずれかの区分を設定します。エラーが出た場合は、同日や前後の日程で他スタッフとの区分交換・区分変更による自動調整を試み、やむを得ない場合のみ赤いセルと警告でお知らせします（自動では「休」を入れません）。「入れるシフト」が空のスタッフは公休・希望休のみ自動設定し、それ以外は空欄のままにします。前月末の確定シフトとのつながり（連勤・遅番→早番）もチェックします。確定後は、全体シフト表上の該当部署セルが編集不可になります。再編集を押すと再度編集・再生成できます。</div>`;
   // 締め月はメニュー上部のバッジで全ページ共通管理（ここでは表示のみ）
   const pb = getPeriodBounds();
   const periodControl = `<div class="currentPeriodBadge" style="margin:0 0 12px"><div class="periodBadgeTitle">作成対象の締め月</div><div class="periodBig">${state.year}年${state.month}月締め</div><div class="periodRange">対象期間：${pb.start.getFullYear()}/${pb.start.getMonth()+1}/${pb.start.getDate()}〜${pb.end.getFullYear()}/${pb.end.getMonth()+1}/${pb.end.getDate()}　<span class="small">変更はメニューの「締め月」から</span></div></div>`;
@@ -3004,7 +3026,7 @@ function renderDeptBuildPanel(){
           {label:'印刷/PDF', onclick:'printMonthlyView()'}
         ], {label:'ファイル出力', disabled:!monthlyAvail.canRun, title: monthlyAvail.canRun?'':'まだ出力できるデータがありません'})}</div>
       </div>
-      ${availReasonsHtml(monthlyAvail.reasons)}
+      ${availBox(monthlyAvail)}
       <div class="calendarControl" style="margin:0 0 10px">
         <div><label for="monthlyYear">年</label><input id="monthlyYear" type="text" inputmode="numeric" min="2024" max="2038" value="${state.monthlyYear}"></div>
         <div><label for="monthlyMonth">月</label><div class="monthNav"><button type="button" class="btn2 navBtn" onclick="shiftMonthly(-1)" title="前の月へ" aria-label="前の月へ">◀</button><input id="monthlyMonth" type="text" inputmode="numeric" min="1" max="12" value="${state.monthlyMonth}"><button type="button" class="btn2 navBtn" onclick="shiftMonthly(1)" title="次の月へ" aria-label="次の月へ">▶</button></div></div>
@@ -3148,23 +3170,67 @@ function renderDraftWarnings(dept, precomputedWarns=null){
   const box=document.getElementById('draftWarningsBox'); if(!box) return;
   // 自動生成・手動登録をしていない（この締め月のこの部署が全て空欄）なら下書きチェックはしない
   if(!deptHasAnyAssignment(dept)){ box.innerHTML=`<div class="draftEmptyNote">この締め月の ${esc(dept)} はまだシフトが作成されていません。「自動生成」または「一括手動登録」で作成すると、ここに下書きチェックが表示されます。</div>`; return; }
-  const warns=precomputedWarns || scopeWarnsForDept(dept, validate(schedule, getDays(), true, assignDept));
-  const hard=warns.filter(w=>w.level==='bad').length;
-  if(!warns.length){ box.innerHTML='<div class="ok">下書き時点のエラーはありません。</div>'; return; }
+  const allWarns=precomputedWarns || scopeWarnsForDept(dept, validate(schedule, getDays(), true, assignDept));
+  // 3分類：未解消エラー(bad・未許容) / 注意(warn・未許容) / 許容済み（緑表示・件数からは除外）
+  const sevOf = w => isWarningAllowed(w) ? 'allowed' : (w.level==='bad' ? 'bad' : 'warn');
+  const unresolvedBad  = allWarns.filter(w=>sevOf(w)==='bad');
+  const unresolvedWarn = allWarns.filter(w=>sevOf(w)==='warn');
+  const allowedW       = allWarns.filter(w=>sevOf(w)==='allowed');
+  const unresolvedCount = unresolvedBad.length;   // 確定をブロックする件数＝見出しの主役
+  const noticeCount     = unresolvedWarn.length;
+  const allowedCount    = allowedW.length;
+  // そもそも警告が1件も無い＝問題なし（成功カード）
+  if(!allWarns.length){ box.innerHTML='<div class="ok draftOkCard"><b>問題は見つかりませんでした。</b><div class="small">下書き時点で、重大・注意ともにエラーはありません。</div></div>'; return; }
+  // 並びは「未解消エラー → 注意 → 許容済み」（未解消を上に集める）
+  const ordered = [...unresolvedBad, ...unresolvedWarn, ...allowedW];
+  // 表示フィルタ（未解消のみ / すべて）。既定は「すべて表示」（許容済みも緑で残す）
+  const filter = draftWarnFilters[dept]==='unresolved' ? 'unresolved' : 'all';
+  const list = (filter==='unresolved') ? ordered.filter(w=>sevOf(w)!=='allowed') : ordered;
+  // カードの色：未解消エラーあり=赤 / 注意のみ=金 / すべて許容済み=セージ（赤背景にしない）
+  const cardKind = unresolvedCount>0 ? 'bad' : (noticeCount>0 ? 'warn' : 'draftSage');
+  // 見出し
+  let headTitle, headSub;
+  if(unresolvedCount>0){
+    headTitle = `未解消エラー ${unresolvedCount}件`;
+    headSub = '確定するには、修正して解消するか、各項目の左のチェックで「許容」してください。';
+  }else if(noticeCount>0){
+    headTitle = `未解消エラーはありません（注意 ${noticeCount}件）`;
+    headSub = '注意は確定をブロックしません。内容をご確認のうえ確定できます。';
+  }else{
+    headTitle = '未解消エラーはありません';
+    headSub = `許容済みの項目が ${allowedCount}件あります。内容は確認済みとして表示しています。`;
+  }
+  // 補助カウント（注意・許容済み）をチップで併記
+  const subCounts = [];
+  if(unresolvedCount>0 && noticeCount>0) subCounts.push(`注意 ${noticeCount}件`);
+  if(allowedCount>0) subCounts.push(`許容済み ${allowedCount}件`);
+  const subCountHtml = subCounts.length ? `<span class="draftCountChips">${subCounts.map(c=>`<span class="draftChip">${esc(c)}</span>`).join('')}</span>` : '';
+  // ページング（フィルタ後の list を対象に）
   const pageSize = [5,10,15].includes(+draftWarnPageSize) ? +draftWarnPageSize : 5;
-  const maxPage = Math.max(1, Math.ceil(warns.length / pageSize));
+  const maxPage = Math.max(1, Math.ceil(Math.max(list.length,1) / pageSize));
   const current = Math.min(Math.max(+(draftWarningPages[dept]||1), 1), maxPage);
   draftWarningPages[dept] = current;
   const startIdx = (current-1) * pageSize;
-  const shown = warns.slice(startIdx, startIdx + pageSize);
+  const shown = list.slice(startIdx, startIdx + pageSize);
+  // 別ページ指標：このページに出ていない未解消エラーが何件あるか
+  const unresolvedOnThisPage = shown.filter(w=>sevOf(w)==='bad').length;
+  const unresolvedElsewhere = unresolvedCount - unresolvedOnThisPage;
+  const crossPageNote = (maxPage>1 && unresolvedElsewhere>0)
+    ? `<div class="draftCrossPage">未解消エラーは別ページにもあります（このページ以外に ${unresolvedElsewhere}件）。</div>` : '';
+  // フィルタトグル（許容済みがあるときだけ出す）
+  const filterSeg = (allowedCount>0) ? `<span class="draftFilterSeg" role="group" aria-label="表示フィルタ"><button type="button" class="${filter==='all'?'active':''}" onclick="setDraftWarnFilter('${escAttr(dept)}','all')">すべて表示</button><button type="button" class="${filter==='unresolved'?'active':''}" onclick="setDraftWarnFilter('${escAttr(dept)}','unresolved')">未解消のみ</button></span>` : '';
+  const sizeSeg = `<span class="pageSizeSeg">表示件数: ${[5,10,15].map(n=>`<button type="button" class="${pageSize===n?'active':''}" onclick="setDraftWarnPageSize('${escAttr(dept)}', ${n})">${n}</button>`).join('')}</span>`;
+  const showingTo = Math.min(startIdx+pageSize, list.length);
+  const countInfo = list.length ? `<span class="small">表示中：${startIdx+1}〜${showingTo} / 全${list.length}件${filter==='unresolved'?'（未解消のみ）':''}</span>` : `<span class="small">表示する項目はありません</span>`;
   const pageButtons = Array.from({length:maxPage}, (_,i)=>i+1)
     .map(n=>`<button type="button" class="${n===current?'active':''}" onclick="setDraftWarningPage('${escAttr(dept)}', ${n})">${n}</button>`).join('');
-  const sizeSeg = `<span class="pageSizeSeg">表示件数: ${[5,10,15].map(n=>`<button type="button" class="${pageSize===n?'active':''}" onclick="setDraftWarnPageSize('${escAttr(dept)}', ${n})">${n}</button>`).join('')}</span>`;
-  // 上段は件数情報＋表示件数切替のみ、下段はページ移動のみ（重複表示を避ける）
-  const countInfo = `<span class="small">${startIdx+1}〜${Math.min(startIdx+pageSize,warns.length)} / ${warns.length}件</span>`;
-  const pagerTop = `<div class="draftPager">${countInfo}${sizeSeg}</div>`;
-  const pagerBottom = maxPage>1 ? `<div class="draftPager"><button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.max(1,current-1)})" ${current===1?'disabled':''}>前へ</button>${pageButtons}<button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.min(maxPage,current+1)})" ${current===maxPage?'disabled':''}>次へ</button></div>` : '';
-  box.innerHTML=`<div class="${hard?'bad':'warn'}"><div class="draftWarnHeader"><b>下書きチェック：エラー ${warns.length}件</b><span class="small">重大・注意をまとめて、この画面内で全件確認できます。「該当箇所へ移動」で対象セルへ移動します。</span></div>${pagerTop}${shown.map(w=>renderWarningItem(w,{page:'deptBuild',dept})).join('')}${pagerBottom}</div>`;
+  // 上段は件数情報＋フィルタ＋表示件数切替、下段はページ移動（重複表示を避ける）
+  const pagerTop = `<div class="draftPager">${countInfo}${filterSeg}${sizeSeg}</div>`;
+  const pagerBottom = maxPage>1 ? `<div class="draftPager"><button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.max(1,current-1)})" ${current===1?'disabled':''}>前へ</button>${pageButtons}<button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.min(maxPage,current+1)})" ${current===maxPage?'disabled':''}>次へ</button><span class="small draftPageOfTotal">${current} / ${maxPage}ページ</span></div>` : '';
+  const itemsHtml = shown.length
+    ? shown.map(w=>renderWarningItem(w,{page:'deptBuild',dept,showLevel:true})).join('')
+    : `<div class="draftEmptyNote">未解消の項目はありません。「すべて表示」で許容済みの項目を確認できます。</div>`;
+  box.innerHTML=`<div class="${cardKind}"><div class="draftWarnHeader"><b>下書きチェック：${esc(headTitle)}</b>${subCountHtml}<span class="small">${esc(headSub)}「該当箇所へ移動」で対象セルへ移動します。</span></div>${crossPageNote}${pagerTop}${itemsHtml}${pagerBottom}</div>`;
 }
 function setDraftWarningPage(dept, page){
   draftWarningPages[dept] = page;
@@ -3175,6 +3241,11 @@ function setDraftWarnPageSize(dept, n){
   draftWarnPageSize = [5,10,15].includes(+n) ? +n : 5;
   draftWarningPages[dept] = 1;
   persist();
+  renderDraftWarnings(dept);
+}
+function setDraftWarnFilter(dept, mode){
+  draftWarnFilters[dept] = (mode==='unresolved') ? 'unresolved' : 'all';
+  draftWarningPages[dept] = 1; // フィルタ変更で件数が変わるため先頭ページへ
   renderDraftWarnings(dept);
 }
 
@@ -3421,10 +3492,10 @@ function scheduleQuality(out, days, deptOut, deptFilter='', warnsPre=null){
   const softMtg = mtgSoftPenalty(days, out, deptOut, deptFilter);
   return {bad, shortage, warn, balance, softMtg};
 }
-// 自動作成の弱い希望：チーフMTGの日は、チーフ／園長タグのスタッフ（出勤する場合）をなるべく遅番にする。
+// 自動生成の弱い希望：チーフMTGの日は、チーフ／園長タグのスタッフ（出勤する場合）をなるべく遅番にする。
 // 優先度は低め（bad/不足/注意/早中遅バランスより後の同点処理）なので、ハードな制約を犠牲にはしない。
 function wantsLateForMtg(st){ const t=st.tags||[]; return MTG_LATE_STAFF_TAGS.some(x=>t.includes(x)); }
-// チーフMTGに該当する日のキー集合。締め月内では不変なので、自動作成中は1回だけ算出してキャッシュする（採点ループでの再計算を避ける）。
+// チーフMTGに該当する日のキー集合。締め月内では不変なので、自動生成中は1回だけ算出してキャッシュする（採点ループでの再計算を避ける）。
 let _mtgDayKeysCache = null;
 function computeMtgDayKeys(days){ const set=new Set(); for(const day of days){ if(!day.closed && scheduleTagsForDay(day).includes(MTG_SCHEDULE_TAG)) set.add(day.key); } return set; }
 function mtgSoftPenalty(days, out, deptOut, deptFilter){
@@ -3784,7 +3855,7 @@ function finalizeStrictSchedule(out, deptOut, days, targetDept, offMap, prefMap,
 async function generateDeptSchedule(dept, options={}){
   if(generationRunning) return;
   pullInputs(); normalizeState();
-  if(isDeptConfirmed(dept)){ showToast('この部署は確定済みです。再編集してから自動作成できます。','warn'); return; }
+  if(isDeptConfirmed(dept)){ showToast('この部署は確定済みです。再編集してから自動生成できます。','warn'); return; }
   if(state.staff.length===0){ showToast('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。','warn'); return; }
   const candidates = state.staff.filter(s=>staffCanDept(s, dept));
   if(!candidates.length){ showToast(`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`,'warn'); return; }
@@ -3793,7 +3864,7 @@ async function generateDeptSchedule(dept, options={}){
   if(hadData){
     const msg = options.variant
       ? `${dept} の現在のシフトを、別パターンで作り直します。\n作り直す前のシフトは「前案に戻す」で元に戻せます。`
-      : `${dept} には既にシフトが入っています。自動作成で作り直します。\n作り直す前のシフトは「前案に戻す」で元に戻せます。`;
+      : `${dept} には既にシフトが入っています。自動生成で作り直します。\n作り直す前のシフトは「前案に戻す」で元に戻せます。`;
     if(!await showConfirmModal({title:'シフトを作り直しますか？', message:msg, confirmText:'作り直す', cancelText:'キャンセル', variant:'caution'})) return;
   }
   const attempts = Math.max(30, Math.min(1500, state.attempts || 800));
@@ -3833,8 +3904,8 @@ async function generateDeptSchedule(dept, options={}){
       // 中止された場合は追い込み修復も結果反映も行わず、生成前のシフトをそのまま保持する。
       genDiff=null;
       preserveScroll(()=>{ renderInputs(); renderAll(); });
-      setGenerationProgress(100, `${dept} の作成を中止しました。変更は反映していません（元のシフトのままです）。`);
-      toast(`${dept} の自動作成を中止しました（変更なし）。`, 'warn');
+      setGenerationProgress(100, `${dept} の生成を中止しました。変更は反映していません（元のシフトのままです）。`);
+      toast(`${dept} の自動生成を中止しました（変更なし）。`, 'warn');
     } else {
       // 最良案にエラー等が残る場合のみ追い込み修復（厳密に改善した場合のみ採用）
       if(best && (best.quality.bad>0 || (best.quality.shortage||0)>0 || best.quality.warn>0)){
@@ -3858,15 +3929,15 @@ async function generateDeptSchedule(dept, options={}){
       markDeptGenerated(dept);
       preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
       const doneText = earlyStopped
-        ? `${dept} の${options.variant?'別パターン':''}部署別シフト作成が完了しました（${attemptsUsed}回目でエラー0の案が見つかったため早期終了）。別案を見たい場合は「別パターン再生成」を押してください。`
-        : `${dept} の${options.variant?'別パターン':''}部署別シフト作成が完了しました（${attemptsUsed}回試行）。内容を確認してから「確定」を押してください。`;
+        ? `${dept} の${options.variant?'別パターン':''}自動生成が完了しました（${attemptsUsed}回目でエラー0の案が見つかったため早期終了）。別案を見たい場合は「別パターン再生成」を押してください。`
+        : `${dept} の${options.variant?'別パターン':''}自動生成が完了しました（${attemptsUsed}回試行）。内容を確認してから「確定」を押してください。`;
       setGenerationProgress(100, doneText);
       // 完了通知は操作した場所（進捗バーの直下）に表示し、見落としを防ぐ。
       const progress = document.getElementById('genProgress');
       if(progress){
         const note = document.createElement('div');
         note.className = 'ok';
-        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}作成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。`;
+        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}生成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。`;
         progress.insertAdjacentElement('afterend', note);
         if(genDiff){
           const cmp = document.createElement('button');
@@ -3885,7 +3956,7 @@ async function generateDeptSchedule(dept, options={}){
     if(isDeptConfirmed(dept)){ const gen=document.querySelector('#deptBuildPanel .genBtn'); if(gen) gen.disabled=true; }
   }
 }
-// ===== 自動作成の差分確認モーダル（前案 ⇄ 今回の生成結果を並べて表示）=====
+// ===== 自動生成の差分確認モーダル（前案 ⇄ 今回の生成結果を並べて表示）=====
 function genDiffCellText(v){
   if(v===undefined || v===null || v==='') return '';
   if(v==='OFF') return '休';
@@ -3917,7 +3988,7 @@ function buildGenDiffTable(which){
 }
 function genDiffEscHandler(e){ if(e.key==='Escape') closeGenDiffModal(); }
 function openGenDiffModal(){
-  if(!genDiff){ toast('比較できる前案がありません。先に自動作成してください。','warn'); return; }
+  if(!genDiff){ toast('比較できる前案がありません。先に自動生成してください。','warn'); return; }
   closeGenDiffModal();
   const g=genDiff;
   const back=document.createElement('div');
@@ -3925,7 +3996,7 @@ function openGenDiffModal(){
   back.innerHTML=`
     <div class="genDiffModal" role="dialog" aria-modal="true" aria-label="${esc(g.dept)} 生成前後の差分">
       <div class="genDiffHead">
-        <h3>${esc(g.dept)}：自動作成の前後を比較</h3>
+        <h3>${esc(g.dept)}：自動生成の前後を比較</h3>
         <span class="gdMeta">変更されたセル ${g.changed} 件</span>
       </div>
       <div class="genDiffBody">
@@ -4753,11 +4824,14 @@ function warningAllowKey(w){
 }
 function isWarningAllowed(w){ return !!(allowedErrors[warningAllowKey(w)] || allowedErrors[messageErrorKey(w.text||'')]); }
 function renderWarningItem(w, ctx){
+  ctx = ctx || {};
   const k=warningAllowKey(w); const allowed=isWarningAllowed(w);
   const legacyKey=messageErrorKey(w.text||'');
-  const tgt=warningTarget(w, ctx||{});
+  const tgt=warningTarget(w, ctx);
   const jumpBtn = tgt ? `<button type="button" class="warnJumpBtn" aria-label="該当箇所へ移動：${escAttr(w.text||'')}" onclick="appJumpStr('${escAttr(JSON.stringify(tgt))}')">該当箇所へ移動</button>` : '';
-  return `<div class="warnItemRow"><label class="allowErrorLine"><input type="checkbox" ${allowed?'checked':''} onchange="toggleAllowedError('${escAttr(k)}', this, '${escAttr(legacyKey)}')"><span class="msg ${allowed?'allowedErrorText':''}">${esc(w.text||'')}</span></label>${jumpBtn}</div>`;
+  // 下書きチェックでは重大／注意／許容済みを小バッジで明示し、未解消と許容済みを見分けやすくする
+  const levelChip = ctx.showLevel ? `<span class="lvChip ${allowed?'lvAllowed':(w.level==='bad'?'lvBad':'lvWarn')}">${allowed?'許容済み':(w.level==='bad'?'重大':'注意')}</span>` : '';
+  return `<div class="warnItemRow${allowed?' isAllowed':''}"><label class="allowErrorLine"><input type="checkbox" ${allowed?'checked':''} onchange="toggleAllowedError('${escAttr(k)}', this, '${escAttr(legacyKey)}')">${levelChip}<span class="msg ${allowed?'allowedErrorText':''}">${esc(w.text||'')}</span></label>${jumpBtn}</div>`;
 }
 async function toggleAllowedError(key, checkbox, legacyKey=''){
   if(checkbox.checked){
@@ -4921,16 +4995,16 @@ function renderSummary(){
   document.getElementById('summary').innerHTML = `<div class="metric"><b>${days.length}</b><span>対象日数</span></div><div class="metric"><b>${formatPeriodShort()}</b><span>15日締め期間</span></div><div class="metric"><b>${state.staff.length}</b><span>スタッフ数</span></div><div class="metric"><b>${deptCount}</b><span>登録部署数</span></div><div class="metric"><b>${confirmedDeptList().length}</b><span>確定部署</span></div><div class="metric metricLink" role="button" tabindex="0" title="クリックで集計・警告を開く" onclick="showMenuPanel('stats')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showMenuPanel('stats');}"><b class="${shortage?'metricBad':''}">${shortage}</b><span>不足枠（必要人数未達）</span></div>`;
   const msgBox=document.getElementById('messages');
   const built=Object.keys(schedule).length>0;
-  if(!state.staff.length) msgBox.innerHTML='<div class="warn">ようこそ まずは「基本ルール」で必要人数を、「スタッフ」でメンバーを登録してください。そのあと「部署別シフト作成」からシフトを自動作成できます。</div>';
+  if(!state.staff.length) msgBox.innerHTML='<div class="warn">ようこそ まずは「基本ルール」で必要人数を、「スタッフ」でメンバーを登録してください。そのあと「部署別シフト作成」からシフトを自動生成できます。</div>';
   // 基本ルール違反のアラートはヒント文より優先して必ず表示する
   else if(hard || soft) msgBox.innerHTML=`<div class="${hard?'bad':'warn'}">警告：重大 ${hard}件 / 軽微 ${soft}件。${built?'':'（未作成の期間・部署があります。「部署別シフト作成」から作成してください）'}<button type="button" class="statsLinkBtn" onclick="showMenuPanel('stats')">集計・警告タブを開く</button></div>`;
-  else if(!built) msgBox.innerHTML='<div class="warn">準備ができたら「部署別シフト作成」から部署ごとにシフトを自動作成してください。</div>';
+  else if(!built) msgBox.innerHTML='<div class="warn">準備ができたら「部署別シフト作成」から部署ごとにシフトを自動生成してください。</div>';
   else msgBox.innerHTML='<div class="ok">重大なルール違反は検出されていません。必要に応じて手修正・CSV出力してください。</div>';
 }
 function formatPeriodShort(){const {start,end}=getPeriodBounds(); return `${start.getMonth()+1}/${start.getDate()}-${end.getMonth()+1}/${end.getDate()}`;}
 // 全体シフト表などの表示順：部署の並び（DEPTS）は固定し、各部署の中だけ社員番号の昇順に並べる。
 // 全体シフト表の並び：通常部署の順 → 末尾に部署未設定（DEPTSに無い／空）をまとめる。
-// 部署未設定スタッフは表示のみ。部署別の自動作成候補（staffCanDept）には入らないため割当はされない。
+// 部署未設定スタッフは表示のみ。部署別の自動生成候補（staffCanDept）には入らないため割当はされない。
 function unsetDeptStaff(){ return staffSortedByEmpNo(state.staff.filter(s=>!s.dept || !DEPTS.includes(s.dept))); }
 function orderedStaff(){ return [...DEPTS.flatMap(d=>staffSortedByEmpNo(state.staff.filter(s=>s.dept===d))), ...unsetDeptStaff()]; }
 function renderCalendar(){
@@ -4983,7 +5057,7 @@ function renderCalendar(){
     {label:'Excel出力', onclick:'exportCalendarExcel()'},
     {label:'印刷/PDF', onclick:'printCalendarView()'}
   ], {disabled:!calAvail.canRun, title: calAvail.canRun ? '' : 'まだ出力できるデータがありません（下の表示を参照）'});
-  const calAvailBox=document.getElementById('calendarAvailSlot'); if(calAvailBox) calAvailBox.innerHTML=availReasonsHtml(calAvail.reasons);
+  const calAvailBox=document.getElementById('calendarAvailSlot'); if(calAvailBox) calAvailBox.innerHTML=availBox(calAvail);
   requestAnimationFrame(updateCalendarHScroll);
 }
 function renderNeedRows(days, baseSchedule=schedule, baseAssignDept=assignDept){
@@ -5446,41 +5520,63 @@ function closeExportMenus(){ document.querySelectorAll('details.exportMenu[open]
 // 文言はスタッフ向けにやさしく（「まだ実行できません」「先に〜してください」）。
 // reason は文字列、または {text, jump:{...target}, jumpLabel} を許容（jumpがあれば移動ボタンを表示）
 function reasonText(r){ return (r && typeof r==='object') ? (r.text||'') : (r||''); }
-function availReasonsHtml(reasons, title='この操作はまだ実行できません'){
+// reasons配列に加えて、第2引数で見た目を制御できる。
+//   文字列を渡す → タイトル（従来互換、赤エラー表示）
+//   オブジェクトを渡す → {kind:'error'|'caution'|'info', title, subLabel}
+//   kind は色分け（error=赤／caution=金／info=セージ）。avail自体が {kind,title} を持つ場合はそれを優先。
+function availReasonsHtml(reasons, opts){
   if(!reasons || !reasons.length) return '';
+  if(typeof opts==='string') opts={title:opts};
+  opts=opts||{};
+  const kind = opts.kind || 'error';
+  const defaultTitle = kind==='info' ? 'この操作はロックされています' : kind==='caution' ? '今はまだ実行できません' : 'この操作はまだ実行できません';
+  const title = opts.title || defaultTitle;
+  const subLabel = ('subLabel' in opts) ? opts.subLabel : (kind==='info' ? '' : '不足している条件：');
+  const cls = 'availBlock' + (kind==='caution' ? ' avail-caution' : kind==='info' ? ' avail-info' : '');
   const li=reasons.map(r=>{ if(r && typeof r==='object'){ const btn=r.jump?`<button type="button" class="availJumpBtn" aria-label="${escAttr((r.jumpLabel||'該当箇所へ移動')+'：'+(r.text||''))}" onclick="appJumpStr('${escAttr(JSON.stringify(r.jump))}')">${esc(r.jumpLabel||'該当箇所へ移動')}</button>`:''; return `<li>${esc(r.text||'')}${btn}</li>`; } return `<li>${esc(r)}</li>`; }).join('');
-  return `<div class="availBlock" role="status"><div class="availTitle">${esc(title)}</div><div class="availSub">不足している条件：</div><ul class="availList">${li}</ul></div>`;
+  const subHtml = subLabel ? `<div class="availSub">${esc(subLabel)}</div>` : '';
+  return `<div class="${cls}" role="status"><div class="availTitle">${esc(title)}</div>${subHtml}<ul class="availList">${li}</ul></div>`;
 }
+// avail（{reasons,kind,title}）をそのまま渡せる薄いラッパ。kind/title が無ければ既定（赤エラー）。
+function availBox(avail){ if(!avail || !avail.reasons || !avail.reasons.length) return ''; return availReasonsHtml(avail.reasons, {kind:avail.kind, title:avail.title, subLabel:avail.subLabel}); }
 function getCalendarOutputAvailability(){
+  // 出力できるデータが無いだけ＝エラーではないので「注意（金）」で案内する。
   const reasons=[];
   if(!state.staff.length) reasons.push({text:'まだ出力できるデータがありません。「スタッフ」からスタッフを登録してください。', jump:{page:'staff',note:'スタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
-  return {canRun: reasons.length===0, reasons};
+  return {canRun: reasons.length===0, reasons, kind:'caution', title:'まだ出力できるデータがありません'};
 }
 function getMonthlyOutputAvailability(){
   const reasons=[];
   if(!monthlyStaffRows().length) reasons.push({text:'まだ出力できるデータがありません。「スタッフ」でトリマー（または兼務）のスタッフを登録してください。', jump:{page:'staff',note:'トリマー（または兼務）のスタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
-  return {canRun: reasons.length===0, reasons};
+  return {canRun: reasons.length===0, reasons, kind:'caution', title:'まだ出力できるデータがありません'};
 }
 function getDeptConfirmAvailability(dept, unresolvedCount){
   // 「確定」（未確定→確定）のみ判定する。確定済みのときの「再編集」は常に可能。
+  // 未解消エラーがある＝要対応なので「エラー（赤）」のまま。
   const reasons=[];
   if(!isDeptConfirmed(dept)){
     const unresolved = (typeof unresolvedCount==='number') ? unresolvedCount : deptUnresolvedBadCount(dept);
     if(unresolved>0) reasons.push({text:`未解消のエラーが ${unresolved}件 あります。シフトを修正して解消するか、「下書きチェック」や「集計・警告」で許容すると確定できます。`, jump:{page:'stats',note:'重大な警告を確認・修正または許容してください。'}, jumpLabel:'集計・警告を開く'});
   }
-  return {canRun: reasons.length===0, reasons};
+  return {canRun: reasons.length===0, reasons, kind:'error', title:'未解消のエラーがあるため確定できません'};
 }
 function getDeptGenerateAvailability(dept){
+  // 確定済みは「エラー」ではなく「状態（ロック中）」。セージ＝info で案内し、再編集を促す。
+  if(isDeptConfirmed(dept)){
+    return {canRun:false, kind:'info', title:'この部署は確定済みです',
+      reasons:['確定済みのため、自動生成はロックされています。やり直す場合は「再編集」を押してください。']};
+  }
+  // 未確定でスタッフ条件が足りない＝要対応なので「エラー（赤）」。
   const reasons=[];
-  if(isDeptConfirmed(dept)) reasons.push('この部署は確定済みです。「再編集」を押すと自動作成できます。');
   if(!state.staff.length) reasons.push({text:'スタッフが登録されていません。「スタッフ」からメンバーを登録してください。', jump:{page:'staff',note:'スタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
   else if(!state.staff.some(s=>staffCanDept(s, dept))) reasons.push({text:`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`, jump:{page:'staff',note:'対応できる部署を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
-  return {canRun: reasons.length===0, reasons};
+  return {canRun: reasons.length===0, reasons, kind:'error'};
 }
 function getDeptExportAvailability(dept){
+  // 未確定＝まだ手順が残っているだけ＝「注意（金）」で案内する（エラーではない）。
   const reasons=[];
   if(!isDeptConfirmed(dept)) reasons.push('先にこの部署のシフトを確定すると出力できます。');
-  return {canRun: reasons.length===0, reasons};
+  return {canRun: reasons.length===0, reasons, kind:'caution', title:'まだ出力できません'};
 }
 function exportMenuHtml(items, {label='ファイル出力', disabled=false, title=''}={}){
   const iconFor=(l)=>({'CSV出力':'action-export-csv','Excel出力':'spreadsheet-download','印刷/PDF':'print-pdf'}[l]||'');
@@ -5502,7 +5598,7 @@ function kanaSortKey(st){
 function empNoSortVal(st){ return isValidEmpNo(st.empNo) ? parseInt(String(st.empNo).trim(),10) : Number.POSITIVE_INFINITY; }
 // 社員番号の昇順（未設定は末尾）。同番号はよみがな→氏名で安定化。スタッフ一覧・OBICで共用。
 function staffSortedByEmpNo(list){ return [...list].sort((a,b)=> empNoSortVal(a)-empNoSortVal(b) || kanaSortKey(a).localeCompare(kanaSortKey(b),'ja') || (a.name||'').localeCompare(b.name||'','ja')); }
-// 部署未設定（未配属）スタッフはシフト表・自動作成の対象外なのでOBIC出力からも除外し、カレンダーと行が一致するようにする。
+// 部署未設定（未配属）スタッフはシフト表・自動生成の対象外なのでOBIC出力からも除外し、カレンダーと行が一致するようにする。
 function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='')); }
 // OBICのコピー/Excel出力をブロックすべき「エラー」理由を返す（無ければ空文字）。
 //  ・対象スタッフが0名（未登録/全員部署未設定）→ 出力する中身が無い
@@ -6013,7 +6109,7 @@ function equinoxDay(y, spring=true){ return spring ? Math.floor(20.8431 + 0.2421
 function getJapaneseHolidayBase(y,m,d){
   // 振替休日・国民の休日を含めない基礎祝日判定。
   // ここを非再帰にしておかないと、9月の国民の休日判定で左右の日付を見続けて無限再帰し、
-  // 9月締め・10月締めのカレンダー更新や自動作成が停止する。
+  // 9月締め・10月締めのカレンダー更新や自動生成が停止する。
   const dt = new Date(y, m-1, d);
   if(dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d) return '';
   const fixed={'1-1':'元日','2-11':'建国記念の日','2-23':'天皇誕生日','4-29':'昭和の日','5-3':'憲法記念日','5-4':'みどりの日','5-5':'こどもの日','8-11':'山の日','11-3':'文化の日','11-23':'勤労感謝の日'};
