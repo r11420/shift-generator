@@ -52,6 +52,35 @@ textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padd
 .toast.show{opacity:1;transform:translateY(0)}
 .toast-warn{background:#b06a00}
 .toast-bad{background:#b3413f}
+.toast-success{background:#3f6f55}
+.toast-error{background:#b3413f}
+/* ===== 共通モーダル（確認／入力／通知）：本ツールのトンマナ ===== */
+.appModalOverlay{position:fixed;inset:0;z-index:100050;display:flex;align-items:center;justify-content:center;background:rgba(40,30,15,.45);padding:18px;opacity:0;transition:opacity .15s ease}
+.appModalOverlay.show{opacity:1}
+.appModalCard{width:min(460px,100%);max-height:90vh;overflow:auto;background:var(--iv);border:1px solid var(--ln);border-radius:18px;box-shadow:0 24px 60px rgba(40,30,15,.32);padding:22px 22px 18px;transform:translateY(8px) scale(.985);transition:transform .15s ease}
+.appModalOverlay.show .appModalCard{transform:none}
+.appModalCard.variant-primary{border-top:5px solid var(--accent)}
+.appModalCard.variant-caution{border-top:5px solid var(--gd)}
+.appModalCard.variant-danger{border-top:5px solid var(--rd)}
+.appModalTitle{font-size:17px;font-weight:900;color:var(--ink);margin:0 0 8px;line-height:1.4}
+.appModalMsg{font-size:13.5px;line-height:1.75;color:var(--ink2);font-weight:600;white-space:pre-line;margin:0 0 14px}
+.appModalDangerNote{background:var(--rdb);border:1px solid var(--rdl);color:#8a2c2c;border-radius:12px;padding:10px 12px;font-size:12.5px;font-weight:700;line-height:1.6;margin:0 0 14px}
+.appModalCautionNote{background:var(--gdb);border:1px solid var(--gdl);color:#6a5320;border-radius:12px;padding:10px 12px;font-size:12.5px;font-weight:700;line-height:1.6;margin:0 0 14px}
+.appModalInput{width:100%;border:1px solid var(--sgl);border-radius:12px;padding:10px 12px;font-size:14px;background:#fff;color:var(--ink)}
+.appModalInput:focus{outline:2px solid var(--accent);outline-offset:1px}
+.appModalErr{color:#b3413f;font-size:12px;font-weight:700;margin:6px 2px 0;min-height:1.1em}
+.appModalBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.appModalBtn{width:auto;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;border:1px solid transparent}
+.appModalCancel{background:#fff;border-color:var(--line);color:var(--ink2)}
+.appModalCancel:hover{background:#f3efe7}
+.appModalConfirm.variant-primary{background:var(--accent);color:#fff}
+.appModalConfirm.variant-primary:hover{background:var(--accent2)}
+.appModalConfirm.variant-caution{background:var(--gd);color:#fff}
+.appModalConfirm.variant-caution:hover{filter:brightness(.94)}
+.appModalConfirm.variant-danger{background:var(--rd);color:#fff}
+.appModalConfirm.variant-danger:hover{filter:brightness(.94)}
+.tagStdBadge{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:900;background:var(--bg2);color:var(--ink3);border:1px solid var(--ln)}
+.tagStdBadge svg{width:11px;height:11px}
 .progressRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
 .genCancelBtn{width:auto;background:#fff;border:1px solid var(--bad);color:var(--bad);font-weight:800;padding:6px 12px;border-radius:9px}
 .genCancelBtn:disabled{opacity:.5}
@@ -838,9 +867,9 @@ function editableSelectWidth(v){
   let w=0; for(const ch of label) w += ch.charCodeAt(0)>255 ? 13 : 8;
   return Math.max(44, Math.min(118, w+34));
 }
-function normalizeManualShiftValue(value){
+async function normalizeManualShiftValue(value){
   if(value !== '__OTHER__') return value;
-  const text = prompt('その他のシフト区分・時間を入力してください。例：研修 / 12:00-18:00');
+  const text = await showInputModal({title:'その他のシフトを入力', message:'その他のシフト区分・時間を入力してください。', placeholder:'例：研修 / 12:00-18:00', confirmText:'設定する', cancelText:'キャンセル'});
   // キャンセル・未入力時は元の値を保持する（セルを勝手に空白へ変えない）。
   const cleaned = (text || '').trim();
   return cleaned ? `OTHER:${cleaned}` : '__CANCEL__';
@@ -1103,9 +1132,9 @@ function buildPreferenceMap(days, prefs=activePreferences()){
   return map;
 }
 // 希望の「その他（自由入力）」選択時に、このページ上でも内容入力を求める
-function handlePrefShiftOtherSelect(sel){
+async function handlePrefShiftOtherSelect(sel){
   if(sel.value !== '__OTHER__'){ sel.dataset.prev = sel.value; return; }
-  const v = normalizeManualShiftValue('__OTHER__');
+  const v = await normalizeManualShiftValue('__OTHER__');
   if(v === '__CANCEL__'){ sel.value = sel.dataset.prev || 'OFF'; return; }
   if(![...sel.options].some(o=>o.value===v)){
     const opt = document.createElement('option');
@@ -1188,7 +1217,7 @@ function showPrefInputError(message){
 function clearPrefInputError(){ document.querySelectorAll('.prefInputError').forEach(el=>el.remove()); }
 function staffLabel(st){ const tags=(st.tags||[]).join('・'); return `${st.name}${st.dept?'（'+st.dept+(tags?'・'+tags:'')+'）':''}`; }
 function tagBadgesHtml(st){ return (st.tags||[]).map(t=>`<span class="roleBadge ${PURPLE_TAGS.has(t)?'leaderTag':''}">${esc(t)}</span>`).join(''); }
-function confirmAction(message){ return confirm(message); }
+// 旧 confirmAction（ブラウザ標準 confirm）はカスタムモーダル showConfirmModal に全面置換済み。
 function nextFrame(){ return new Promise(resolve=>setTimeout(resolve,0)); }
 function captureScrollState(){
   const active = document.activeElement;
@@ -1339,6 +1368,12 @@ function normalizeState(){
   for(const t of ['社員','パート',DEPT_UNSET_TAG,'店長']){ if(!state.tags.includes(t)) state.tags.push(t); } // 社員番号・部署からの自動タグ用に必須
   if(!Array.isArray(state.scheduleTags)) state.scheduleTags = DEFAULT_SCHEDULE_TAGS.slice();
   state.scheduleTags = [...new Set(state.scheduleTags.map(t=>String(t||'').trim()).filter(Boolean))];
+  // 標準（デフォルト）タグの保護フラグ。未設定の保存データには、いまも既定名のままのタグだけを保護対象として付与する
+  // （ユーザーが後から追加・改名したタグは保護しない）。一度設定後は維持し、存在しないタグは除く（冪等）。
+  if(!Array.isArray(state.protectedTags)) state.protectedTags = DEFAULT_TAGS.filter(t=>state.tags.includes(t));
+  state.protectedTags = [...new Set(state.protectedTags.filter(t=>state.tags.includes(t)))];
+  if(!Array.isArray(state.protectedScheduleTags)) state.protectedScheduleTags = DEFAULT_SCHEDULE_TAGS.filter(t=>state.scheduleTags.includes(t));
+  state.protectedScheduleTags = [...new Set(state.protectedScheduleTags.filter(t=>state.scheduleTags.includes(t)))];
   if(!Array.isArray(state.recurringSchedules)) state.recurringSchedules = [];
   // 曜日指定を新形式 {wds:[...], occ:[...]} に移行（旧形式 {wd,mode,nth} を変換）
   state.recurringSchedules = state.recurringSchedules.map(rs=>{
@@ -1586,13 +1621,13 @@ function renderImportantRuleCards(){
     if(card) card.classList.toggle('isOff', !on);
   }
 }
-function requestRuleChange(id){
+async function requestRuleChange(id){
   const cfg=IMPORTANT_RULES[id]; if(!cfg) return;
   const cb=document.getElementById(id); if(!cb) return;
   const currentlyOn=!!cb.checked;
   const ok = currentlyOn
-    ? confirmAction(cfg.offConfirm + '\n\n通常はONのまま使用することを推奨しています。')
-    : confirmAction(`「${cfg.name}」をON（有効）に戻します。通常はONのまま使用することを推奨しています。よろしいですか？`);
+    ? await showConfirmModal({title:`${cfg.name}`, message:cfg.offConfirm, confirmText:'変更する', cancelText:'キャンセル', variant:'caution', cautionNote:'通常はONのまま使用することを推奨しています。'})
+    : await showConfirmModal({title:`${cfg.name}`, message:`この設定をON（有効）に戻します。`, confirmText:'変更する', cancelText:'キャンセル', variant:'primary'});
   if(!ok) return;
   cb.checked = !currentlyOn;
   pullInputs();
@@ -1755,8 +1790,8 @@ function resetShiftAppearanceRow(el){
   pullInputs(); delete state.shiftAppearance[key];
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
-function resetAllShiftAppearance(){
-  if(!confirm('すべてのグループの区分デザインを既定（早番＝オレンジ、休＝グレー、ほかは標準）に戻しますか？')) return;
+async function resetAllShiftAppearance(){
+  if(!await showConfirmModal({title:'区分デザインを既定に戻しますか？', message:'すべてのグループの区分デザインを既定（早番＝オレンジ、休＝グレー、ほかは標準）に戻します。', confirmText:'戻す', cancelText:'キャンセル', variant:'caution', cautionNote:'設定した色・太枠はすべて既定に戻ります。'})) return;
   pullInputs(); state.shiftAppearance={};
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
@@ -1773,8 +1808,8 @@ function pullShiftDefsFromInputs(){
   })));
   rebuildShiftRuntime();
 }
-function addShiftDefRow(){ pullInputs(); const code=prompt('追加するシフト区分名を入力してください。例：R'); if(!code) return; const time=prompt('時間を入力してください。例：10:00-18:00') || '時間未設定'; state.shiftDefs.push({code:code.trim().toUpperCase(), time:time.trim(), weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function deleteShiftDefRow(index){ pullInputs(); const d=state.shiftDefs[index]; if(!d) return; if(!confirm(`シフト区分 ${d.code} を削除しますか？\n既存シフトで使っている場合、表示は残ることがありますが候補からは外れます。`)) return; state.shiftDefs.splice(index,1); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+async function addShiftDefRow(){ pullInputs(); const code=await showInputModal({title:'シフト区分を追加', message:'追加するシフト区分名を入力してください。', placeholder:'例：R', confirmText:'次へ', cancelText:'キャンセル', validate:v=>state.shiftDefs.some(d=>d.code===v.trim().toUpperCase())?'同じ区分名がすでにあります。':null}); if(!code) return; const time=(await showInputModal({title:'時間を入力', message:`「${code.trim().toUpperCase()}」の時間を入力してください。`, placeholder:'例：10:00-18:00', confirmText:'追加する', cancelText:'入力せず追加'})) || '時間未設定'; state.shiftDefs.push({code:code.trim().toUpperCase(), time:time.trim(), weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('シフト区分を追加しました。','success'); }
+async function deleteShiftDefRow(index){ pullInputs(); const d=state.shiftDefs[index]; if(!d) return; if(!await showConfirmModal({title:'シフト区分を削除しますか？', message:`シフト区分 ${d.code} を削除します。\n既存シフトで使っている場合、表示は残ることがありますが候補からは外れます。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; state.shiftDefs.splice(index,1); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function moveShiftDefRow(index, dir){ pullInputs(); const j=index+dir; if(j<0 || j>=state.shiftDefs.length) return; const d=state.shiftDefs[index]; state.shiftDefs[index]=state.shiftDefs[j]; state.shiftDefs[j]=d; normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function autoAssignShiftRow(btn){ preserveScroll(()=>{ const row=btn.closest('.shiftDefRow'); if(!row) return; const time=row.querySelector('.sdTime')?.value||''; row.querySelector('.sdWeekGroup').value=autoGroupByTime(time,false); row.querySelector('.sdHolGroup').value=autoGroupByTime(time,true); save(); renderInputs(); renderAll(); }); }
 function autoAssignAllShiftGroups(){ preserveScroll(()=>{ pullInputs(); state.shiftDefs=state.shiftDefs.map(d=>({...d, weekGroup:autoGroupByTime(d.time,false), holGroup:autoGroupByTime(d.time,true)})); normalizeState(); persist(); renderInputs(); renderAll(); }); }
@@ -1881,32 +1916,41 @@ function tagListFor(kind){ return kind==='master' ? state.tags : (state.schedule
 function moveFnFor(kind){ return kind==='master' ? 'moveMasterTag' : 'moveScheduleTag'; }
 function delFnFor(kind){ return kind==='master' ? 'deleteMasterTag' : 'deleteScheduleTag'; }
 function renderTagManagers(){ renderTagManager(); renderScheduleTagManager(); }
+const ICON_LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+// 標準（デフォルト）タグ判定：保護リスト＋自動管理タグ。名前文字列だけでなく state の保護フラグで判定する。
+function isTagProtected(kind, name){
+  if(kind==='master') return AUTO_MANAGED_TAGS.has(name) || (state.protectedTags||[]).includes(name);
+  return (state.protectedScheduleTags||[]).includes(name);
+}
 function tagChipHtml(kind, t, i, total){
   if(editingTag && editingTag.kind===kind && editingTag.index===i){
     return `<span class="tagChip editing"><input class="tagEditInput" id="tagEditInput" type="text" value="${escAttr(t)}" maxlength="20" aria-label="新しいタグ名" onkeydown="onTagEditKey(event,'${kind}',${i})"><button type="button" class="tagIconBtn tagSave" title="保存" aria-label="保存" onclick="commitTagEdit('${kind}',${i})">${ICON_CHECK}</button><button type="button" class="tagIconBtn tagCancel" title="キャンセル" aria-label="キャンセル" onclick="cancelTagEdit()">${ICON_XMARK}</button></span>`;
   }
-  return `<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" aria-label="左へ移動" onclick="${moveFnFor(kind)}(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" class="tagIconBtn tagEdit" title="タグ名を変更" aria-label="タグ名を変更" onclick="startTagEdit('${kind}',${i})">${ICON_PENCIL}</button><button type="button" class="tagIconBtn tagTrash" title="タグを削除" aria-label="タグを削除" onclick="${delFnFor(kind)}(${i})">${ICON_TRASH}</button><button type="button" class="tagMove" title="右へ移動" aria-label="右へ移動" onclick="${moveFnFor(kind)}(${i},1)" ${i===total-1?'disabled':''}>▶</button></span>`;
+  const actions = isTagProtected(kind, t)
+    ? `<span class="tagStdBadge" title="標準タグのため変更・削除できません">${ICON_LOCK}標準</span>`
+    : `<button type="button" class="tagIconBtn tagEdit" title="タグ名を変更" aria-label="タグ名を変更" onclick="startTagEdit('${kind}',${i})">${ICON_PENCIL}</button><button type="button" class="tagIconBtn tagTrash" title="タグを削除" aria-label="タグを削除" onclick="${delFnFor(kind)}(${i})">${ICON_TRASH}</button>`;
+  return `<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" aria-label="左へ移動" onclick="${moveFnFor(kind)}(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b>${actions}<button type="button" class="tagMove" title="右へ移動" aria-label="右へ移動" onclick="${moveFnFor(kind)}(${i},1)" ${i===total-1?'disabled':''}>▶</button></span>`;
 }
 function startTagEdit(kind, index){
   pullInputs();
   const list=tagListFor(kind); const cur=list[index]; if(cur===undefined) return;
-  if(kind==='master' && AUTO_MANAGED_TAGS.has(cur)){ alert(`「${cur}」は社員番号・部署から自動で管理されるタグのため、名前を変更できません。`); return; }
+  if(isTagProtected(kind, cur)){ showNoticeModal({title:'標準タグ', message:'標準タグのため名前変更できません。'}); return; }
   editingTag={kind, index};
   renderTagManagers();
   setTimeout(()=>{ const inp=document.getElementById('tagEditInput'); if(inp){ inp.focus(); inp.select(); } },0);
 }
 function cancelTagEdit(){ editingTag=null; renderTagManagers(); }
 function onTagEditKey(e, kind, index){ if(e.key==='Enter'){ e.preventDefault(); commitTagEdit(kind, index); } else if(e.key==='Escape'){ e.preventDefault(); cancelTagEdit(); } }
-function commitTagEdit(kind, index){
+async function commitTagEdit(kind, index){
   const list=tagListFor(kind); const cur=list[index]; const inp=document.getElementById('tagEditInput');
   if(cur===undefined || !inp){ editingTag=null; renderTagManagers(); return; }
+  if(isTagProtected(kind, cur)){ editingTag=null; renderTagManagers(); showNoticeModal({title:'標準タグ', message:'標準タグのため名前変更できません。'}); return; }
   const name=(inp.value||'').trim();
-  if(!name){ alert('タグ名を入力してください。'); inp.focus(); return; }
+  if(!name){ showToast('タグ名を入力してください。','warn'); inp.focus(); return; }
   if(name===cur){ editingTag=null; renderTagManagers(); return; }
-  if(list.includes(name)){ alert('同じ名前のタグがすでにあります。'); inp.focus(); inp.select(); return; }
-  if(kind==='master' && MTG_LATE_STAFF_TAGS.includes(cur) && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日に遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)){ inp.focus(); return; }
-  if(kind==='schedule' && cur===MTG_SCHEDULE_TAG && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日にチーフ／園長を遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)){ inp.focus(); return; }
-  if(!confirm(`タグ名を変更しますか？\nこのタグが付いているスタッフや予定の表示もまとめて変更されます。\n\n変更前：${cur}\n変更後：${name}`)){ inp.focus(); return; }
+  if(list.includes(name)){ showToast('同じ名前のタグがすでにあります。','warn'); inp.focus(); inp.select(); return; }
+  const ok=await showConfirmModal({title:'タグ名を変更しますか？', message:`このタグが付いているスタッフや予定の表示もまとめて変更されます。\n\n変更前：${cur}\n変更後：${name}`, confirmText:'変更する', cancelText:'キャンセル', variant:'primary'});
+  if(!ok){ const i2=document.getElementById('tagEditInput'); if(i2) i2.focus(); return; }
   if(kind==='master'){
     state.tags[index]=name;
     for(const st of state.staff){ if(Array.isArray(st.tags)) st.tags=st.tags.map(t=>t===cur?name:t); }
@@ -1935,33 +1979,20 @@ function moveMasterTag(i, dir){
   const t=state.tags[i]; state.tags[i]=state.tags[j]; state.tags[j]=t;
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
-function addMasterTag(){
+async function addMasterTag(){
   pullInputs();
-  const name=(prompt('追加するタグ名を入力してください。例：研修中')||'').trim();
+  const name=await showInputModal({title:'タグを追加', message:'追加するタグ名を入力してください。', placeholder:'タグ名を入力（例：研修中）', confirmText:'追加する', cancelText:'キャンセル', validate:v=>state.tags.includes(v)?'同じ名前のタグがすでにあります。':null});
   if(!name) return;
-  if(state.tags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; }
   state.tags.push(name);
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  showToast('タグを追加しました。','success');
 }
-function renameMasterTag(i){
+async function deleteMasterTag(i){
   pullInputs();
   const cur=state.tags[i]; if(cur===undefined) return;
-  if(AUTO_MANAGED_TAGS.has(cur)){ alert(`「${cur}」は社員番号・部署から自動で管理されるタグのため、名前を変更できません。`); return; }
-  if(MTG_LATE_STAFF_TAGS.includes(cur) && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日に遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)) return;
-  const name=(prompt(`「${cur}」の新しい名前を入力してください。`, cur)||'').trim();
-  if(!name || name===cur) return;
-  if(state.tags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; }
-  state.tags[i]=name;
-  for(const st of state.staff){ if(Array.isArray(st.tags)) st.tags=st.tags.map(t=>t===cur?name:t); }
-  activeStaffTagFilters = activeStaffTagFilters.map(t=>t===cur?name:t);
-  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
-}
-function deleteMasterTag(i){
-  pullInputs();
-  const cur=state.tags[i]; if(cur===undefined) return;
-  if(AUTO_MANAGED_TAGS.has(cur)){ alert(`「${cur}」は社員番号・部署から自動で管理されるタグのため、削除できません。`); return; }
-  if(MTG_LATE_STAFF_TAGS.includes(cur) && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日に遅番へ寄せる）で使われています。削除するとこのルールが無効になります。続けますか？`)) return;
-  if(!confirm(`このタグを削除しますか？\n削除すると、このタグは付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`)) return;
+  if(isTagProtected('master', cur)){ showNoticeModal({title:'標準タグ', message:'標準タグのため削除できません。'}); return; }
+  const ok=await showConfirmModal({title:'タグを削除しますか？', message:`このタグを削除すると、付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'});
+  if(!ok) return;
   state.tags.splice(i,1);
   for(const st of state.staff){ if(Array.isArray(st.tags)) st.tags=st.tags.filter(t=>t!==cur); }
   activeStaffTagFilters = activeStaffTagFilters.filter(t=>t!==cur);
@@ -1978,9 +2009,8 @@ function renderScheduleTagManager(){
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addScheduleTag()">＋ タグ追加</button></div>`;
 }
 function moveScheduleTag(i, dir){ pullInputs(); const j=i+dir; if(j<0||j>=state.scheduleTags.length) return; const t=state.scheduleTags[i]; state.scheduleTags[i]=state.scheduleTags[j]; state.scheduleTags[j]=t; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function addScheduleTag(){ pullInputs(); const name=(prompt('追加する全体予定タグ名を入力してください。例：棚卸')||'').trim(); if(!name) return; if(state.scheduleTags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; } state.scheduleTags.push(name); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function renameScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(cur===MTG_SCHEDULE_TAG && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日にチーフ／園長を遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)) return; const name=(prompt(`「${cur}」の新しい名前を入力してください。`, cur)||'').trim(); if(!name||name===cur) return; if(state.scheduleTags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; } state.scheduleTags[i]=name; for(const rs of (state.recurringSchedules||[])){ if(rs.tag===cur) rs.tag=name; } for(const k in (state.scheduleEventsByPeriod||{})){ for(const ev of state.scheduleEventsByPeriod[k]){ if(ev.tag===cur) ev.tag=name; } } preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(!confirm(`このタグを削除しますか？\n削除すると、このタグは付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`)) return; state.scheduleTags.splice(i,1); if(editingTag && editingTag.kind==='schedule') editingTag=null; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('タグを削除しました。'); }
+async function addScheduleTag(){ pullInputs(); const name=await showInputModal({title:'タグを追加', message:'追加する全体予定タグ名を入力してください。', placeholder:'タグ名を入力（例：棚卸）', confirmText:'追加する', cancelText:'キャンセル', validate:v=>state.scheduleTags.includes(v)?'同じ名前のタグがすでにあります。':null}); if(!name) return; state.scheduleTags.push(name); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('タグを追加しました。','success'); }
+async function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(isTagProtected('schedule', cur)){ showNoticeModal({title:'標準タグ', message:'標準タグのため削除できません。'}); return; } const ok=await showConfirmModal({title:'タグを削除しますか？', message:`このタグを削除すると、付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'}); if(!ok) return; state.scheduleTags.splice(i,1); if(editingTag && editingTag.kind==='schedule') editingTag=null; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('タグを削除しました。'); }
 // ===== 定期予定（基本ルール：毎月/月末/毎週/第N/最終）=====
 function scheduleTagOptionsHtml(sel=''){ return (state.scheduleTags||[]).map(t=>`<option value="${esc(t)}" ${sel===t?'selected':''}>${esc(t)}</option>`).join('')+`<option value="__OTHER__" ${sel==='__OTHER__'?'selected':''}>その他（自由入力）</option>`; }
 function onRecAxisChange(){ const ax=document.getElementById('recAxis')?.value; const d=document.getElementById('recDateOpts'), w=document.getElementById('recWdOpts'); if(d) d.style.display = ax==='date'?'':'none'; if(w) w.style.display = ax==='wd'?'':'none'; }
@@ -2028,21 +2058,21 @@ function renderRecurringSchedule(){
     </div>
     ${list.length?`<div class="recList">${list.map((rs,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(rs.tag)}</span><span class="recItemRule">${esc(recurringRuleText(rs))}</span><button type="button" class="tagDel" title="削除" onclick="deleteRecurringSchedule(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">定期予定は未登録です。</div>'}`;
 }
-function addRecurringSchedule(){
+async function addRecurringSchedule(){
   pullInputs();
   const tagSel=document.getElementById('recTag')?.value||'';
   const tag = tagSel==='__OTHER__' ? (document.getElementById('recTagOther')?.value||'').trim() : tagSel;
-  if(!tag){ alert('タグを選択（その他は内容を入力）してください。'); return; }
+  if(!tag){ showToast('タグを選択（その他は内容を入力）してください。','warn'); return; }
   const axis=document.getElementById('recAxis')?.value||'date';
   let rs={id:makeStaffId(), tag, axis};
   if(axis==='date'){ rs.month=document.getElementById('recMonth')?.value||'every'; const dv=document.getElementById('recDay')?.value||'1'; if(dv==='end'){ rs.mode='monthEnd'; } else { rs.mode='monthly'; rs.day=clampInt(dv,1,31,1); } }
-  else { const r=readWdOcc('rec'); if(r.error){ alert(r.error); return; } rs.wds=r.wds; rs.occ=r.occ; }
-  if(!confirmAction(`定期予定「${tag}（${recurringRuleText(rs)}）」を追加しますか？`)) return;
+  else { const r=readWdOcc('rec'); if(r.error){ showToast(r.error,'warn'); return; } rs.wds=r.wds; rs.occ=r.occ; }
+  if(!await showConfirmModal({title:'定期予定を追加しますか？', message:`${tag}（${recurringRuleText(rs)}）を追加します。\n追加後、シフト表の日付下に表示されます。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   state.recurringSchedules.push(rs);
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   toast('定期予定を追加しました。');
 }
-function deleteRecurringSchedule(i){ pullInputs(); const rs=state.recurringSchedules[i]; if(!rs) return; if(!confirmAction(`「${rs.tag}（${recurringRuleText(rs)}）」を削除しますか？`)) return; state.recurringSchedules.splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+async function deleteRecurringSchedule(i){ pullInputs(); const rs=state.recurringSchedules[i]; if(!rs) return; if(!await showConfirmModal({title:'定期予定を削除しますか？', message:`${rs.tag}（${recurringRuleText(rs)}）を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; state.recurringSchedules.splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('定期予定を削除しました。'); }
 function weekdayCheckboxes(values=[], offHolidays=false){
   const selected = new Set((values||[]).map(Number));
   return `<div class="weekdayChecks">${WD.map((w,i)=>`<label class="badge"><input class="stOffWd" type="checkbox" value="${i}" ${selected.has(i)?'checked':''}>${w}</label>`).join('')}<label class="badge" title="日本の祝日をすべて固定公休にします"><input class="stOffHoliday" type="checkbox" ${offHolidays?'checked':''}>祝日</label></div>`;
@@ -2170,21 +2200,21 @@ function renderScheduleEventTab(tabs, box){
     </div>
     ${events.length?`<div class="recList">${events.map((ev,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(ev.tag)}</span><span class="recItemRule">${esc(periodEventRuleText(ev))}</span><button type="button" class="tagDel" title="削除" onclick="deleteScheduleEvent(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">この締め月の全体予定は未登録です。</div>'}`;
 }
-function addScheduleEvent(){
+async function addScheduleEvent(){
   pullInputs();
   const tagSel=document.getElementById('evtTag')?.value||'';
   const tag = tagSel==='__OTHER__' ? (document.getElementById('evtTagOther')?.value||'').trim() : tagSel;
-  if(!tag){ alert('タグを選択（その他は内容を入力）してください。'); return; }
+  if(!tag){ showToast('タグを選択（その他は内容を入力）してください。','warn'); return; }
   const axis=document.getElementById('evtAxis')?.value||'date';
   let ev={id:makeStaffId(), tag, axis};
-  if(axis==='date'){ ev.date=document.getElementById('evtDate')?.value||''; if(!ev.date){ alert('日付を選択してください。'); return; } }
-  else { const r=readWdOcc('evt'); if(r.error){ alert(r.error); return; } ev.wds=r.wds; ev.occ=r.occ; }
-  if(!confirmAction(`全体予定「${tag}（${periodEventRuleText(ev)}）」を追加しますか？`)) return;
+  if(axis==='date'){ ev.date=document.getElementById('evtDate')?.value||''; if(!ev.date){ showToast('日付を選択してください。','warn'); return; } }
+  else { const r=readWdOcc('evt'); if(r.error){ showToast(r.error,'warn'); return; } ev.wds=r.wds; ev.occ=r.occ; }
+  if(!await showConfirmModal({title:'全体予定を追加しますか？', message:`${tag}（${periodEventRuleText(ev)}）を追加します。\n追加後、シフト表の日付下に表示されます。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   activeScheduleEvents().push(ev);
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   toast('全体予定を追加しました。');
 }
-function deleteScheduleEvent(i){ pullInputs(); const ev=activeScheduleEvents()[i]; if(!ev) return; if(!confirmAction(`「${ev.tag}（${periodEventRuleText(ev)}）」を削除しますか？`)) return; activeScheduleEvents().splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+async function deleteScheduleEvent(i){ pullInputs(); const ev=activeScheduleEvents()[i]; if(!ev) return; if(!await showConfirmModal({title:'全体予定を削除しますか？', message:`${ev.tag}（${periodEventRuleText(ev)}）を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; activeScheduleEvents().splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('全体予定を削除しました。'); }
 function renderPrefList(){
   const tabs = document.getElementById('prefStaffTabs');
   const box = document.getElementById('prefList');
@@ -2300,13 +2330,13 @@ function prefRowHtml(p,i){
     </div>
   </div>`;
 }
-function addPreferenceForActiveStaff(){
-  if(activePrefStaff==='全体'){ alert('全体タブは参照専用です。スタッフタブを選択してください。'); return; }
+async function addPreferenceForActiveStaff(){
+  if(activePrefStaff==='全体'){ showToast('全体タブは参照専用です。スタッフタブを選択してください。','warn'); return; }
   clearPrefInputError();
   const pref = createPreferenceFromInputs('new', activePrefStaff);
   if(!pref) return;
   const shiftText = shiftFull(pref.shift)||shiftLabel(pref.shift);
-  if(!confirmAction(`${activePrefStaff} に ${prefConditionText(pref)} ${shiftText} を追加しますか？`)) return;
+  if(!await showConfirmModal({title:'希望を追加しますか？', message:`${activePrefStaff} に ${prefConditionText(pref)} ${shiftText} を追加します。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   const prefs = activePreferences();
   prefs.push(pref);
   setActivePreferences(prefs.sort(prefSort));
@@ -2315,25 +2345,25 @@ function addPreferenceForActiveStaff(){
 }
 function enablePreferenceEdit(i){ activePrefEditIndex = i; preserveScroll(()=>{ renderInputs(); renderAll(); }); }
 function cancelPreferenceEdit(){ activePrefEditIndex = null; preserveScroll(()=>{ renderInputs(); renderAll(); }); }
-function savePreferenceEdit(i){
+async function savePreferenceEdit(i){
   const row = document.querySelector(`.prefItem[data-pref-idx="${i}"]`);
   if(!row) return;
   clearPrefInputError();
   const pref = createPreferenceFromInputs(String(i), activePrefStaff);
   if(!pref) return;
   const shiftText = shiftFull(pref.shift)||shiftLabel(pref.shift);
-  if(!confirmAction(`${activePrefStaff} の希望を ${prefConditionText(pref)} ${shiftText} で保存しますか？`)) return;
+  if(!await showConfirmModal({title:'希望を保存しますか？', message:`${activePrefStaff} の希望を ${prefConditionText(pref)} ${shiftText} で保存します。`, confirmText:'保存する', cancelText:'キャンセル', variant:'primary'})) return;
   const prefs = activePreferences();
   if(prefs[i]) prefs[i] = pref;
   setActivePreferences(prefs.sort(prefSort));
   activePrefEditIndex = null;
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
-function removePreference(i){
+async function removePreference(i){
   const prefs = activePreferences();
   const p = prefs[i];
   if(!p) return;
-  if(!confirmAction(`${p.staff} の ${prefConditionText(p)} ${shiftFull(p.shift)||shiftLabel(p.shift)} を削除しますか？`)) return;
+  if(!await showConfirmModal({title:'希望を削除しますか？', message:`${p.staff} の ${prefConditionText(p)} ${shiftFull(p.shift)||shiftLabel(p.shift)} を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return;
   prefs.splice(i,1);
   setActivePreferences(prefs.sort(prefSort));
   activePrefEditIndex = null;
@@ -2443,18 +2473,18 @@ function attachFuriganaToStaffInputs(){
 }
 function showStaffAddForm(){ pullInputs(); staffAddFormOpen=true; renderStaffAddForm(); setTimeout(()=>document.getElementById('addStaffSei')?.focus(),0); }
 function hideStaffAddForm(){ staffAddFormOpen=false; renderStaffAddForm(); }
-function confirmAddStaffFromForm(){
+async function confirmAddStaffFromForm(){
   // 姓・名は別フォーム。登録時に半角スペース区切りで連結する（よみがなも同様）。
   const sei=(document.getElementById('addStaffSei')?.value||'').trim();
   const mei=(document.getElementById('addStaffMei')?.value||'').trim();
   const name=[sei, mei].filter(Boolean).join(' ');
-  if(!name){ alert('氏名（姓・名）を入力してください。氏名は必須です。'); document.getElementById('addStaffSei')?.focus(); return; }
+  if(!name){ showToast('氏名（姓・名）を入力してください。氏名は必須です。','warn'); document.getElementById('addStaffSei')?.focus(); return; }
   const seiKana=(document.getElementById('addStaffSeiKana')?.value||'').trim();
   const meiKana=(document.getElementById('addStaffMeiKana')?.value||'').trim();
   const kana=[seiKana, meiKana].filter(Boolean).join(' ');
-  if(!kana){ alert('よみがなを入力してください。よみがなは必須です（五十音順の並び替えに使用します）。'); document.getElementById('addStaffSeiKana')?.focus(); return; }
+  if(!kana){ showToast('よみがなを入力してください。よみがなは必須です（五十音順の並び替えに使用します）。','warn'); document.getElementById('addStaffSeiKana')?.focus(); return; }
   const empNo=(document.getElementById('addStaffEmpNo')?.value||'').trim();
-  if(!isValidEmpNo(empNo)){ alert('社員番号を5桁の数字で入力してください（必須）。'); document.getElementById('addStaffEmpNo')?.focus(); return; }
+  if(!isValidEmpNo(empNo)){ showToast('社員番号を5桁の数字で入力してください（必須）。','warn'); document.getElementById('addStaffEmpNo')?.focus(); return; }
   const formEl=document.getElementById('staffAddForm');
   const dept = activeStaffDept==='全体' ? (document.getElementById('addStaffDept')?.value ?? '') : activeStaffDept;
   const tags=readTagSelects(formEl);
@@ -2465,20 +2495,21 @@ function confirmAddStaffFromForm(){
   const useFixedOff=!!document.querySelector('#staffAddForm .stUseFixedOff')?.checked;
   const useWeeklyLimit=!!document.querySelector('#staffAddForm .stUseWeeklyLimit')?.checked;
   const weeklyAvailableDays=+(document.querySelector('#staffAddForm .stWeeklyAvailableDays')?.value || 5);
-  if(!confirmAction(`${deptLabel(dept)} に ${name} を追加しますか？`)) return;
+  if(!await showConfirmModal({title:'スタッフを追加しますか？', message:`${deptLabel(dept)} に ${name} を追加します。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   pullInputs();
   state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0}));
   staffAddFormOpen=false; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  showToast('スタッフを追加しました。','success');
 }
 function addStaff(){ showStaffAddForm(); }
-function removeStaffById(id){
+async function removeStaffById(id){
   pullInputs();
   const st = state.staff.find(s=>s.id===id);
   if(!st) return;
-  if(!confirmAction(`${st.name} をスタッフ一覧から削除しますか？
-作成済みシフトや希望設定にも影響する可能性があります。`)) return;
+  if(!await showConfirmModal({title:'スタッフを削除しますか？', message:`${st.name} をスタッフ一覧から削除します。\n作成済みシフトや希望設定にも影響する可能性があります。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。実行前にバックアップの取得をおすすめします。'})) return;
   state.staff = state.staff.filter(s=>s.id!==id);
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  toast('スタッフを削除しました。');
 }
 function removeStaff(i){ const st=state.staff[i]; if(st) removeStaffById(st.id); }
 
@@ -2921,8 +2952,8 @@ function toggleBulkOtherInput(){
   if(!sel||!inp) return;
   inp.classList.toggle('hidden', sel.value!=='__OTHER__');
 }
-function applyBulkShiftToDept(dept){
-  if(isDeptConfirmed(dept)){ alert(`${dept} は確定済みです。再編集してから一括登録してください。`); return; }
+async function applyBulkShiftToDept(dept){
+  if(isDeptConfirmed(dept)){ showToast(`${dept} は確定済みです。再編集してから一括登録してください。`,'warn'); return; }
   rememberBulkAssignState(dept);
   const staffName=document.getElementById('bulkStaff')?.value || '';
   let value=document.getElementById('bulkShift')?.value || '';
@@ -2930,15 +2961,15 @@ function applyBulkShiftToDept(dept){
   const wdVals=[...document.querySelectorAll('.bulkWd:checked')].map(x=>x.value);
   const wds=wdVals.filter(x=>x!=='holiday').map(x=>+x);
   const includeHoliday=wdVals.includes('holiday');
-  if(!staffName){ alert('スタッフを選択してください。'); return; }
+  if(!staffName){ showToast('スタッフを選択してください。','warn'); return; }
   const bulkSt=state.staff.find(x=>x.name===staffName);
   const bulkLocked=staffLockedLabel(bulkSt);
-  if(bulkLocked){ alert(`${staffName} は ${bulkLocked} のため一括登録できません。`); return; }
-  if(!wdVals.length){ alert('対象曜日を選択してください。'); return; }
-  if(document.getElementById('bulkShift')?.value==='__OTHER__' && !value){ alert('その他の内容を入力してください。'); return; }
+  if(bulkLocked){ showToast(`${staffName} は ${bulkLocked} のため一括登録できません。`,'warn'); return; }
+  if(!wdVals.length){ showToast('対象曜日を選択してください。','warn'); return; }
+  if(document.getElementById('bulkShift')?.value==='__OTHER__' && !value){ showToast('その他の内容を入力してください。','warn'); return; }
   const targets=[...wds.map(i=>WD[i]), ...(includeHoliday?['祝日']:[])];
   const label=value?value:'空白';
-  if(!confirm(`${staffName} の ${targets.join('・')} に「${label}」を一括登録しますか？`)) return;
+  if(!await showConfirmModal({title:'一括登録しますか？', message:`${staffName} の ${targets.join('・')} に「${label}」を一括登録します。`, confirmText:'登録する', cancelText:'キャンセル', variant:'primary'})) return;
   const days=getDays(); let n=0, skippedClosed=0, skippedManual=0, skippedPref=0;
   value = normalizeStoredShift(value);
   const isWorkValue = isWorkingShift(value);
@@ -2978,9 +3009,9 @@ function deptUnresolvedBadCount(dept){
 }
 // 選択中の締め月の、指定部署のシフトだけをすべて空欄に戻す（誤操作防止のため必ず確認する）。
 // 他の締め月・他部署・固定希望などの設定には触れない。
-function resetDeptSchedule(dept){
+async function resetDeptSchedule(dept){
   pullInputs(); normalizeState(); genDiff=null;
-  if(isDeptConfirmed(dept)){ alert(`${dept} は確定済みです。「再編集」を押してから空欄リセットしてください。`); return; }
+  if(isDeptConfirmed(dept)){ showToast(`${dept} は確定済みです。「再編集」を押してから空欄リセットしてください。`,'warn'); return; }
   const days=getDays();
   const dayKeySet = new Set(days.map(d=>d.key));
   const targets=[];
@@ -2988,13 +3019,9 @@ function resetDeptSchedule(dept){
   // この部署・この締め月で「人数不足を許容」にしているフラグ。残すと、空欄に戻したのに
   // 人数不足が"許容済み"（緑）のまま表示され、特定の日だけ緑になる誤表示の原因になる。
   const staleAllow = Object.keys(allowedErrors).filter(k=>{ const p=k.split('|'); return p[0]==='count' && p[3]===dept && dayKeySet.has(p[2]); });
-  if(!targets.length && !staleAllow.length){ alert(`${state.year}年${state.month}月締めの ${dept} のシフトは、すでにすべて空欄です。`); return; }
+  if(!targets.length && !staleAllow.length){ showToast(`${state.year}年${state.month}月締めの ${dept} のシフトは、すでにすべて空欄です。`,'warn'); return; }
   const delDetail = [targets.length?`作成済みのシフト（「休」も含む）${targets.length}件`:'', staleAllow.length?`「許容」設定${staleAllow.length}件`:''].filter(Boolean).join('と');
-  if(!confirm(`【注意】${state.year}年${state.month}月締めの ${dept} を空欄に戻します。
-${delDetail}を削除します（直後なら「元に戻す」で取り消せます）。
-ほかの締め月・ほかの部署には影響しません。
-
-実行しますか？`)) return;
+  if(!await showConfirmModal({title:`${dept} を空欄に戻しますか？`, message:`${state.year}年${state.month}月締めの ${dept} を空欄に戻します。\n${delDetail}を削除します。\nほかの締め月・ほかの部署には影響しません。`, confirmText:'空欄に戻す', cancelText:'キャンセル', variant:'danger', dangerNote:'この締め月のこの部署のシフトを削除します（直後なら「元に戻す」で取り消せます）。'})) return;
   pushShiftHistory();
   for(const [key, name] of targets){
     if(schedule[key]) delete schedule[key][name];
@@ -3050,7 +3077,7 @@ function toggleDeptConfirm(dept){
     // エラーがない、またはすべて許容されている状態でないと確定できない
     const unresolved=deptUnresolvedBadCount(dept);
     if(unresolved>0){
-      alert(`エラーを解消または許容する必要があります。\n\n${dept} に未解消のエラーが ${unresolved}件 あります。\nシフトを修正して解消するか、「下書きチェック」または「集計・警告」のチェックボックスで許容してから確定してください。`);
+      showToast(`未解消のエラーが ${unresolved}件 あります。解消するか「下書きチェック」「集計・警告」で許容すると確定できます。`,'warn');
       return;
     }
     confirmedDepts[dept]=true;
@@ -3645,17 +3672,17 @@ function finalizeStrictSchedule(out, deptOut, days, targetDept, offMap, prefMap,
 async function generateDeptSchedule(dept, options={}){
   if(generationRunning) return;
   pullInputs(); normalizeState();
-  if(isDeptConfirmed(dept)){ alert('この部署は確定済みです。再編集してから生成してください。'); return; }
-  if(state.staff.length===0){ alert('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。'); return; }
+  if(isDeptConfirmed(dept)){ showToast('この部署は確定済みです。再編集してから自動作成できます。','warn'); return; }
+  if(state.staff.length===0){ showToast('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。','warn'); return; }
   const candidates = state.staff.filter(s=>staffCanDept(s, dept));
-  if(!candidates.length){ alert(`${dept} に対応できるスタッフがいません。スタッフの対応できる部署を確認してください。`); return; }
+  if(!candidates.length){ showToast(`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`,'warn'); return; }
   // 既にシフトが入っている場合のみ、作り直し（上書き）の確認を出す。全空欄なら確認不要で作成する。
   const hadData = deptHasAnyAssignment(dept);
   if(hadData){
     const msg = options.variant
-      ? `${dept} の現在のシフトを、別パターンで作り直します。よろしいですか？\n（作り直す前のシフトは「前案に戻す」で元に戻せます）`
-      : `${dept} には既にシフトが入っています。自動作成で作り直しますか？\n（作り直す前のシフトは「前案に戻す」で元に戻せます）`;
-    if(!confirmAction(msg)) return;
+      ? `${dept} の現在のシフトを、別パターンで作り直します。\n作り直す前のシフトは「前案に戻す」で元に戻せます。`
+      : `${dept} には既にシフトが入っています。自動作成で作り直します。\n作り直す前のシフトは「前案に戻す」で元に戻せます。`;
+    if(!await showConfirmModal({title:'シフトを作り直しますか？', message:msg, confirmText:'作り直す', cancelText:'キャンセル', variant:'caution'})) return;
   }
   const attempts = Math.max(30, Math.min(1500, state.attempts || 800));
   const seedOffset = generationSeedFor(dept, !!options.variant);
@@ -3812,8 +3839,8 @@ function closeGenDiffModal(){
 function restoreGenPrev(){
   const g=genDiff;
   if(!g){ closeGenDiffModal(); return; }
-  if(g.period!==periodKey()){ alert('締め月が変わっているため、前案には戻せません。'); closeGenDiffModal(); return; }
-  if(isDeptConfirmed(g.dept)){ alert('この部署は確定済みです。再編集してから操作してください。'); closeGenDiffModal(); return; }
+  if(g.period!==periodKey()){ showToast('締め月が変わっているため、前案には戻せません。','warn'); closeGenDiffModal(); return; }
+  if(isDeptConfirmed(g.dept)){ showToast('この部署は確定済みです。再編集してから操作してください。','warn'); closeGenDiffModal(); return; }
   pushShiftHistory();
   // 前案（再生成前の値）をスナップショットから書き戻す。対象は前案に含まれるセルのみ。
   for(const d of g.days){
@@ -4389,12 +4416,12 @@ function morningCleanActive(staffName, day, v){
   return morningCleanAuto(day, v, dept);
 }
 // 全体シフト編集モード／部署別シフトのセルから、朝そうじを手動でON/OFF（付与・削除とも確認）。
-function toggleMorningCleanOverride(dayKey, staffName){
+async function toggleMorningCleanOverride(dayKey, staffName){
   const day=dayByKey(getDays(), dayKey); if(!day) return;
   const v=normalizeStoredShift(schedule[dayKey]?.[staffName]||'');
-  if(!isWorkingShift(v)){ alert('勤務シフトのセルにのみ朝そうじを付けられます。'); return; }
+  if(!isWorkingShift(v)){ showToast('勤務シフトのセルにのみ朝そうじを付けられます。','warn'); return; }
   const st=findStaff(staffName); const cur=morningCleanActive(staffName, day, v); const want=!cur;
-  if(!confirm(`${staffName} の ${day.m}/${day.day} に朝そうじを${want?'付け':'外し'}ますか？`)) return;
+  if(!await showConfirmModal({title:`朝そうじを${want?'付けますか？':'外しますか？'}`, message:`${staffName} の ${day.m}/${day.day} に朝そうじを${want?'付け':'外し'}ます。`, confirmText:want?'付ける':'外す', cancelText:'キャンセル', variant:'primary'})) return;
   const auto=morningCleanAuto(day, v, st?st.dept:''); const pk=periodKeyForDate(day.y, day.m, day.day);
   if(!state.morningCleanOverrideByPeriod) state.morningCleanOverrideByPeriod={};
   if(!state.morningCleanOverrideByPeriod[pk]) state.morningCleanOverrideByPeriod[pk]={};
@@ -4470,13 +4497,13 @@ function mcAddRule(dept){
   if(!dept) return; const cfg=mcCfgFor(dept);
   const type=document.getElementById('mcRuleType')?.value||'all'; let rule;
   if(type==='all') rule={type:'all'};
-  else if(type==='event'){ const sel=document.getElementById('mcRuleTag')?.value||''; const tag = sel==='__OTHER__' ? (document.getElementById('mcRuleTagOther')?.value||'').trim() : sel; if(!tag){ alert('全体予定タグを選択（その他は内容を入力）してください。'); return; } rule={type:'event', tag}; }
-  else { const wds=[...document.querySelectorAll('.mcrWd:checked')].map(c=>c.value==='hol'?'hol':Number(c.value)); if(!wds.length){ alert('曜日を1つ以上選択してください。'); return; } const occ=[...document.querySelectorAll('.mcrOcc:checked')].map(c=>(c.value==='every'||c.value==='last')?c.value:Number(c.value)); rule={type:'wd', wds, occ}; }
-  if(cfg.rules.some(r=>JSON.stringify(r)===JSON.stringify(rule))){ alert('同じ条件のルールがすでに登録されています。'); return; }
+  else if(type==='event'){ const sel=document.getElementById('mcRuleTag')?.value||''; const tag = sel==='__OTHER__' ? (document.getElementById('mcRuleTagOther')?.value||'').trim() : sel; if(!tag){ showToast('全体予定タグを選択（その他は内容を入力）してください。','warn'); return; } rule={type:'event', tag}; }
+  else { const wds=[...document.querySelectorAll('.mcrWd:checked')].map(c=>c.value==='hol'?'hol':Number(c.value)); if(!wds.length){ showToast('曜日を1つ以上選択してください。','warn'); return; } const occ=[...document.querySelectorAll('.mcrOcc:checked')].map(c=>(c.value==='every'||c.value==='last')?c.value:Number(c.value)); rule={type:'wd', wds, occ}; }
+  if(cfg.rules.some(r=>JSON.stringify(r)===JSON.stringify(rule))){ showToast('同じ条件のルールがすでに登録されています。','warn'); return; }
   cfg.rules.push(rule);
   persist(); renderBasicDeptRulePanel(); renderAll();
 }
-function mcDelRule(dept, idx){ if(!dept) return; const cfg=mcCfgFor(dept); if(idx<0||idx>=cfg.rules.length) return; if(!confirm(`このルール「${mcRuleText(cfg.rules[idx])}」を削除しますか？`)) return; cfg.rules.splice(idx,1); persist(); renderBasicDeptRulePanel(); renderAll(); }
+async function mcDelRule(dept, idx){ if(!dept) return; const cfg=mcCfgFor(dept); if(idx<0||idx>=cfg.rules.length) return; if(!await showConfirmModal({title:'除外ルールを削除しますか？', message:`「${mcRuleText(cfg.rules[idx])}」を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; cfg.rules.splice(idx,1); persist(); renderBasicDeptRulePanel(); renderAll(); }
 function explainShortage(out, days, day, dept, sh){
   const offMap=fixedWeeklyOffMap(days); const prefMap=buildPreferenceMap(days);
   const reasons={}; let ok=0;
@@ -4618,9 +4645,9 @@ function renderWarningItem(w){
   const legacyKey=messageErrorKey(w.text||'');
   return `<label class="allowErrorLine"><input type="checkbox" ${allowed?'checked':''} onchange="toggleAllowedError('${escAttr(k)}', this, '${escAttr(legacyKey)}')"><span class="msg ${allowed?'allowedErrorText':''}">${esc(w.text||'')}</span></label>`;
 }
-function toggleAllowedError(key, checkbox, legacyKey=''){
+async function toggleAllowedError(key, checkbox, legacyKey=''){
   if(checkbox.checked){
-    if(!confirm('このエラーを許容しますか？')){ checkbox.checked=false; return; }
+    if(!await showConfirmModal({title:'このエラーを許容しますか？', message:'このエラーを「許容（確認済み）」として扱います。確定の妨げになりません。', confirmText:'許容する', cancelText:'キャンセル', variant:'caution'})){ checkbox.checked=false; return; }
     allowedErrors[key]=true;
     if(legacyKey && legacyKey!==key) delete allowedErrors[legacyKey];
   }else{
@@ -4740,13 +4767,13 @@ function initCalendarHScroll(){
   window.addEventListener('resize', updateCalendarHScroll, {passive:true});
   window.addEventListener('scroll', updateCalendarHScroll, {passive:true});
 }
-function manualSetDept(key, staffName, value, dept){ genDiff=null;
-  value = normalizeManualShiftValue(value);
+async function manualSetDept(key, staffName, value, dept){ genDiff=null;
+  value = await normalizeManualShiftValue(value);
   if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; }
   const st=state.staff.find(x=>x.name===staffName);
   const lockedLabel=staffLockedLabel(st);
-  if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; }
-  if(isDeptConfirmed(dept)){ alert(`${dept} は確定状態のため編集できません。「部署別シフト作成」で「再編集」を押してください。`); preserveScroll(()=>renderAll()); return; }
+  if(lockedLabel){ showToast(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`,'warn'); preserveScroll(()=>renderAll()); return; }
+  if(isDeptConfirmed(dept)){ showToast(`${dept} は確定状態のため編集できません。「部署別シフト作成」で「再編集」を押してください。`,'warn'); preserveScroll(()=>renderAll()); return; }
   // 既に他部署として入っている勤務は割当部署を保ったまま区分だけ変更する（空欄・休からの新規入力はこのページの部署になる）
   const prev=schedule[key]?.[staffName]||'';
   const prevDept=assignDept[key]?.[staffName]||'';
@@ -4937,11 +4964,11 @@ function makeMonthlyCSV(){
   return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
 function exportMonthlyCSV(){ pullInputs(); { const av=getMonthlyOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } downloadTextFile('\uFEFF'+makeMonthlyCSV(), `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.csv`); }
-function exportMonthlyExcel(){ pullInputs(); renderMonthlyView(); const table=printableTableHtml(document.getElementById('monthlyTable')); if(!table){ alert('出力できる月次シフトがありません。スタッフを登録してください。'); return; } exportHtmlAsExcel(`トリマー月次表（${state.monthlyYear}年${state.monthlyMonth}月）`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.xls`); }
+function exportMonthlyExcel(){ pullInputs(); renderMonthlyView(); const table=printableTableHtml(document.getElementById('monthlyTable')); if(!table){ showToast('まだ出力できるデータがありません。スタッフを登録してください。','warn'); return; } exportHtmlAsExcel(`トリマー月次表（${state.monthlyYear}年${state.monthlyMonth}月）`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.xls`); }
 function printMonthlyView(){
   pullInputs(); renderMonthlyView();
   const table=printableTableHtml(document.getElementById('monthlyTable'), true, true);
-  if(!table){ alert('印刷できる月次シフトがありません。スタッフを登録してください。'); return; }
+  if(!table){ showToast('まだ出力できるデータがありません。スタッフを登録してください。','warn'); return; }
   const mdays=getMonthDays(state.monthlyYear, state.monthlyMonth);
   const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', monthlyStaffRows().map(st=>{
     const c=getStaffDeptCounts(st.name, MONTHLY_DEPT, mdays, schedule, assignDept);
@@ -4977,9 +5004,9 @@ function rectKeys(table, a, f){
 }
 function toggleCellInSelection(sel){ const k=cellKeyOf(sel); if(cellSel.has(k)) cellSel.delete(k); else cellSel.add(k); }
 // 選択範囲のセルへ一括で区分を設定する（描画は最後に1回）
-function applyValueToSelectionCells(value){
+async function applyValueToSelectionCells(value){
   const sels=selectionSelects(); if(!sels.length) return;
-  if(value==='__OTHER__'){ const v=normalizeManualShiftValue('__OTHER__'); if(v==='__CANCEL__') return; value=v; }
+  if(value==='__OTHER__'){ const v=await normalizeManualShiftValue('__OTHER__'); if(v==='__CANCEL__') return; value=v; }
   pushShiftHistory(); // 一括適用前の状態を保存（誤操作のやり直し用）
   let n=0;
   for(const sel of sels){
@@ -5181,7 +5208,7 @@ function undoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.undo
 function redoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.redo.length){ toast('やり直せる操作はありません。','warn'); return; } st.undo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.redo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('やり直しました。'); }
 function refreshUndoRedoButtons(){ document.querySelectorAll('.shiftUndoBtn').forEach(b=>b.disabled=!shiftCanUndo()); document.querySelectorAll('.shiftRedoBtn').forEach(b=>b.disabled=!shiftCanRedo()); }
 function undoRedoBarHtml(){ return `<span class="undoRedoBar" title="この部署・締め月の中での編集を取り消せます"><button type="button" class="btn2 shiftUndoBtn" onclick="undoShift()" ${shiftCanUndo()?'':'disabled'} title="元に戻す（この部署・締め月の直前の編集を取り消す / Ctrl+Z）">↩ 元に戻す</button><button type="button" class="btn2 shiftRedoBtn" onclick="redoShift()" ${shiftCanRedo()?'':'disabled'} title="取り消した編集をやり直す（Ctrl+Y）">↪ やり直す</button></span>`; }
-function manualSet(key, staffName, value){ value = normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ alert('全体シフト表は参照モードです。編集ボタンを押してから変更してください。'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ alert(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
+async function manualSet(key, staffName, value){ value = await normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ showToast('全体シフト表は参照モードです。編集ボタンを押してから変更してください。','warn'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ showToast(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`,'warn'); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
 function setStatsWarnFilter(f){ statsWarnFilter=f; renderStats(); }
 function renderStats(){
   const days=getDays(); const counts=getCounts(schedule,days,assignDept); let html='<thead><tr><th>部署</th><th>タグ</th><th>スタッフ</th><th>合計</th><th>下限</th><th>上限</th><th>早</th><th>中</th><th>遅</th><th>土日祝</th><th>平日</th><th>休/公休</th></tr></thead><tbody>';
@@ -5262,7 +5289,7 @@ function downloadTextFile(text, filename, type='text/csv;charset=utf-8'){
   toast('ファイルを出力しました：'+filename);
 }
 function exportCalendarCSV(){ pullInputs(); const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } downloadTextFile('\uFEFF'+makeCalendarCSV(), `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.csv`); }
-function exportDeptCSV(dept){ if(!isDeptConfirmed(dept)){ alert(`${dept} は未確定のためCSV出力できません。確定後に出力してください。`); return; } pullInputs(); downloadTextFile('\uFEFF'+makeDeptCSV(dept), `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.csv`); }
+function exportDeptCSV(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のためCSV出力できません。確定後に出力できます。`,'warn'); return; } pullInputs(); downloadTextFile('\uFEFF'+makeDeptCSV(dept), `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.csv`); }
 
 function inlineOutputStyles(root){
   root.querySelectorAll('table').forEach(el=>{ el.setAttribute('style','border-collapse:separate;border-spacing:0;width:100%;font-size:11px;'); });
@@ -5336,7 +5363,7 @@ function exportMenuHtml(items, {label='ファイル出力', disabled=false, titl
   return `<details class="exportMenu"><summary class="btn2 exportTrigger">${ico('spreadsheet-download')}${esc(label)} <span class="caret" aria-hidden="true">▾</span></summary><div class="exportMenuList" role="menu">${list}</div></details>`;
 }
 if(typeof document!=='undefined' && typeof document.addEventListener==='function' && !document._exportMenuBound){ document._exportMenuBound=true; document.addEventListener('click', e=>{ if(e.target && e.target.closest && !e.target.closest('details.exportMenu')) closeExportMenus(); }); }
-function exportDeptExcel(dept){ if(!isDeptConfirmed(dept)){ alert(`${dept} は未確定のためExcel出力できません。確定後に出力してください。`); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table')); exportHtmlAsExcel(`${dept}のシフト確認`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.xls`); }
+function exportDeptExcel(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のためExcel出力できません。確定後に出力できます。`,'warn'); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table')); exportHtmlAsExcel(`${dept}のシフト確認`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.xls`); }
 // ===== OBIC連携用：全スタッフの休日（公休・希望休・有休）一覧 =====
 // 厳密な五十音順の並び替えキー：よみがな（無ければ氏名）を全角化＋カタカナ→ひらがな化して比較する。
 function kanaSortKey(st){
@@ -5376,9 +5403,9 @@ function obicCopyText(){
 }
 function copyObicTable(){
   pullInputs();
-  if(!state.staff.length){ alert('スタッフが登録されていません。'); return; }
+  if(!state.staff.length){ showToast('スタッフが登録されていません。','warn'); return; }
   const reasons=obicExportBlockReasons();
-  if(reasons.length){ renderObicView(); alert('コピーできません。\n\n・'+reasons.join('\n・')); return; }
+  if(reasons.length){ renderObicView(); showToast('コピーできません：'+reasons[0],'warn'); return; }
   const text=obicCopyText();
   const done=()=>toast('コピーしました。');
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -5447,16 +5474,16 @@ function renderObicView(){
 }
 function exportObicExcel(){
   pullInputs();
-  if(!state.staff.length){ alert('スタッフが登録されていません。「スタッフ」から登録してください。'); return; }
+  if(!state.staff.length){ showToast('スタッフが登録されていません。「スタッフ」から登録してください。','warn'); return; }
   const reasons=obicExportBlockReasons();
-  if(reasons.length){ renderObicView(); alert('Excel出力できません。\n\n・'+reasons.join('\n・')); return; }
+  if(reasons.length){ renderObicView(); showToast('Excel出力できません：'+reasons[0],'warn'); return; }
   renderObicView();
   const table=printableTableHtml(document.getElementById('obicTable'));
   exportHtmlAsExcel('OBIC連携用 休日一覧（公休・希望休）', `<div>${table}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
 }
 function printHtmlDocument(title, bodyHtml){
   const w=window.open('', '_blank');
-  if(!w){ alert('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。'); return; }
+  if(!w){ showNoticeModal({title:'印刷ウィンドウを開けませんでした', message:'ポップアップブロックを確認してください。', confirmText:'閉じる', variant:'caution'}); return; }
   // 見やすさ優先：合計列なしの前提でpt単位で組む（A4横・ズームなし）
   const printCss = `@page{size:A4 landscape;margin:4mm}
 body{font-family:"BIZ UDPGothic","Noto Sans JP","Yu Gothic UI","Yu Gothic","Hiragino Sans",sans-serif;color:#3a342e;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0}
@@ -5563,7 +5590,7 @@ function deptTotalsRows(dept, days){
 }
 function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
 function saveCalendarPDF(){ printCalendarView(); }
-function printDeptView(dept){ if(!isDeptConfirmed(dept)){ alert(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力してください。`); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
+function printDeptView(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力できます。`,'warn'); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
 function saveDeptPDF(dept){ printDeptView(dept); }
 function cellCsvLabel(day, st){ const v=normalizeStoredShift(schedule[day.key]?.[st.name]||''); if(!v) return ''; const dep=assignDept[day.key]?.[st.name]||st.dept; const label=shiftLabel(v)||''; return (isWorkingShift(v)&&dep!==st.dept) ? `${label}[${dep}]` : label; }
 function makeCSV(){ return makeCalendarCSV(); }
@@ -5622,7 +5649,7 @@ async function downloadJSON(){
     a.click(); URL.revokeObjectURL(a.href);
     markBackupTaken();
     toast('バックアップを取得しました（ダウンロード）。');
-  }catch(e){ alert('バックアップの保存に失敗しました。'+(e&&e.message?'\n'+e.message:'')); }
+  }catch(e){ showNoticeModal({title:'バックアップの保存に失敗しました', message:(e&&e.message?e.message:'もう一度お試しください。'), confirmText:'閉じる', variant:'danger'}); }
 }
 function applyImportedBackup(obj){
   if(!obj || typeof obj !== 'object') throw new Error('invalid settings');
@@ -5666,7 +5693,7 @@ function applyImportedBackup(obj){
 }
 function openBackupFilePicker(){
   const input = document.getElementById('jsonFile');
-  if(!input){ alert('バックアップ復元用のファイル入力が見つかりません。'); return; }
+  if(!input){ showNoticeModal({title:'復元できません', message:'バックアップ復元用のファイル入力が見つかりません。', confirmText:'閉じる', variant:'danger'}); return; }
   input.value = '';
   input.click();
 }
@@ -5674,20 +5701,23 @@ function loadJSONFile(e){
   const file=e.target.files && e.target.files[0];
   if(!file) return;
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=async ev=>{
+    let obj;
+    try{ obj=JSON.parse(ev.target.result); }
+    catch(err){ console.error(err); e.target.value=''; showNoticeModal({title:'読み込めませんでした', message:'JSONを読み込めませんでした。バックアップ取得で出力したJSONか確認してください。', confirmText:'閉じる', variant:'danger'}); return; }
+    const ok=await showConfirmModal({title:'バックアップから復元しますか？', message:'バックアップJSONから、現在の設定・作成済みシフト・締め月別希望をすべて復元します。', confirmText:'復元する', cancelText:'キャンセル', variant:'danger', dangerNote:'現在の内容はすべて上書きされ、元に戻せません。'});
+    if(!ok){ e.target.value=''; return; }
     try{
-      const obj=JSON.parse(ev.target.result);
-      if(!confirmAction('バックアップJSONから、現在の設定・作成済みシフト・締め月別希望をすべて復元しますか？\n現在の内容は上書きされます。')){ e.target.value=''; return; }
       applyImportedBackup(obj);
       msg('バックアップJSONを読み込み、LocalStorageにも復元しました。','ok');
       toast('バックアップから復元しました。');
-    }catch(err){ console.error(err); alert('JSONを読み込めませんでした。バックアップ取得で出力したJSONか確認してください。'); }
+    }catch(err){ console.error(err); showNoticeModal({title:'復元に失敗しました', message:'復元中に問題が発生しました。'+(err&&err.message?'\n'+err.message:''), confirmText:'閉じる', variant:'danger'}); }
     finally{ e.target.value=''; }
   };
-  reader.onerror=()=>{ alert('ファイルの読み込みに失敗しました。'); e.target.value=''; };
+  reader.onerror=()=>{ e.target.value=''; showNoticeModal({title:'読み込み失敗', message:'ファイルの読み込みに失敗しました。', confirmText:'閉じる', variant:'danger'}); };
   reader.readAsText(file);
 }
-function resetAll(){ if(confirm('設定・スタッフ・作成済みシフト・締め月別の希望をすべて削除して、まっさらな状態に戻します。\nこの操作は取り消せません。必要であれば先に「バックアップ」で取得してください。\n\n本当に初期化しますか？')){ localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; renderInputs(); renderAll(); } }
+async function resetAll(){ if(!await showConfirmModal({title:'すべて初期化しますか？', message:'設定・作成済みシフト・希望が削除されます。\n実行前にバックアップを取得してください。', confirmText:'初期化する', cancelText:'キャンセル', variant:'danger', dangerNote:'この操作は取り消せません。先に「バックアップ」で取得することをおすすめします。'})) return; localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; renderInputs(); renderAll(); showToast('初期化しました。','success'); }
 
 function showMenuPanel(name){
   if(name === 'csv') name = 'calendar';
@@ -5712,6 +5742,62 @@ function toast(text, type='ok'){
   const t=document.createElement('div'); t.className='toast toast-'+type; t.textContent=text; box.appendChild(t);
   requestAnimationFrame(()=>t.classList.add('show'));
   setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>{ if(t.parentNode) t.remove(); }, 320); }, 3200);
+}
+function showToast(text, type='ok'){ const m={success:'ok',error:'bad',danger:'bad',warning:'warn',info:'ok'}; toast(text, m[type]||type); }
+// ===== 共通モーダル基盤（確認／入力／通知）。標準 alert/confirm/prompt の置き換え用 =====
+function _modalFocusables(el){ return [...el.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled && x.offsetParent!==null); }
+function _openModal(overlay, {initialFocus, onEnter, onEsc}){
+  const prev=document.activeElement;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  function onKey(e){
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); onEsc&&onEsc(); }
+    else if(e.key==='Enter'){ if(e.target && e.target.tagName==='TEXTAREA') return; e.preventDefault(); onEnter&&onEnter(); }
+    else if(e.key==='Tab'){ const f=_modalFocusables(overlay); if(!f.length) return; const first=f[0], last=f[f.length-1]; if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); } else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } }
+  }
+  document.addEventListener('keydown', onKey, true);
+  setTimeout(()=>{ try{ (initialFocus||overlay.querySelector('.appModalConfirm')||overlay).focus(); }catch(e){} }, 30);
+  return ()=>{ overlay.classList.remove('show'); document.removeEventListener('keydown', onKey, true); setTimeout(()=>{ if(overlay.parentNode) overlay.remove(); }, 180); try{ if(prev&&prev.focus) prev.focus(); }catch(e){} };
+}
+function showConfirmModal(opts={}){
+  const {title='確認', message='', confirmText='OK', cancelText='キャンセル', variant='primary', dangerNote, cautionNote}=opts;
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div'); overlay.className='appModalOverlay noPrint';
+    const tid='m'+Math.random().toString(36).slice(2);
+    const note = (variant==='danger') ? `<div class="appModalDangerNote">${esc(dangerNote||'この操作は取り消せない場合があります。実行前にバックアップの取得をおすすめします。')}</div>` : (variant==='caution' && cautionNote ? `<div class="appModalCautionNote">${esc(cautionNote)}</div>` : '');
+    overlay.innerHTML=`<div class="appModalCard variant-${variant}" role="dialog" aria-modal="true" aria-labelledby="${tid}"><h2 class="appModalTitle" id="${tid}">${esc(title)}</h2>${message?`<div class="appModalMsg">${esc(message)}</div>`:''}${note}<div class="appModalBtns"><button type="button" class="appModalBtn appModalCancel">${esc(cancelText)}</button><button type="button" class="appModalBtn appModalConfirm variant-${variant}">${esc(confirmText)}</button></div></div>`;
+    let done=false; const finish=v=>{ if(done) return; done=true; close(); resolve(v); };
+    const close=_openModal(overlay, {initialFocus: overlay.querySelector('.appModalConfirm'), onEnter:()=>finish(true), onEsc:()=>finish(false)});
+    overlay.querySelector('.appModalConfirm').onclick=()=>finish(true);
+    overlay.querySelector('.appModalCancel').onclick=()=>finish(false);
+  });
+}
+function showInputModal(opts={}){
+  const {title='入力', message='', placeholder='', initialValue='', confirmText='OK', cancelText='キャンセル', variant='primary', validate}=opts;
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div'); overlay.className='appModalOverlay noPrint';
+    const tid='m'+Math.random().toString(36).slice(2);
+    overlay.innerHTML=`<div class="appModalCard variant-${variant}" role="dialog" aria-modal="true" aria-labelledby="${tid}"><h2 class="appModalTitle" id="${tid}">${esc(title)}</h2>${message?`<div class="appModalMsg">${esc(message)}</div>`:''}<input type="text" class="appModalInput" placeholder="${esc(placeholder)}" value="${esc(initialValue)}"><div class="appModalErr" aria-live="polite"></div><div class="appModalBtns"><button type="button" class="appModalBtn appModalCancel">${esc(cancelText)}</button><button type="button" class="appModalBtn appModalConfirm variant-${variant}">${esc(confirmText)}</button></div></div>`;
+    const input=overlay.querySelector('.appModalInput'); const errBox=overlay.querySelector('.appModalErr');
+    let done=false; const finish=v=>{ if(done) return; done=true; close(); resolve(v); };
+    const tryConfirm=()=>{ const v=(input.value||'').trim(); if(!v){ errBox.textContent='入力してください。'; input.focus(); return; } if(validate){ const err=validate(v); if(err){ errBox.textContent=err; input.focus(); input.select(); return; } } finish(v); };
+    const close=_openModal(overlay, {initialFocus: input, onEnter:tryConfirm, onEsc:()=>finish(null)});
+    overlay.querySelector('.appModalConfirm').onclick=tryConfirm;
+    overlay.querySelector('.appModalCancel').onclick=()=>finish(null);
+    input.addEventListener('input', ()=>{ errBox.textContent=''; });
+  });
+}
+function showNoticeModal(opts={}){
+  if(typeof opts==='string') opts={message:opts};
+  const {title='お知らせ', message='', confirmText='閉じる', variant='primary'}=opts;
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div'); overlay.className='appModalOverlay noPrint';
+    const tid='m'+Math.random().toString(36).slice(2);
+    overlay.innerHTML=`<div class="appModalCard variant-${variant}" role="dialog" aria-modal="true" aria-labelledby="${tid}"><h2 class="appModalTitle" id="${tid}">${esc(title)}</h2>${message?`<div class="appModalMsg">${esc(message)}</div>`:''}<div class="appModalBtns"><button type="button" class="appModalBtn appModalConfirm variant-${variant}">${esc(confirmText)}</button></div></div>`;
+    let done=false; const finish=()=>{ if(done) return; done=true; close(); resolve(); };
+    const close=_openModal(overlay, {initialFocus: overlay.querySelector('.appModalConfirm'), onEnter:finish, onEsc:finish});
+    overlay.querySelector('.appModalConfirm').onclick=finish;
+  });
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 // onclick="...('値')" のようにHTML属性内のJS文字列へ埋め込む値用。
