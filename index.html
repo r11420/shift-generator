@@ -157,7 +157,7 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 
 .weekendCol{background:#fff0f4!important}
 th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f4!important}
-.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:#FBE7CE!important;border:2.5px solid #E59A3A!important;color:#8A4E12!important}
+.shiftView.shiftGroup-E,.editableSelect.shiftGroup-E{background:#FBE7CE!important;border-color:#E59A3A!important;color:#8A4E12!important}
 .shiftView.shiftGroup-M,.editableSelect.shiftGroup-M{background:var(--mdb)!important;border-color:var(--mdn)!important;color:var(--mdl)!important}
 .shiftView.shiftGroup-L,.editableSelect.shiftGroup-L{background:var(--ltb)!important;border-color:var(--ltn)!important;color:var(--ltl)!important}
 .shiftView.shiftGroup-OFF,.editableSelect.shiftGroup-OFF{background:#E7E7EC!important;border:1.5px solid #CBCBD3!important;color:#5C5C66!important}
@@ -1019,7 +1019,7 @@ function groupKeyFromLabel(label){ const hit=Object.entries(GROUP_LABEL).find(([
 function shiftGroupClass(v, dayObj=null){ v=normalizeStoredShift(v); if(!v) return ''; if(v==='OFF') return 'shiftGroup-OFF'; if(v===PAID_LEAVE) return 'shiftGroup-PAID'; if(isCustomShift(v)) return 'shiftGroup-OTHER'; const g=groupOfShift(v, dayObj); return g ? `shiftGroup-${g}` : ''; }
 // ===== 区分デザイン設定（グループ別の見た目上書き） =====
 const APPEARANCE_DEFAULTS = {
-  E:{bg:'#FBE7CE',fg:'#8A4E12',border:'#E59A3A',thick:true},
+  E:{bg:'#FBE7CE',fg:'#8A4E12',border:'#E59A3A',thick:false},
   M:{bg:'#E9EFE8',fg:'#566E5C',border:'#CFDACE',thick:false},
   L:{bg:'#EFE9F5',fg:'#6B5894',border:'#DACFE7',thick:false},
   OFF:{bg:'#E7E7EC',fg:'#5C5C66',border:'#CBCBD3',thick:false},
@@ -3089,7 +3089,7 @@ function deptClosed(dept){ return !!progressFor().prefsClosed[dept] || deptHasAn
 // その部署の未解消の重大警告（許容済みを除く）件数
 function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(schedule, getDays(), true, assignDept)); return w.filter(x=>x.level==='bad' && !isWarningAllowed(x)).length; }
 function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
-function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} }
+function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} try{ renderGlobalBar(); }catch(e){} }
 // バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
 function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance, state.morningCleanExclude, state.morningCleanOverrideByPeriod])); }catch(e){ return String(Math.random()); } }
 // 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
