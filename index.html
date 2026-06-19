@@ -398,6 +398,19 @@ td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 
 .availBlock li{margin:3px 0}
 .availInline{display:inline-flex;align-items:center;gap:6px;color:#9c4844;font-weight:700;font-size:12px}
 .availInline::before{content:"";width:8px;height:8px;border-radius:50%;background:#c0504a;flex:0 0 auto}
+/* ===== エラー→該当箇所ジャンプ：ハイライト・補足ノート・移動ボタン ===== */
+.jumpHL{outline:3px solid var(--rd)!important;box-shadow:0 0 0 6px rgba(189,84,75,.18)!important;border-radius:8px!important;position:relative;z-index:6;transition:outline .15s,box-shadow .15s}
+.jumpHL.warnHL{outline-color:var(--gd)!important;box-shadow:0 0 0 6px rgba(169,120,31,.18)!important}
+.jumpNote{position:fixed;z-index:100060;background:var(--iv);border:1px solid var(--ln);border-left:5px solid var(--rd);border-radius:12px;box-shadow:0 14px 36px rgba(40,30,15,.28);padding:10px 14px;max-width:300px;font-size:12px;color:var(--ink2);font-weight:700;line-height:1.6}
+.jumpNote.warn{border-left-color:var(--gd)}
+.jumpNote .jnTitle{font-size:13px;font-weight:900;color:var(--ink);margin-bottom:2px}
+.warnItemRow{display:flex;align-items:flex-start;gap:8px}
+.warnItemRow .allowErrorLine{flex:1;min-width:0}
+.warnJumpBtn{width:auto;flex:0 0 auto;background:#fff;border:1.5px solid var(--sgl);color:var(--accent2);font-weight:800;font-size:11.5px;border-radius:999px;padding:4px 11px;cursor:pointer;white-space:nowrap;margin-top:2px}
+.warnJumpBtn:hover{background:var(--sgs);border-color:var(--sg)}
+.availJumpBtn{width:auto;background:#fff;border:1px solid var(--sgl);color:var(--accent2);font-weight:800;font-size:11px;border-radius:999px;padding:3px 10px;cursor:pointer;white-space:nowrap;margin-left:8px}
+.availJumpBtn:hover{background:var(--sgs);border-color:var(--sg)}
+.availList li .availJumpBtn{margin-top:3px}
 .exportMenu{position:relative;display:inline-block}
 .exportMenu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:13px;padding:10px 12px;font-weight:800;font-size:15px;background:#fff;color:var(--ink);white-space:nowrap;transition:filter .12s ease,box-shadow .12s ease}
 .exportMenu>summary:hover{box-shadow:0 6px 14px rgba(72,111,78,.14)}
@@ -3149,7 +3162,7 @@ function renderDraftWarnings(dept, precomputedWarns=null){
   const countInfo = `<span class="small">${startIdx+1}〜${Math.min(startIdx+pageSize,warns.length)} / ${warns.length}件</span>`;
   const pagerTop = `<div class="draftPager">${countInfo}${sizeSeg}</div>`;
   const pagerBottom = maxPage>1 ? `<div class="draftPager"><button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.max(1,current-1)})" ${current===1?'disabled':''}>前へ</button>${pageButtons}<button type="button" onclick="setDraftWarningPage('${escAttr(dept)}', ${Math.min(maxPage,current+1)})" ${current===maxPage?'disabled':''}>次へ</button></div>` : '';
-  box.innerHTML=`<div class="${hard?'bad':'warn'}"><div class="draftWarnHeader"><b>下書きチェック：エラー ${warns.length}件</b><span class="small">重大・注意をまとめて、この画面内で全件確認できます。</span></div>${pagerTop}${shown.map(renderWarningItem).join('')}${pagerBottom}</div>`;
+  box.innerHTML=`<div class="${hard?'bad':'warn'}"><div class="draftWarnHeader"><b>下書きチェック：エラー ${warns.length}件</b><span class="small">重大・注意をまとめて、この画面内で全件確認できます。「該当箇所へ移動」で対象セルへ移動します。</span></div>${pagerTop}${shown.map(w=>renderWarningItem(w,{page:'deptBuild',dept})).join('')}${pagerBottom}</div>`;
 }
 function setDraftWarningPage(dept, page){
   draftWarningPages[dept] = page;
@@ -4377,7 +4390,7 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
     const ass = out[day.key]||{};
     if(day.closed){
       const dayLabel = day.closure ? '臨時休業日' : '休業日';
-      for(const [s,v] of Object.entries(ass)){ if(isWorkingShift(v)) warnings.push({level:'bad', text:`${day.key} は${dayLabel}ですが、${s} に${shiftFull(v)||shiftLabel(v)||v}が入っています。`}); }
+      for(const [s,v] of Object.entries(ass)){ if(isWorkingShift(v)) warnings.push({level:'bad', text:`${day.key} は${dayLabel}ですが、${s} に${shiftFull(v)||shiftLabel(v)||v}が入っています。`, staff:s, date:day.key}); }
       continue;
     }
     for(const dept of DEPTS){
@@ -4404,15 +4417,15 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
     for(const day of days){
       const v = out[day.key]?.[s];
       if(isWorkingShift(v)) con++; else { con=0; runFromPrevPeriod=false; }
-      if(con > state.maxConsecutive) warnings.push({level:'bad', text: runFromPrevPeriod ? `${s}：前月末からの連勤が${day.key}時点で最大連勤${state.maxConsecutive}を超過` : `${s}：${day.key}時点で最大連勤${state.maxConsecutive}を超過`});
-      if(state.avoidLateEarly){ const reason=lateEarlyReasonFromPrevious(out, days, day, s, groupOfShift(v, day)); if(reason) { const prevKey=fmtDate(addDays(day.date,-1)); warnings.push({level:'bad', text:`${s}：${prevKey}遅番→${day.key}早番（${reason}）`}); } }
+      if(con > state.maxConsecutive) warnings.push({level:'bad', text: runFromPrevPeriod ? `${s}：前月末からの連勤が${day.key}時点で最大連勤${state.maxConsecutive}を超過` : `${s}：${day.key}時点で最大連勤${state.maxConsecutive}を超過`, staff:s, date:day.key});
+      if(state.avoidLateEarly){ const reason=lateEarlyReasonFromPrevious(out, days, day, s, groupOfShift(v, day)); if(reason) { const prevKey=fmtDate(addDays(day.date,-1)); warnings.push({level:'bad', text:`${s}：${prevKey}遅番→${day.key}早番（${reason}）`, staff:s, date:day.key}); } }
     }
   }
   const offMapForValidate = fixedWeeklyOffMap(days);
   for(const st of state.staff){
     for(const day of days){
       const v=out[day.key]?.[st.name];
-      if(isWorkingShift(v) && offMapForValidate.get(st.name)?.has(day.key)) warnings.push({level:'bad', text:`固定公休違反：${day.key} ${st.name} は固定公休ですが${shiftLabel(v)}が入っています`});
+      if(isWorkingShift(v) && offMapForValidate.get(st.name)?.has(day.key)) warnings.push({level:'bad', text:`固定公休違反：${day.key} ${st.name} は固定公休ですが${shiftLabel(v)}が入っています`, staff:st.name, date:day.key});
     }
   }
   // セル単位の構造違反も漏れなく重大エラーにする（赤セルと同じ判定を警告一覧にも出す）
@@ -4422,14 +4435,14 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
       if(!isWorkingShift(v) || isCustomShift(v) || day.closed) continue;
       const dept=deptOut[day.key]?.[st.name] || st.dept;
       const g=groupOfShift(v, day);
-      if(!staffCanDept(st, dept)) warnings.push({level:'bad', text:`${day.key} ${st.name}：対応部署外（${dept}）に割り当てられています`});
-      else if(!isShiftUsableOnDay(v, day)) warnings.push({level:'bad', text:`${day.key} ${st.name}：区分${shiftLabel(v)}は${day.holType?'土日祝':'平日'}に使用しない設定です`});
-      else if(!g || !groupEnabledForDay(day, dept, g)) warnings.push({level:'bad', text:`${day.key} ${st.name}：${dept} で使用しない帯（${groupLabel(g)||'不明'}）に入っています`});
-      else if(Array.isArray(st.canShifts) && st.canShifts.length && !st.canShifts.includes(v)) warnings.push({level:'bad', text:`${day.key} ${st.name}：「入れるシフト」に無い区分${shiftLabel(v)}が設定されています`});
+      if(!staffCanDept(st, dept)) warnings.push({level:'bad', text:`${day.key} ${st.name}：対応部署外（${dept}）に割り当てられています`, staff:st.name, date:day.key, dept});
+      else if(!isShiftUsableOnDay(v, day)) warnings.push({level:'bad', text:`${day.key} ${st.name}：区分${shiftLabel(v)}は${day.holType?'土日祝':'平日'}に使用しない設定です`, staff:st.name, date:day.key, dept});
+      else if(!g || !groupEnabledForDay(day, dept, g)) warnings.push({level:'bad', text:`${day.key} ${st.name}：${dept} で使用しない帯（${groupLabel(g)||'不明'}）に入っています`, staff:st.name, date:day.key, dept});
+      else if(Array.isArray(st.canShifts) && st.canShifts.length && !st.canShifts.includes(v)) warnings.push({level:'bad', text:`${day.key} ${st.name}：「入れるシフト」に無い区分${shiftLabel(v)}が設定されています`, staff:st.name, date:day.key, dept});
     }
   }
   const countsForLimit = getCounts(out, days, deptOut);
-  for(const st of state.staff){ const c=countsForLimit[st.name]||{total:0}; if(st.minDays && c.total<st.minDays) warnings.push({level:'warn', text:`${st.name}：希望勤務日数下限 ${st.minDays}日に未達（実績${c.total}日）`}); if(st.maxDays && c.total>st.maxDays) warnings.push({level:'bad', text:`${st.name}：勤務日数上限 ${st.maxDays}日を超過（実績${c.total}日）`}); }
+  for(const st of state.staff){ const c=countsForLimit[st.name]||{total:0}; if(st.minDays && c.total<st.minDays) warnings.push({level:'warn', text:`${st.name}：希望勤務日数下限 ${st.minDays}日に未達（実績${c.total}日）`, staff:st.name}); if(st.maxDays && c.total>st.maxDays) warnings.push({level:'bad', text:`${st.name}：勤務日数上限 ${st.maxDays}日を超過（実績${c.total}日）`, staff:st.name}); }
   for(const st of state.staff){
     if(st.useWeeklyLimit===false) continue;
     const limit=+(st.weeklyAvailableDays ?? 5);
@@ -4443,8 +4456,8 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
       const v = out[day.key]?.[p.staff] || '';
       const cond = prefConditionText(p);
       const prefShift = normalizeStoredShift(p.shift);
-      if(isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'bad', text:`希望違反：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`});
-      if(!isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'warn', text:`希望未達：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`});
+      if(isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'bad', text:`希望違反：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`, staff:p.staff, date:day.key});
+      if(!isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'warn', text:`希望未達：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`, staff:p.staff, date:day.key});
     }
   }
   return warnings;
@@ -4626,7 +4639,7 @@ function countIssue(kind, day, scope, group, got, limit){
     text=`${day.key} 全体の${label}が最低人数未達：必要${limit} / 実績${got}`;
     shortText=`全体${label}不足 ${got}/${limit}`;
   }
-  return {level:'bad', text, allowKey:countErrorKey(kind, day.key, scope, group||''), shortText};
+  return {level:'bad', text, allowKey:countErrorKey(kind, day.key, scope, group||''), shortText, date:day.key, dept:(scope!=='全体'?scope:'')};
 }
 function countIssueAllowed(issue){ return !!(allowedErrors[issue.allowKey] || allowedErrors[messageErrorKey(issue.text||'')]); }
 function consecutiveRunKeys(out, days, staffName, key){
@@ -4737,10 +4750,12 @@ function warningAllowKey(w){
   return messageErrorKey(text);
 }
 function isWarningAllowed(w){ return !!(allowedErrors[warningAllowKey(w)] || allowedErrors[messageErrorKey(w.text||'')]); }
-function renderWarningItem(w){
+function renderWarningItem(w, ctx){
   const k=warningAllowKey(w); const allowed=isWarningAllowed(w);
   const legacyKey=messageErrorKey(w.text||'');
-  return `<label class="allowErrorLine"><input type="checkbox" ${allowed?'checked':''} onchange="toggleAllowedError('${escAttr(k)}', this, '${escAttr(legacyKey)}')"><span class="msg ${allowed?'allowedErrorText':''}">${esc(w.text||'')}</span></label>`;
+  const tgt=warningTarget(w, ctx||{});
+  const jumpBtn = tgt ? `<button type="button" class="warnJumpBtn" aria-label="該当箇所へ移動：${escAttr(w.text||'')}" onclick="appJumpStr('${escAttr(JSON.stringify(tgt))}')">該当箇所へ移動</button>` : '';
+  return `<div class="warnItemRow"><label class="allowErrorLine"><input type="checkbox" ${allowed?'checked':''} onchange="toggleAllowedError('${escAttr(k)}', this, '${escAttr(legacyKey)}')"><span class="msg ${allowed?'allowedErrorText':''}">${esc(w.text||'')}</span></label>${jumpBtn}</div>`;
 }
 async function toggleAllowedError(key, checkbox, legacyKey=''){
   if(checkbox.checked){
@@ -4818,10 +4833,10 @@ function renderDeptShiftPreview(){
       if(closureWork){ err='臨時休業日に出勤が入っています。休業日のため通常は休みです。'; errCls='errorCell'; }
       const colErr=dayCountIssueClass(dayIssues.get(day.key)||[]);
       if(editable && !lockedLabel){
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }else{
         const title=lockedLabel?`${lockedLabel} のため編集不可`:err;
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}</td>`;
       }
     }
     const dc=getStaffDeptCounts(st.name, activeBuildDept, days, schedule, assignDept);
@@ -4938,7 +4953,7 @@ function renderCalendar(){
     const deptPill = st.dept ? `<span class="pill pDept">${esc(deptLabel(st.dept))}</span>` : `<span class="pill pDeptUnset" title="部署が未設定です。スタッフ画面で所属部署を設定してください。">部署未設定</span>`;
     html+=`<tr${st.dept?'':' class="unsetRow"'}><td class="deptCol sticky1">${deptPill}</td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); html+=`<td class="dateCol closureHead${work?' errorCell':''}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で変更可）'}">${work?`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`:`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で変更可）'}">${work?`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`:`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
@@ -4947,10 +4962,10 @@ function renderCalendar(){
       const lockMark='';
       const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'':'errorCell'):''; /* 全体シフト表では許容済みの緑表示は出さない */
       if(calendarEditMode && !confirmed){
-        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}"><select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }else{
         const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
-        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}"><span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}</td>`;
       }
     }
     html+=`<td class="sumCol"><b>${c.total}</b></td><td class="sumCol">${c.E||0}</td><td class="sumCol">${c.M||0}</td><td class="sumCol">${c.L||0}</td></tr>`;
@@ -5070,7 +5085,7 @@ function makeMonthlyCSV(){
   const rows=[[`トリマー月次シフト（${state.monthlyYear}年${state.monthlyMonth}月）`], ...monthlyTableRows(), [], ['シフト区分対応表'], ...shiftLegendRows()];
   return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
-function exportMonthlyCSV(){ pullInputs(); { const av=getMonthlyOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } downloadTextFile('\uFEFF'+makeMonthlyCSV(), `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.csv`); }
+function exportMonthlyCSV(){ pullInputs(); { const av=getMonthlyOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } downloadTextFile('\uFEFF'+makeMonthlyCSV(), `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.csv`); }
 function exportMonthlyExcel(){ pullInputs(); renderMonthlyView(); const table=printableTableHtml(document.getElementById('monthlyTable')); if(!table){ showToast('まだ出力できるデータがありません。スタッフを登録してください。','warn'); return; } exportHtmlAsExcel(`トリマー月次表（${state.monthlyYear}年${state.monthlyMonth}月）`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.xls`); }
 function printMonthlyView(){
   pullInputs(); renderMonthlyView();
@@ -5336,7 +5351,7 @@ function renderStats(){
     return true;
   });
   const listHtml = warns.length
-    ? (shown.length ? shown.map(w=>`<div class="${w.level==='bad'?'bad':'warn'}">${renderWarningItem(w)}</div>`).join('') : '<div class="small">この絞り込み条件に該当する警告はありません。</div>')
+    ? (shown.length ? shown.map(w=>`<div class="${w.level==='bad'?'bad':'warn'}">${renderWarningItem(w,{page:'calendar'})}</div>`).join('') : '<div class="small">この絞り込み条件に該当する警告はありません。</div>')
     : '<div class="ok">警告はありません。</div>';
   // 「次の行動」：状態から導く次の一手を1つだけ提示する（色＝意味：赤=重大／橙=注意・不足／緑=OK）
   const unresolvedBad = bad.filter(w=>!isWarningAllowed(w));
@@ -5395,7 +5410,7 @@ function downloadTextFile(text, filename, type='text/csv;charset=utf-8'){
   const blob=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
   toast('ファイルを出力しました：'+filename);
 }
-function exportCalendarCSV(){ pullInputs(); const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } downloadTextFile('\uFEFF'+makeCalendarCSV(), `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.csv`); }
+function exportCalendarCSV(){ pullInputs(); const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } downloadTextFile('\uFEFF'+makeCalendarCSV(), `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.csv`); }
 function exportDeptCSV(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のためCSV出力できません。確定後に出力できます。`,'warn'); return; } pullInputs(); downloadTextFile('\uFEFF'+makeDeptCSV(dept), `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.csv`); }
 
 function inlineOutputStyles(root){
@@ -5421,24 +5436,27 @@ function exportHtmlAsExcel(title, bodyHtml, filename){
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>${excelStyleCss()}</style></head><body><h1 style="font-size:18px;color:#27231f;">${esc(title)}</h1>${styledBody}</body></html>`;
   downloadTextFile(html, filename, 'application/vnd.ms-excel;charset=utf-8');
 }
-function exportCalendarExcel(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表', `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
+function exportCalendarExcel(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表', `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
 // CSV/Excel/印刷PDF を1つの「ファイル出力」ボタン＋選択メニューにまとめるための共通部品。
 function closeExportMenus(){ document.querySelectorAll('details.exportMenu[open]').forEach(d=>{ d.open=false; }); }
 // ===== 実行可否（条件未達はボタン非活性＋画面に不足理由を表示）=====
 // 各操作は {canRun:boolean, reasons:string[]} を返す共通形にし、UI表示と実行直前チェックで同じ判定を使う。
 // 文言はスタッフ向けにやさしく（「まだ実行できません」「先に〜してください」）。
+// reason は文字列、または {text, jump:{...target}, jumpLabel} を許容（jumpがあれば移動ボタンを表示）
+function reasonText(r){ return (r && typeof r==='object') ? (r.text||'') : (r||''); }
 function availReasonsHtml(reasons, title='この操作はまだ実行できません'){
   if(!reasons || !reasons.length) return '';
-  return `<div class="availBlock" role="status"><div class="availTitle">${esc(title)}</div><div class="availSub">不足している条件：</div><ul class="availList">${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>`;
+  const li=reasons.map(r=>{ if(r && typeof r==='object'){ const btn=r.jump?`<button type="button" class="availJumpBtn" aria-label="${escAttr((r.jumpLabel||'該当箇所へ移動')+'：'+(r.text||''))}" onclick="appJumpStr('${escAttr(JSON.stringify(r.jump))}')">${esc(r.jumpLabel||'該当箇所へ移動')}</button>`:''; return `<li>${esc(r.text||'')}${btn}</li>`; } return `<li>${esc(r)}</li>`; }).join('');
+  return `<div class="availBlock" role="status"><div class="availTitle">${esc(title)}</div><div class="availSub">不足している条件：</div><ul class="availList">${li}</ul></div>`;
 }
 function getCalendarOutputAvailability(){
   const reasons=[];
-  if(!state.staff.length) reasons.push('まだ出力できるデータがありません。「スタッフ」からスタッフを登録してください。');
+  if(!state.staff.length) reasons.push({text:'まだ出力できるデータがありません。「スタッフ」からスタッフを登録してください。', jump:{page:'staff',note:'スタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
   return {canRun: reasons.length===0, reasons};
 }
 function getMonthlyOutputAvailability(){
   const reasons=[];
-  if(!monthlyStaffRows().length) reasons.push('まだ出力できるデータがありません。「スタッフ」でトリマー（または兼務）のスタッフを登録してください。');
+  if(!monthlyStaffRows().length) reasons.push({text:'まだ出力できるデータがありません。「スタッフ」でトリマー（または兼務）のスタッフを登録してください。', jump:{page:'staff',note:'トリマー（または兼務）のスタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
   return {canRun: reasons.length===0, reasons};
 }
 function getDeptConfirmAvailability(dept, unresolvedCount){
@@ -5446,15 +5464,15 @@ function getDeptConfirmAvailability(dept, unresolvedCount){
   const reasons=[];
   if(!isDeptConfirmed(dept)){
     const unresolved = (typeof unresolvedCount==='number') ? unresolvedCount : deptUnresolvedBadCount(dept);
-    if(unresolved>0) reasons.push(`未解消のエラーが ${unresolved}件 あります。シフトを修正して解消するか、「下書きチェック」や「集計・警告」で許容すると確定できます。`);
+    if(unresolved>0) reasons.push({text:`未解消のエラーが ${unresolved}件 あります。シフトを修正して解消するか、「下書きチェック」や「集計・警告」で許容すると確定できます。`, jump:{page:'stats',note:'重大な警告を確認・修正または許容してください。'}, jumpLabel:'集計・警告を開く'});
   }
   return {canRun: reasons.length===0, reasons};
 }
 function getDeptGenerateAvailability(dept){
   const reasons=[];
   if(isDeptConfirmed(dept)) reasons.push('この部署は確定済みです。「再編集」を押すと自動作成できます。');
-  if(!state.staff.length) reasons.push('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。');
-  else if(!state.staff.some(s=>staffCanDept(s, dept))) reasons.push(`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`);
+  if(!state.staff.length) reasons.push({text:'スタッフが登録されていません。「スタッフ」からメンバーを登録してください。', jump:{page:'staff',note:'スタッフを登録してください。'}, jumpLabel:'スタッフ設定を開く'});
+  else if(!state.staff.some(s=>staffCanDept(s, dept))) reasons.push({text:`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`, jump:{page:'staff',note:'対応できる部署を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
   return {canRun: reasons.length===0, reasons};
 }
 function getDeptExportAvailability(dept){
@@ -5492,13 +5510,13 @@ function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.de
 function obicExportBlockReasons(){
   const reasons=[];
   const staff = obicStaffSorted(); // dept!=='' のスタッフ
-  if(!staff.length) reasons.push('対象スタッフがいません（スタッフ未登録、または全員が部署未設定）。「スタッフ」画面で部署を割り当ててください。');
+  if(!staff.length) reasons.push({text:'対象スタッフがいません（スタッフ未登録、または全員が部署未設定）。「スタッフ」画面で部署を割り当ててください。', jump:{page:'staff',note:'スタッフを登録し、所属部署を割り当ててください。'}, jumpLabel:'スタッフ設定を開く'});
   const unconfirmed = DEPTS.filter(d=>state.staff.some(s=>s.dept===d) && !isDeptConfirmed(d));
-  if(unconfirmed.length) reasons.push(`未確定の部署があります（${unconfirmed.join('・')}）。「部署別シフト作成」で各部署を確定してから出力してください。`);
+  if(unconfirmed.length) reasons.push({text:`未確定の部署があります（${unconfirmed.join('・')}）。「部署別シフト作成」で各部署を確定してから出力してください。`, jump:{page:'deptBuild',dept:unconfirmed[0],note:'この部署を確定してください。'}, jumpLabel:'部署別シフト作成を開く'});
   const unassigned = state.staff.filter(s=>s.dept==='').length;
-  if(unassigned) reasons.push(`部署未設定のスタッフが ${unassigned}名 います。「スタッフ」画面で部署を割り当ててください。`);
+  if(unassigned) reasons.push({text:`部署未設定のスタッフが ${unassigned}名 います。「スタッフ」画面で部署を割り当ててください。`, jump:{page:'staff',note:'部署未設定のスタッフに所属部署を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
   const missing = staff.filter(st=>!isValidEmpNo(st.empNo)).length;
-  if(missing) reasons.push(`社員番号が未設定のスタッフが ${missing}名 います。OBICに貼り付けたとき全員の行がずれます。「スタッフ」画面で社員番号（5桁）を設定してください。`);
+  if(missing) reasons.push({text:`社員番号が未設定のスタッフが ${missing}名 います。OBICに貼り付けたとき全員の行がずれます。「スタッフ」画面で社員番号（5桁）を設定してください。`, jump:{page:'staff',note:'社員番号（5桁）を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
   return reasons;
 }
 // OBIC連携シート貼り付け用：日付セル（休日/空欄）だけをタブ区切りで返す（Excelのセルコピーと同形式）。
@@ -5512,7 +5530,7 @@ function copyObicTable(){
   pullInputs();
   if(!state.staff.length){ showToast('スタッフが登録されていません。','warn'); return; }
   const reasons=obicExportBlockReasons();
-  if(reasons.length){ renderObicView(); showToast('コピーできません：'+reasons[0],'warn'); return; }
+  if(reasons.length){ renderObicView(); showToast('コピーできません：'+reasonText(reasons[0]),'warn'); return; }
   const text=obicCopyText();
   const done=()=>toast('コピーしました。');
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -5561,7 +5579,7 @@ function renderObicView(){
   const reasons = obicExportBlockReasons();
   const blocked = reasons.length>0;
   const msgBox=document.getElementById('obicBlockMsg');
-  if(msgBox){ msgBox.style.display = blocked ? '' : 'none'; msgBox.innerHTML = blocked ? ('コピー・Excel出力はできません：<ul class="obicBlockList">'+reasons.map(r=>`<li>${esc(r)}</li>`).join('')+'</ul>') : ''; }
+  if(msgBox){ msgBox.style.display = blocked ? '' : 'none'; msgBox.innerHTML = blocked ? ('コピー・Excel出力はできません：<ul class="obicBlockList">'+reasons.map(r=>`<li>${esc(reasonText(r))}${r&&r.jump?` <button type="button" class="availJumpBtn" aria-label="${escAttr((r.jumpLabel||'該当箇所へ移動')+'：'+reasonText(r))}" onclick="appJumpStr('${escAttr(JSON.stringify(r.jump))}')">${esc(r.jumpLabel||'該当箇所へ移動')}</button>`:''}</li>`).join('')+'</ul>') : ''; }
   const copyBtn=document.querySelector('.obicCopyBtn'), xlsBtn=document.querySelector('.obicExcelBtn');
   if(copyBtn){ copyBtn.disabled=blocked; copyBtn.title=blocked?'エラーを解消すると出力できます（下の赤い表示を参照）':'日付セル（休日/空欄）をExcel形式でコピー'; }
   if(xlsBtn){ xlsBtn.disabled=blocked; xlsBtn.title=blocked?'エラーを解消すると出力できます（下の赤い表示を参照）':'全スタッフの休日をExcel形式で保存'; }
@@ -5583,7 +5601,7 @@ function exportObicExcel(){
   pullInputs();
   if(!state.staff.length){ showToast('スタッフが登録されていません。「スタッフ」から登録してください。','warn'); return; }
   const reasons=obicExportBlockReasons();
-  if(reasons.length){ renderObicView(); showToast('Excel出力できません：'+reasons[0],'warn'); return; }
+  if(reasons.length){ renderObicView(); showToast('Excel出力できません：'+reasonText(reasons[0]),'warn'); return; }
   renderObicView();
   const table=printableTableHtml(document.getElementById('obicTable'));
   exportHtmlAsExcel('OBIC連携用 休日一覧（公休・希望休）', `<div>${table}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
@@ -5695,7 +5713,7 @@ function deptTotalsRows(dept, days){
     return {name:st.name, total:c.total, E:c.E, M:c.M, L:c.L};
   });
 }
-function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
+function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
 function saveCalendarPDF(){ printCalendarView(); }
 function printDeptView(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力できます。`,'warn'); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
 function saveDeptPDF(dept){ printDeptView(dept); }
@@ -5905,6 +5923,59 @@ function showNoticeModal(opts={}){
     const close=_openModal(overlay, {initialFocus: overlay.querySelector('.appModalConfirm'), onEnter:finish, onEsc:finish});
     overlay.querySelector('.appModalConfirm').onclick=finish;
   });
+}
+// ===== エラー・警告・条件不足 → 該当箇所へジャンプ（画面切替＋スクロール＋一時ハイライト＋補足） =====
+let _jumpHLEls=[], _jumpTimer=null;
+function clearJumpHighlight(){ for(const el of _jumpHLEls){ try{ el.classList.remove('jumpHL','warnHL'); }catch(e){} } _jumpHLEls=[]; const n=document.getElementById('jumpNote'); if(n) n.remove(); if(_jumpTimer){ clearTimeout(_jumpTimer); _jumpTimer=null; } }
+function _placeJumpNote(el, severity, body){
+  const old=document.getElementById('jumpNote'); if(old) old.remove();
+  const note=document.createElement('div'); note.id='jumpNote'; note.className='jumpNote noPrint'+(severity==='warn'?' warn':''); note.setAttribute('role','status'); note.setAttribute('aria-live','polite');
+  note.innerHTML=`<div class="jnTitle">ここを確認してください</div><div>${esc(body||'この箇所を確認してください。')}</div>`;
+  document.body.appendChild(note);
+  const r=el.getBoundingClientRect(); const nw=note.offsetWidth, nh=note.offsetHeight;
+  let top=r.bottom+8, left=Math.min(r.left, window.innerWidth-nw-12); if(top+nh>window.innerHeight-8) top=Math.max(8, r.top-nh-8); left=Math.max(8,left);
+  note.style.top=top+'px'; note.style.left=left+'px';
+}
+function appJump(target){
+  clearJumpHighlight();
+  if(!target || typeof target!=='object') return;
+  const sev = target.severity==='warn' ? 'warn' : 'error';
+  const page = target.page || 'calendar';
+  if(page==='deptBuild' && target.dept && DEPTS.includes(target.dept)) activeBuildDept=target.dept;
+  if(page==='staff' && target.staffDept && (DEPTS.includes(target.staffDept)||target.staffDept==='全体')) activeStaffDept=target.staffDept;
+  if(page==='prefs' && target.prefsTab) prefsTab=target.prefsTab;
+  showMenuPanel(page);
+  setTimeout(()=>{
+    const panel=document.querySelector(`.menuPanel[data-panel="${page}"]`)||document;
+    const q=(sel)=>{ try{ return panel.querySelector(sel); }catch(e){ return null; } };
+    let el=null, body=target.note||'この箇所を確認してください。';
+    if(target.date && target.staff) el=q(`[data-cell="${target.date}|${encodeURIComponent(target.staff)}"]`);
+    if(!el && target.date) el=q(`[data-cell^="${target.date}|"]`);
+    if(!el && target.staff && page==='staff') el=q(`.staffItem[data-sname="${(target.staff+'').replace(/"/g,'')}"]`);
+    if(!el && target.selector) el=q(target.selector);
+    if(!el){ el=q('h2')||q('h3')||(panel.nodeType?panel:document.body); body='詳細な位置は特定できませんでした。関連する画面を開きました。'; }
+    const hl=(el.closest && el.closest('td,.staffItem,.prefRow,.tagChip,.deptBuildCard'))||el;
+    try{ hl.scrollIntoView({behavior:'smooth',block:'center',inline:'center'}); }catch(e){ try{hl.scrollIntoView();}catch(_){} }
+    try{ hl.classList.add('jumpHL'); if(sev==='warn') hl.classList.add('warnHL'); }catch(e){}
+    _jumpHLEls=[hl];
+    let f=(hl.querySelector&&hl.querySelector('select,input,button,a'))||null; if(!f && hl.matches && hl.matches('select,input,button,a')) f=hl;
+    try{ if(f&&f.focus){ f.focus({preventScroll:true}); } else if(hl.setAttribute){ hl.setAttribute('tabindex','-1'); hl.focus({preventScroll:true}); } }catch(e){}
+    _placeJumpNote(hl, sev, body);
+    _jumpTimer=setTimeout(clearJumpHighlight, 3200);
+  }, 140);
+}
+function appJumpStr(s){ try{ appJump(JSON.parse(s)); }catch(e){} }
+// 警告オブジェクトから移動先targetを導く（staff/date/deptが無ければtextから日付を拾う）。
+function warningTarget(w, ctx){
+  ctx=ctx||{}; if(!w) return null;
+  const date = w.date || (String(w.text||'').match(/\d{4}-\d{2}-\d{2}/)||[])[0] || '';
+  const staff = w.staff || '';
+  const dept = w.dept || (staff ? (findStaff(staff)?.dept||'') : '');
+  if(!date && !staff && !(dept&&DEPTS.includes(dept))) return null;
+  const page = ctx.page || ((dept&&DEPTS.includes(dept)) ? 'deptBuild' : 'calendar');
+  const t = { page, date, staff, severity: w.level==='bad'?'error':'warn', note:'対象の日付・スタッフのセルを確認してください。' };
+  if(page==='deptBuild') t.dept = ctx.dept || (dept&&DEPTS.includes(dept)?dept:'') || activeBuildDept;
+  return t;
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 // onclick="...('値')" のようにHTML属性内のJS文字列へ埋め込む値用。
