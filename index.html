@@ -350,6 +350,13 @@ td.allowedDayCountErr{background:#edf8ed!important;border-left:2px solid #9dce9f
 .allowedDayCountErr .dayErrMark{color:#237a3a}
 td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 0 0 2px #dcaaa6!important}
 .confirmBlockNote{background:#fdf2f1;border:1px solid #ecc9c5;color:#9c4844;border-radius:12px;padding:8px 10px;font-size:12.5px;font-weight:700;margin-top:10px}
+.availBlock{background:#fdf2f1;border:1px solid #ecc9c5;border-left:5px solid #c0504a;border-radius:12px;padding:9px 12px;margin:8px 0 0;color:#8a2c2c;font-weight:700;font-size:12.5px;line-height:1.6}
+.availBlock .availTitle{font-size:13px;font-weight:900}
+.availBlock .availSub{margin-top:2px;font-weight:800}
+.availBlock ul.availList{margin:4px 0 0;padding-left:1.3em}
+.availBlock li{margin:3px 0}
+.availInline{display:inline-flex;align-items:center;gap:6px;color:#9c4844;font-weight:700;font-size:12px}
+.availInline::before{content:"";width:8px;height:8px;border-radius:50%;background:#c0504a;flex:0 0 auto}
 .exportMenu{position:relative;display:inline-block}
 .exportMenu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:13px;padding:10px 12px;font-weight:800;font-size:15px;background:#fff;color:var(--ink);white-space:nowrap;transition:filter .12s ease,box-shadow .12s ease}
 .exportMenu>summary:hover{box-shadow:0 6px 14px rgba(72,111,78,.14)}
@@ -541,8 +548,9 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <section class="card menuPanel active" data-panel="calendar">
       <div class="panelHead noPrint">
         <div><h2><img class="appicon xl" src="assets/icons/svg/nav-overall-shift.svg" alt="">全体シフト表</h2><p>全体シフトの参照ページです。通常は編集不可。必要な場合だけ編集モードに切り替えます。</p></div>
-        <div class="panelActions"><button id="calendarEditBtn" class="btn2" onclick="toggleCalendarEditMode()"><img class="appicon" src="assets/icons/svg/edit-mode.svg" alt="">編集モードにする</button><button class="btn" onclick="showMenuPanel('deptBuild')"><img class="appicon" src="assets/icons/svg/nav-department-create.svg" alt="">部署別シフト作成へ</button><span class="vDivider" aria-hidden="true"></span><details class="exportMenu"><summary class="btn2 exportTrigger"><img class="appicon" src="assets/icons/svg/spreadsheet-download.svg" alt="">ファイル出力 <span class="caret" aria-hidden="true">▾</span></summary><div class="exportMenuList" role="menu"><button type="button" role="menuitem" onclick="closeExportMenus(); exportCalendarCSV()"><img class="appicon" src="assets/icons/svg/action-export-csv.svg" alt="">CSV出力</button><button type="button" role="menuitem" onclick="closeExportMenus(); exportCalendarExcel()"><img class="appicon" src="assets/icons/svg/spreadsheet-download.svg" alt="">Excel出力</button><button type="button" role="menuitem" onclick="closeExportMenus(); printCalendarView()"><img class="appicon" src="assets/icons/svg/print-pdf.svg" alt="">印刷/PDF</button></div></details></div>
+        <div class="panelActions"><button id="calendarEditBtn" class="btn2" onclick="toggleCalendarEditMode()"><img class="appicon" src="assets/icons/svg/edit-mode.svg" alt="">編集モードにする</button><button class="btn" onclick="showMenuPanel('deptBuild')"><img class="appicon" src="assets/icons/svg/nav-department-create.svg" alt="">部署別シフト作成へ</button><span class="vDivider" aria-hidden="true"></span><span id="calendarExportSlot"></span></div>
       </div>
+      <div id="calendarAvailSlot" class="noPrint"></div>
       <div class="calendarControl noPrint">
         <div><label for="year">締め年</label><input id="year" type="text" inputmode="numeric" min="2024" max="2038"></div>
         <div><label for="month">締め月</label><div class="monthNav"><button type="button" class="btn2 navBtn" onclick="shiftPeriod(-1)" title="前の締め月へ" aria-label="前の締め月へ">◀</button><input id="month" type="text" inputmode="numeric" min="1" max="12"><button type="button" class="btn2 navBtn" onclick="shiftPeriod(1)" title="次の締め月へ" aria-label="次の締め月へ">▶</button></div></div>
@@ -2793,9 +2801,7 @@ function renderDeptBuildPanel(){
   const actionLabel=isDeptConfirmed(activeBuildDept)?'再編集':'確定';
   const actionClass=isDeptConfirmed(activeBuildDept)?'btnCaution':'btn';
   const actionIcon=isDeptConfirmed(activeBuildDept)?'action-reedit':'action-confirm';
-  const genDisabledAttr = generationRunning ? 'disabled' : (isDeptConfirmed(activeBuildDept) ? 'disabled title="再編集してから生成してください"' : '');
   const variantTitle = isDeptConfirmed(activeBuildDept) ? '再編集してから生成してください' : (deptHasAnyAssignment(activeBuildDept) ? '同じ条件で探索開始位置を変えて、別のシフト案を作成します' : 'まずは「この部署だけ自動作成」でシフトを作成してください');
-  const variantDisabledAttr = (generationRunning || isDeptConfirmed(activeBuildDept) || !deptHasAnyAssignment(activeBuildDept)) ? 'disabled' : '';
   const diffBtn = (genDiff && genDiff.dept===activeBuildDept && genDiff.period===periodKey()) ? `<button class="btn2" type="button" onclick="openGenDiffModal()" title="前回のシフトと今回の生成結果を並べて比較します">前案と比較</button>` : '';
   const candidates=state.staff.filter(s=>s.dept===activeBuildDept || (s.supportDepts||[]).includes(activeBuildDept));
   const previewDays = getDays();
@@ -2803,19 +2809,23 @@ function renderDeptBuildPanel(){
     <div class="tableWrap" style="max-height:320px"><table class="countTable"><thead><tr><th>所属</th><th>タグ</th><th>スタッフ</th><th>入れるシフト</th><th>固定公休</th><th>上限</th><th>合計</th><th>早</th><th>中</th><th>遅</th></tr></thead><tbody>${candidates.map(s=>{ const dc=getStaffDeptCounts(s.name, activeBuildDept, previewDays, schedule, assignDept); return `<tr><td>${esc(s.dept)}</td><td>${esc((s.tags||[]).join('・'))}</td><td><b>${esc(s.name)}</b>${s.dept!==activeBuildDept?`<div class="miniBadge">兼務候補</div>`:''}</td><td>${(s.canShifts||[]).map(x=>x).join(' / ')}</td><td>${[...(s.offWds||[]).map(i=>WD[i]), ...(s.offHolidays?['祝']:[])].join(' / ')}</td><td>${s.maxDays||''}</td><td><b>${dc.total||0}</b></td><td>${dc.E||0}</td><td>${dc.M||0}</td><td>${dc.L||0}</td></tr>`; }).join('') || `<tr><td colspan="10">候補スタッフがいません</td></tr>`}</tbody></table></div>`;
   // 確定ガード用：この部署の未解消エラー数（許容済みは除外）
   const scopedWarns = scopeWarnsForDept(activeBuildDept, validate(schedule, previewDays, true, assignDept));
-  const hasData = deptHasAnyAssignment(activeBuildDept); // 未作成（全空欄）なら下書きチェック・エラー表示はしない
   const unresolvedBad = scopedWarns.filter(w=>w.level==='bad' && !isWarningAllowed(w)).length;
-  const showErrNote = !isDeptConfirmed(activeBuildDept) && hasData && unresolvedBad;
+  const confirmAvail = getDeptConfirmAvailability(activeBuildDept, unresolvedBad);
+  const confirmBlocked = !confirmAvail.canRun; // 未確定かつ未解消エラーあり→確定ボタンを非活性
+  const genAvail = getDeptGenerateAvailability(activeBuildDept);
+  const exportAvail = getDeptExportAvailability(activeBuildDept);
+  const monthlyAvail = getMonthlyOutputAvailability();
   const autoTabContent = `
       <div class="grid">
         <div><b>平日必要人数</b><div class="small">早${needWeek.E||0} / 中${needWeek.M||0} / 遅${needWeek.L||0}</div></div>
         <div><b>土日祝必要人数</b><div class="small">早${needHol.E||0} / 中${needHol.M||0} / 遅${needHol.L||0}</div></div>
       </div>
       <div class="row" style="margin-top:10px">
-        <button class="btn genBtn" onclick="generateDeptSchedule(activeBuildDept)" ${genDisabledAttr}><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">この部署だけ自動作成</button>
-        <button class="btn2 genBtn" onclick="generateDeptSchedule(activeBuildDept,{variant:true})" ${variantDisabledAttr} title="${variantTitle}"><img class="appicon" src="assets/icons/svg/regenerate-pattern.svg" alt="">別パターン再生成</button>
+        <button class="btn genBtn" onclick="generateDeptSchedule(activeBuildDept)" ${(generationRunning||!genAvail.canRun)?'disabled':''} ${(!genAvail.canRun)?'title="今は自動作成できません（下の表示を参照）"':''}><img class="appicon" src="assets/icons/svg/action-auto-generate.svg" alt="">この部署だけ自動作成</button>
+        <button class="btn2 genBtn" onclick="generateDeptSchedule(activeBuildDept,{variant:true})" ${(generationRunning||!genAvail.canRun||!deptHasAnyAssignment(activeBuildDept))?'disabled':''} title="${variantTitle}"><img class="appicon" src="assets/icons/svg/regenerate-pattern.svg" alt="">別パターン再生成</button>
         ${diffBtn}
       </div>
+      ${availReasonsHtml(genAvail.reasons)}
       ${progressFor().generatedAt[activeBuildDept] ? `<div class="small genTime">前回の作成：${new Date(progressFor().generatedAt[activeBuildDept]).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>` : ''}`;
   const bulkTabContent = renderBulkAssignBox(activeBuildDept);
   const actionBox = `<div class="deptActionBox">
@@ -2825,17 +2835,17 @@ function renderDeptBuildPanel(){
       <div class="buildTabBody">${deptBuildTab==='auto' ? autoTabContent : bulkTabContent}</div>
       <div id="genProgress" class="progressBox" aria-live="polite"><div class="progressTrack"><div id="genProgressFill" class="progressFill"></div></div><div class="progressRow"><div id="genProgressText" class="progressText">待機中</div><button type="button" id="genCancelBtn" class="btn2 genCancelBtn" onclick="requestGenerationCancel()" style="display:none">生成を中止</button></div></div>
       <div class="row buildCommonRow" style="margin-top:10px">
-        <button class="${actionClass} confirmBtn" onclick="toggleDeptConfirm(activeBuildDept)" ${generationRunning?'disabled':''} ${showErrNote?'title="エラーを解消または許容する必要があります"':''}><img class="appicon" src="assets/icons/svg/${actionIcon}.svg" alt="">${actionLabel}</button>
+        <button class="${actionClass} confirmBtn" onclick="toggleDeptConfirm(activeBuildDept)" ${generationRunning||confirmBlocked?'disabled':''} ${confirmBlocked?'title="未解消のエラーがあるため確定できません（下の表示を参照）"':''}><img class="appicon" src="assets/icons/svg/${actionIcon}.svg" alt="">${actionLabel}</button>
         <span class="vDivider" aria-hidden="true"></span>
         ${exportMenuHtml([
           {label:'CSV出力', onclick:'exportDeptCSV(activeBuildDept)'},
           {label:'Excel出力', onclick:'exportDeptExcel(activeBuildDept)'},
           {label:'印刷/PDF', onclick:'printDeptView(activeBuildDept)'}
-        ], {disabled:!isDeptConfirmed(activeBuildDept), title:'確定後のみ出力できます'})}
+        ], {disabled:!exportAvail.canRun, title: exportAvail.canRun?'':'先に確定すると出力できます'})}${exportAvail.canRun?'':`<span class="availInline">${esc(exportAvail.reasons[0])}</span>`}
         <span class="vDivider" aria-hidden="true"></span>
         <button class="btn2 resetBtn" onclick="resetDeptSchedule(activeBuildDept)" ${generationRunning?'disabled':''} ${isDeptConfirmed(activeBuildDept)?'disabled title="再編集してから実行できます"':'title="この締め月のこの部署のシフトをすべて空欄にします"'}><img class="appicon" src="assets/icons/svg/clear-month.svg" alt="">この締め月のシフトを空欄にする</button>
       </div>
-      ${showErrNote?`<div class="confirmBlockNote">未解消のエラーが ${unresolvedBad}件 あります。確定するには、エラーを解消または許容する必要があります（下の「下書きチェック」で確認・許容できます）。</div>`:''}
+      ${confirmBlocked?availReasonsHtml(confirmAvail.reasons):''}
       <div class="backupNudge">編集が一段落したら、メニュー「バックアップ」からの取得をおすすめします。</div>
     </div>`;
   const footerNote = `<div class="footerNote">自動作成では、固定公休日・休希望の日だけ「休」を入れ、それ以外の所属スタッフは「入れるシフト」からいずれかの区分を設定します。エラーが出た場合は、同日や前後の日程で他スタッフとの区分交換・区分変更による自動調整を試み、やむを得ない場合のみ赤いセルと警告でお知らせします（自動では「休」を入れません）。「入れるシフト」が空のスタッフは公休・希望休のみ自動設定し、それ以外は空欄のままにします。前月末の確定シフトとのつながり（連勤・遅番→早番）もチェックします。確定後は、全体シフト表上の該当部署セルが編集不可になります。再編集を押すと再度編集・再生成できます。</div>`;
@@ -2849,8 +2859,9 @@ function renderDeptBuildPanel(){
           {label:'CSV出力', onclick:'exportMonthlyCSV()'},
           {label:'Excel出力', onclick:'exportMonthlyExcel()'},
           {label:'印刷/PDF', onclick:'printMonthlyView()'}
-        ], {label:'ファイル出力'})}</div>
+        ], {label:'ファイル出力', disabled:!monthlyAvail.canRun, title: monthlyAvail.canRun?'':'まだ出力できるデータがありません'})}</div>
       </div>
+      ${availReasonsHtml(monthlyAvail.reasons)}
       <div class="calendarControl" style="margin:0 0 10px">
         <div><label for="monthlyYear">年</label><input id="monthlyYear" type="text" inputmode="numeric" min="2024" max="2038" value="${state.monthlyYear}"></div>
         <div><label for="monthlyMonth">月</label><div class="monthNav"><button type="button" class="btn2 navBtn" onclick="shiftMonthly(-1)" title="前の月へ" aria-label="前の月へ">◀</button><input id="monthlyMonth" type="text" inputmode="numeric" min="1" max="12" value="${state.monthlyMonth}"><button type="button" class="btn2 navBtn" onclick="shiftMonthly(1)" title="次の月へ" aria-label="次の月へ">▶</button></div></div>
@@ -4813,6 +4824,15 @@ function renderCalendar(){
   html += renderMorningCleanRow(days, displaySchedule, sortedStaff);
   html += renderNeedRows(days, displaySchedule, displayAssignDept);
   html+='</tbody>'; tbl.innerHTML=html; const calLegend=document.getElementById('calendarShiftLegend'); if(calLegend) calLegend.innerHTML=shiftLegendHtml();
+  // ファイル出力（CSV/Excel/印刷PDF）：出力できるデータが無いときは非活性＋理由表示
+  const calAvail=getCalendarOutputAvailability();
+  const calExp=document.getElementById('calendarExportSlot');
+  if(calExp) calExp.innerHTML=exportMenuHtml([
+    {label:'CSV出力', onclick:'exportCalendarCSV()'},
+    {label:'Excel出力', onclick:'exportCalendarExcel()'},
+    {label:'印刷/PDF', onclick:'printCalendarView()'}
+  ], {disabled:!calAvail.canRun, title: calAvail.canRun ? '' : 'まだ出力できるデータがありません（下の表示を参照）'});
+  const calAvailBox=document.getElementById('calendarAvailSlot'); if(calAvailBox) calAvailBox.innerHTML=availReasonsHtml(calAvail.reasons);
   requestAnimationFrame(updateCalendarHScroll);
 }
 function renderNeedRows(days, baseSchedule=schedule, baseAssignDept=assignDept){
@@ -4916,7 +4936,7 @@ function makeMonthlyCSV(){
   const rows=[[`トリマー月次シフト（${state.monthlyYear}年${state.monthlyMonth}月）`], ...monthlyTableRows(), [], ['シフト区分対応表'], ...shiftLegendRows()];
   return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
-function exportMonthlyCSV(){ pullInputs(); downloadTextFile('\uFEFF'+makeMonthlyCSV(), `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.csv`); }
+function exportMonthlyCSV(){ pullInputs(); { const av=getMonthlyOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } downloadTextFile('\uFEFF'+makeMonthlyCSV(), `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.csv`); }
 function exportMonthlyExcel(){ pullInputs(); renderMonthlyView(); const table=printableTableHtml(document.getElementById('monthlyTable')); if(!table){ alert('出力できる月次シフトがありません。スタッフを登録してください。'); return; } exportHtmlAsExcel(`トリマー月次表（${state.monthlyYear}年${state.monthlyMonth}月）`, `<div>${table}</div>${shiftLegendExcelHtml()}`, `shift_${state.monthlyYear}_${pad(state.monthlyMonth)}_トリマー_月次.xls`); }
 function printMonthlyView(){
   pullInputs(); renderMonthlyView();
@@ -5241,7 +5261,7 @@ function downloadTextFile(text, filename, type='text/csv;charset=utf-8'){
   const blob=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
   toast('ファイルを出力しました：'+filename);
 }
-function exportCalendarCSV(){ pullInputs(); downloadTextFile('\uFEFF'+makeCalendarCSV(), `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.csv`); }
+function exportCalendarCSV(){ pullInputs(); const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } downloadTextFile('\uFEFF'+makeCalendarCSV(), `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.csv`); }
 function exportDeptCSV(dept){ if(!isDeptConfirmed(dept)){ alert(`${dept} は未確定のためCSV出力できません。確定後に出力してください。`); return; } pullInputs(); downloadTextFile('\uFEFF'+makeDeptCSV(dept), `shift_${state.year}_${pad(state.month)}_15締め_${dept}_シフト確認.csv`); }
 
 function inlineOutputStyles(root){
@@ -5267,9 +5287,47 @@ function exportHtmlAsExcel(title, bodyHtml, filename){
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>${excelStyleCss()}</style></head><body><h1 style="font-size:18px;color:#27231f;">${esc(title)}</h1>${styledBody}</body></html>`;
   downloadTextFile(html, filename, 'application/vnd.ms-excel;charset=utf-8');
 }
-function exportCalendarExcel(){ renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表', `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
+function exportCalendarExcel(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表', `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
 // CSV/Excel/印刷PDF を1つの「ファイル出力」ボタン＋選択メニューにまとめるための共通部品。
 function closeExportMenus(){ document.querySelectorAll('details.exportMenu[open]').forEach(d=>{ d.open=false; }); }
+// ===== 実行可否（条件未達はボタン非活性＋画面に不足理由を表示）=====
+// 各操作は {canRun:boolean, reasons:string[]} を返す共通形にし、UI表示と実行直前チェックで同じ判定を使う。
+// 文言はスタッフ向けにやさしく（「まだ実行できません」「先に〜してください」）。
+function availReasonsHtml(reasons, title='この操作はまだ実行できません'){
+  if(!reasons || !reasons.length) return '';
+  return `<div class="availBlock" role="status"><div class="availTitle">${esc(title)}</div><div class="availSub">不足している条件：</div><ul class="availList">${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>`;
+}
+function getCalendarOutputAvailability(){
+  const reasons=[];
+  if(!state.staff.length) reasons.push('まだ出力できるデータがありません。「スタッフ」からスタッフを登録してください。');
+  return {canRun: reasons.length===0, reasons};
+}
+function getMonthlyOutputAvailability(){
+  const reasons=[];
+  if(!monthlyStaffRows().length) reasons.push('まだ出力できるデータがありません。「スタッフ」でトリマー（または兼務）のスタッフを登録してください。');
+  return {canRun: reasons.length===0, reasons};
+}
+function getDeptConfirmAvailability(dept, unresolvedCount){
+  // 「確定」（未確定→確定）のみ判定する。確定済みのときの「再編集」は常に可能。
+  const reasons=[];
+  if(!isDeptConfirmed(dept)){
+    const unresolved = (typeof unresolvedCount==='number') ? unresolvedCount : deptUnresolvedBadCount(dept);
+    if(unresolved>0) reasons.push(`未解消のエラーが ${unresolved}件 あります。シフトを修正して解消するか、「下書きチェック」や「集計・警告」で許容すると確定できます。`);
+  }
+  return {canRun: reasons.length===0, reasons};
+}
+function getDeptGenerateAvailability(dept){
+  const reasons=[];
+  if(isDeptConfirmed(dept)) reasons.push('この部署は確定済みです。「再編集」を押すと自動作成できます。');
+  if(!state.staff.length) reasons.push('スタッフが登録されていません。「スタッフ」からメンバーを登録してください。');
+  else if(!state.staff.some(s=>staffCanDept(s, dept))) reasons.push(`${dept} に対応できるスタッフがいません。「スタッフ」で対応できる部署を確認してください。`);
+  return {canRun: reasons.length===0, reasons};
+}
+function getDeptExportAvailability(dept){
+  const reasons=[];
+  if(!isDeptConfirmed(dept)) reasons.push('先にこの部署のシフトを確定すると出力できます。');
+  return {canRun: reasons.length===0, reasons};
+}
 function exportMenuHtml(items, {label='ファイル出力', disabled=false, title=''}={}){
   const iconFor=(l)=>({'CSV出力':'action-export-csv','Excel出力':'spreadsheet-download','印刷/PDF':'print-pdf'}[l]||'');
   const ico=(name)=>name?`<img class="appicon" src="assets/icons/svg/${name}.svg" alt="">`:'';
@@ -5503,7 +5561,7 @@ function deptTotalsRows(dept, days){
     return {name:st.name, total:c.total, E:c.E, M:c.M, L:c.L};
   });
 }
-function printCalendarView(){ renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
+function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(av.reasons[0]||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
 function saveCalendarPDF(){ printCalendarView(); }
 function printDeptView(dept){ if(!isDeptConfirmed(dept)){ alert(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力してください。`); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
 function saveDeptPDF(dept){ printDeptView(dept); }
