@@ -461,6 +461,18 @@ body.cellSelecting .editableSelect{cursor:cell}
 .tagChip .tagDel{background:#fdf0f0;color:#9c4844}
 .tagChip .tagMove{background:transparent;color:var(--accent2);padding:2px 3px;font-size:10px}
 .tagChip .tagMove:disabled{opacity:.25}
+.tagChip .tagIconBtn{width:auto;display:inline-flex;align-items:center;justify-content:center;padding:4px;border-radius:50%;background:transparent;border:0;cursor:pointer;line-height:0}
+.tagChip .tagIconBtn svg{width:15px;height:15px;display:block}
+.tagChip .tagEdit{color:var(--sgd)}
+.tagChip .tagEdit:hover{background:var(--sgs)}
+.tagChip .tagTrash{color:var(--bad);margin-left:7px}
+.tagChip .tagTrash:hover{background:#fbeceb}
+.tagChip .tagSave{color:var(--sgd)}
+.tagChip .tagSave:hover{background:var(--sgs)}
+.tagChip .tagCancel{color:var(--muted)}
+.tagChip .tagCancel:hover{background:#efe9e1}
+.tagChip.editing{padding:3px 7px 3px 9px;gap:5px}
+.tagEditInput{width:auto;min-width:84px;max-width:150px;padding:4px 9px;border:1px solid var(--sgl);border-radius:999px;font-size:12.5px;background:#fff}
 .roleBadge.leaderTag{background:#f2eafd;color:#5d398c;border:1px solid #d9c6f0}
 .tagAddMasterBtn{width:auto;flex:0 0 auto;padding:6px 12px;font-size:13px}
 
@@ -1607,6 +1619,10 @@ function renderInputs(){
     if(el.closest('#staffAddForm')) return;
     // 定期予定の入力フォームは独自のonchange（指定方法の表示切替など）を使うため共通配線しない
     if(el.closest('#recurringScheduleBox')) return;
+    // 朝そうじ除外ルールの組み立てフォームは独自の委譲ハンドラ（bindMorningCleanDelegation）で処理する。
+    // 共通onchangeを付けると、条件タイプを変えるたびに save→renderInputs→renderAll の全再描画が走り、
+    // セレクトが「全日」に戻って他の選択肢を選べなくなるため除外する。
+    if(el.closest('.mcBuilder')) return;
     // 姓・名・よみがな欄は、blur時の全再描画でフォーカス（TAB移動）が妨げられないよう保存のみ（再描画しない）
     if(el.classList.contains('stSei')||el.classList.contains('stMei')||el.classList.contains('stSeiKana')||el.classList.contains('stMeiKana')){ el.onchange = ()=>{ pullInputs(); persist(); }; return; }
     el.onchange = ()=>preserveScroll(()=>{save(); renderInputs(); renderAll();});
@@ -1846,11 +1862,62 @@ function staffTagFilterBarHtml(){
     ...state.tags.map(t=>{ const n=state.staff.filter(st=>scope(st) && (st.tags||[]).includes(t)).length; return `<button type="button" class="${activeStaffTagFilters.includes(t)?'active':''}" onclick="toggleStaffTagFilter('${escAttr(t)}')">${esc(t)} <span class="staffCount">${n}</span></button>`; })];
   return `<div class="warnFilterBar" role="group" aria-label="タグで絞り込み（複数選択でAND検索）">${chips.join('')}${activeStaffTagFilters.length?`<span class="small" style="align-self:center">「${esc(activeStaffTagFilters.join('」かつ「'))}」を全て持つスタッフを表示中</span>`:''}</div>`;
 }
+// ===== タグ操作アイコン（線画・modern UI／currentColorで配色） =====
+const ICON_PENCIL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.83-2.83L5 17.2z"/><path d="M13.5 6.5l4 4"/></svg>';
+const ICON_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M18 7l-.8 12.1A2 2 0 0 1 15.2 21H8.8a2 2 0 0 1-2-1.9L6 7"/><path d="M10 11v6M14 11v6"/></svg>';
+const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+const ICON_XMARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+// ===== タグ名インライン編集（スタッフタグ／全体予定タグ共通）=====
+let editingTag=null; // {kind:'master'|'schedule', index}
+function tagListFor(kind){ return kind==='master' ? state.tags : (state.scheduleTags||[]); }
+function moveFnFor(kind){ return kind==='master' ? 'moveMasterTag' : 'moveScheduleTag'; }
+function delFnFor(kind){ return kind==='master' ? 'deleteMasterTag' : 'deleteScheduleTag'; }
+function renderTagManagers(){ renderTagManager(); renderScheduleTagManager(); }
+function tagChipHtml(kind, t, i, total){
+  if(editingTag && editingTag.kind===kind && editingTag.index===i){
+    return `<span class="tagChip editing"><input class="tagEditInput" id="tagEditInput" type="text" value="${escAttr(t)}" maxlength="20" aria-label="新しいタグ名" onkeydown="onTagEditKey(event,'${kind}',${i})"><button type="button" class="tagIconBtn tagSave" title="保存" aria-label="保存" onclick="commitTagEdit('${kind}',${i})">${ICON_CHECK}</button><button type="button" class="tagIconBtn tagCancel" title="キャンセル" aria-label="キャンセル" onclick="cancelTagEdit()">${ICON_XMARK}</button></span>`;
+  }
+  return `<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" aria-label="左へ移動" onclick="${moveFnFor(kind)}(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" class="tagIconBtn tagEdit" title="タグ名を変更" aria-label="タグ名を変更" onclick="startTagEdit('${kind}',${i})">${ICON_PENCIL}</button><button type="button" class="tagIconBtn tagTrash" title="タグを削除" aria-label="タグを削除" onclick="${delFnFor(kind)}(${i})">${ICON_TRASH}</button><button type="button" class="tagMove" title="右へ移動" aria-label="右へ移動" onclick="${moveFnFor(kind)}(${i},1)" ${i===total-1?'disabled':''}>▶</button></span>`;
+}
+function startTagEdit(kind, index){
+  pullInputs();
+  const list=tagListFor(kind); const cur=list[index]; if(cur===undefined) return;
+  if(kind==='master' && AUTO_MANAGED_TAGS.has(cur)){ alert(`「${cur}」は社員番号・部署から自動で管理されるタグのため、名前を変更できません。`); return; }
+  editingTag={kind, index};
+  renderTagManagers();
+  setTimeout(()=>{ const inp=document.getElementById('tagEditInput'); if(inp){ inp.focus(); inp.select(); } },0);
+}
+function cancelTagEdit(){ editingTag=null; renderTagManagers(); }
+function onTagEditKey(e, kind, index){ if(e.key==='Enter'){ e.preventDefault(); commitTagEdit(kind, index); } else if(e.key==='Escape'){ e.preventDefault(); cancelTagEdit(); } }
+function commitTagEdit(kind, index){
+  const list=tagListFor(kind); const cur=list[index]; const inp=document.getElementById('tagEditInput');
+  if(cur===undefined || !inp){ editingTag=null; renderTagManagers(); return; }
+  const name=(inp.value||'').trim();
+  if(!name){ alert('タグ名を入力してください。'); inp.focus(); return; }
+  if(name===cur){ editingTag=null; renderTagManagers(); return; }
+  if(list.includes(name)){ alert('同じ名前のタグがすでにあります。'); inp.focus(); inp.select(); return; }
+  if(kind==='master' && MTG_LATE_STAFF_TAGS.includes(cur) && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日に遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)){ inp.focus(); return; }
+  if(kind==='schedule' && cur===MTG_SCHEDULE_TAG && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日にチーフ／園長を遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)){ inp.focus(); return; }
+  if(!confirm(`タグ名を変更しますか？\nこのタグが付いているスタッフや予定の表示もまとめて変更されます。\n\n変更前：${cur}\n変更後：${name}`)){ inp.focus(); return; }
+  if(kind==='master'){
+    state.tags[index]=name;
+    for(const st of state.staff){ if(Array.isArray(st.tags)) st.tags=st.tags.map(t=>t===cur?name:t); }
+    activeStaffTagFilters=activeStaffTagFilters.map(t=>t===cur?name:t);
+  }else{
+    state.scheduleTags[index]=name;
+    for(const rs of (state.recurringSchedules||[])){ if(rs.tag===cur) rs.tag=name; }
+    for(const k in (state.scheduleEventsByPeriod||{})){ for(const ev of state.scheduleEventsByPeriod[k]){ if(ev.tag===cur) ev.tag=name; } }
+  }
+  editingTag=null;
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  toast('タグ名を変更しました。付与済みデータにも反映されています。');
+}
 // タグマスタの管理（基本ルール）
 function renderTagManager(){
   const box=document.getElementById('tagManager'); if(!box) return;
-  box.innerHTML = `<div class="small">スタッフに付けられるタグを管理します。名前を変更すると付与済みスタッフのタグも一括で変わり、削除すると全スタッフから外れます。◀▶で並び順を変更できます（選択肢・絞り込みの表示順に反映）。</div>
-    <div class="tagChipList">${state.tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveMasterTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameMasterTag(${i})"></button><button type="button" class="tagDel" title="削除" onclick="deleteMasterTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveMasterTag(${i},1)" ${i===state.tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
+  const tags=state.tags||[];
+  box.innerHTML = `<div class="small">スタッフに付けられるタグを管理します。鉛筆アイコンで名前を変更（付与済みスタッフにも反映）、ごみ箱アイコンで削除（全スタッフから外れます）。◀▶で並び順を変更できます。</div>
+    <div class="tagChipList">${tags.map((t,i)=>tagChipHtml('master',t,i,tags.length)).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addMasterTag()">＋ タグ追加</button></div>`;
 }
 function moveMasterTag(i, dir){
@@ -1886,25 +1953,26 @@ function deleteMasterTag(i){
   const cur=state.tags[i]; if(cur===undefined) return;
   if(AUTO_MANAGED_TAGS.has(cur)){ alert(`「${cur}」は社員番号・部署から自動で管理されるタグのため、削除できません。`); return; }
   if(MTG_LATE_STAFF_TAGS.includes(cur) && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日に遅番へ寄せる）で使われています。削除するとこのルールが無効になります。続けますか？`)) return;
-  const used=state.staff.filter(st=>(st.tags||[]).includes(cur)).length;
-  if(!confirm(`タグ「${cur}」を削除しますか？${used?`\n付与中の${used}名のスタッフからも外れます。`:''}`)) return;
+  if(!confirm(`このタグを削除しますか？\n削除すると、このタグは付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`)) return;
   state.tags.splice(i,1);
   for(const st of state.staff){ if(Array.isArray(st.tags)) st.tags=st.tags.filter(t=>t!==cur); }
   activeStaffTagFilters = activeStaffTagFilters.filter(t=>t!==cur);
+  if(editingTag && editingTag.kind==='master') editingTag=null;
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  toast('タグを削除しました。');
 }
 // ===== 全体予定タグ一覧の管理（基本ルール）=====
 function renderScheduleTagManager(){
   const box=document.getElementById('scheduleTagManager'); if(!box) return;
   const tags=state.scheduleTags||[];
-  box.innerHTML = `<div class="small">「定期予定」「全体予定」で選べるタグを管理します。シフト表の日付の下に表示されます。</div>
-    <div class="tagChipList">${tags.map((t,i)=>`<span class="tagChip"><button type="button" class="tagMove" title="左へ移動" onclick="moveScheduleTag(${i},-1)" ${i===0?'disabled':''}>◀</button><b>${esc(t)}</b><button type="button" title="名前を変更" onclick="renameScheduleTag(${i})"></button><button type="button" class="tagDel" title="削除" onclick="deleteScheduleTag(${i})">×</button><button type="button" class="tagMove" title="右へ移動" onclick="moveScheduleTag(${i},1)" ${i===tags.length-1?'disabled':''}>▶</button></span>`).join('') || '<span class="small">タグはありません。</span>'}
+  box.innerHTML = `<div class="small">「定期予定」「全体予定」で選べるタグを管理します。鉛筆アイコンで名前を変更（登録済みの予定表示にも反映）、ごみ箱アイコンで削除できます。シフト表の日付の下に表示されます。</div>
+    <div class="tagChipList">${tags.map((t,i)=>tagChipHtml('schedule',t,i,tags.length)).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addScheduleTag()">＋ タグ追加</button></div>`;
 }
 function moveScheduleTag(i, dir){ pullInputs(); const j=i+dir; if(j<0||j>=state.scheduleTags.length) return; const t=state.scheduleTags[i]; state.scheduleTags[i]=state.scheduleTags[j]; state.scheduleTags[j]=t; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function addScheduleTag(){ pullInputs(); const name=(prompt('追加する全体予定タグ名を入力してください。例：棚卸')||'').trim(); if(!name) return; if(state.scheduleTags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; } state.scheduleTags.push(name); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function renameScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(cur===MTG_SCHEDULE_TAG && !confirm(`「${cur}」は自動作成ルール（チーフMTGの日にチーフ／園長を遅番へ寄せる）で使われています。名前を変えるとこのルールが無効になります。続けますか？`)) return; const name=(prompt(`「${cur}」の新しい名前を入力してください。`, cur)||'').trim(); if(!name||name===cur) return; if(state.scheduleTags.includes(name)){ alert('同じ名前のタグがすでにあります。'); return; } state.scheduleTags[i]=name; for(const rs of (state.recurringSchedules||[])){ if(rs.tag===cur) rs.tag=name; } for(const k in (state.scheduleEventsByPeriod||{})){ for(const ev of state.scheduleEventsByPeriod[k]){ if(ev.tag===cur) ev.tag=name; } } preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(!confirm(`全体予定タグ「${cur}」を削除しますか？\n（このタグの定期予定・全体予定の登録は残りますが、新規では選べなくなります）`)) return; state.scheduleTags.splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+function deleteScheduleTag(i){ pullInputs(); const cur=state.scheduleTags[i]; if(cur===undefined) return; if(!confirm(`このタグを削除しますか？\n削除すると、このタグは付与済みスタッフや予定からも外れます。\n\n削除するタグ：${cur}`)) return; state.scheduleTags.splice(i,1); if(editingTag && editingTag.kind==='schedule') editingTag=null; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('タグを削除しました。'); }
 // ===== 定期予定（基本ルール：毎月/月末/毎週/第N/最終）=====
 function scheduleTagOptionsHtml(sel=''){ return (state.scheduleTags||[]).map(t=>`<option value="${esc(t)}" ${sel===t?'selected':''}>${esc(t)}</option>`).join('')+`<option value="__OTHER__" ${sel==='__OTHER__'?'selected':''}>その他（自由入力）</option>`; }
 function onRecAxisChange(){ const ax=document.getElementById('recAxis')?.value; const d=document.getElementById('recDateOpts'), w=document.getElementById('recWdOpts'); if(d) d.style.display = ax==='date'?'':'none'; if(w) w.style.display = ax==='wd'?'':'none'; }
@@ -4357,7 +4425,7 @@ function mcRuleText(r){
 function morningCleanDeptHtml(dept){
   bindMorningCleanDelegation();
   const cfg=mcCfgFor(dept); const da=`data-dept="${escAttr(dept)}"`;
-  const builder = `<div class="recForm">`+
+  const builder = `<div class="recForm mcBuilder">`+
     `<div class="recFormRow"><select id="mcRuleType" title="条件タイプ"><option value="all">全日（この部署は常に付けない）</option><option value="event">全体予定で指定</option><option value="wd">曜日で指定</option></select>`+
       `<span id="mcrEventOpts" style="display:none"><select id="mcRuleTag">${scheduleTagOptionsHtml()}</select><input id="mcRuleTagOther" placeholder="その他の内容" style="display:none"></span></div>`+
     `<div id="mcrWdOpts" class="recWdBlock" style="display:none">`+
