@@ -401,6 +401,8 @@ td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 
 /* ===== エラー→該当箇所ジャンプ：ハイライト・補足ノート・移動ボタン ===== */
 .jumpHL{outline:3px solid var(--rd)!important;box-shadow:0 0 0 6px rgba(189,84,75,.18)!important;border-radius:8px!important;position:relative;z-index:6;transition:outline .15s,box-shadow .15s}
 .jumpHL.warnHL{outline-color:var(--gd)!important;box-shadow:0 0 0 6px rgba(169,120,31,.18)!important}
+.jumpHLcol{background:rgba(189,84,75,.14)!important}
+.jumpHLcol.warnHL{background:rgba(169,120,31,.16)!important}
 .jumpNote{position:fixed;z-index:100060;background:var(--iv);border:1px solid var(--ln);border-left:5px solid var(--rd);border-radius:12px;box-shadow:0 14px 36px rgba(40,30,15,.28);padding:10px 14px;max-width:300px;font-size:12px;color:var(--ink2);font-weight:700;line-height:1.6}
 .jumpNote.warn{border-left-color:var(--gd)}
 .jumpNote .jnTitle{font-size:13px;font-weight:900;color:var(--ink);margin-bottom:2px}
@@ -4813,7 +4815,7 @@ function renderDeptShiftPreview(){
   // ただし未生成・全空欄（この締め月のこの部署にシフトが無い）なら、下書きチェックと同条件でエラー検出しない。
   const previewHasData = deptHasAnyAssignment(activeBuildDept);
   const dayIssues=new Map(days.map(d=>[d.key, previewHasData ? deptDayCountIssueList(d, activeBuildDept) : []]));
-  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day)}${issues.length?'<div class="dayErrMark"></div>':''}</th>`; }
+  for(const day of days){ const cls=dayColClass(day); const issues=dayIssues.get(day.key)||[]; const issueText=issues.map(i=>i.shortText).join(' / '); const thTitle=[issueText, day.holiday||''].filter(Boolean).join('　'); const issueCls=dayCountIssueClass(issues); html+=`<th class="dateCol ${cls} ${issueCls}" data-day="${day.key}" ${thTitle?`title="${escAttr(thTitle)}"`:''}>${dateHeaderInner(day)}${issues.length?'<div class="dayErrMark"></div>':''}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
   for(const st of rows){
@@ -4821,8 +4823,8 @@ function renderDeptShiftPreview(){
     html+=`<tr><td class="deptCol sticky1"><span class="pill pDept">${esc(deptLabel(st.dept))}</span></td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}</td>`;
     for(const day of days){
       const stored=schedule[day.key]?.[st.name]||'';
-      // 臨時休業日は既定で「臨時休業」を表示（出勤に上書きされている場合のみその区分）。部署別では変更可能。
-      const v= (day.closure && !isWorkingShift(stored)) ? CLOSURE_SHIFT : stored;
+      // 臨時休業日は、未入力のセルだけ既定で「臨時休業」を表示する。手動で入れた休・有休・勤務・空欄上書きはそのまま表示し、部署別から変更できる。
+      const v= (day.closure && !stored) ? CLOSURE_SHIFT : stored;
       const dep=assignDept[day.key]?.[st.name]||st.dept;
       const staffEnc=encodeURIComponent(st.name);
       // 兼務分も含めて全セルを共有表示。このページと異なる部署の勤務はバッジで部署名を示す。
@@ -4889,7 +4891,7 @@ async function manualSetDept(key, staffName, value, dept){ genDiff=null;
   // 臨時休業日に勤務系シフトを入れる場合のみ、軽い確認（空欄・休・有休は確認不要）。
   if(isClosureDate(key) && isWorkingShift(value)){
     const day=dayByKey(getDays(), key); const label=day?`${day.m}/${day.day}`:key;
-    if(!await showConfirmModal({title:'臨時休業日に勤務を入れますか？', message:`${label} は臨時休業です。\n勤務シフトを入れますか？\n必要な作業がある場合のみ設定してください。`, confirmText:'設定する', cancelText:'キャンセル', variant:'caution'})){ preserveScroll(()=>renderAll()); return; }
+    if(!await showConfirmModal({title:'この日は臨時休業です', message:`${label} に勤務シフトを設定します。\n必要な作業がある場合のみ設定してください。`, confirmText:'設定する', cancelText:'キャンセル', variant:'caution'})){ preserveScroll(()=>renderAll()); return; }
   }
   // 既に他部署として入っている勤務は割当部署を保ったまま区分だけ変更する（空欄・休からの新規入力はこのページの部署になる）
   const prev=schedule[key]?.[staffName]||'';
@@ -4943,7 +4945,7 @@ function renderCalendar(){
   if(editBtn){ editBtn.innerHTML = (calendarEditMode ? '<img class="appicon" src="assets/icons/svg/nav-overall-shift.svg" alt="">参照モードに戻す' : '<img class="appicon" src="assets/icons/svg/edit-mode.svg" alt="">編集モードにする'); editBtn.className = calendarEditMode ? 'btn' : 'btn2'; }
   if(modeBox){ const un=unsetDeptStaff().length; if(un) modeBox.insertAdjacentHTML('beforeend', `<div class="unsetNotice">部署が未設定のスタッフが <b>${un}名</b> います。スタッフ画面で所属部署を確認してください。<button type="button" class="btn2 unsetNoticeBtn" onclick="showMenuPanel('staff')">スタッフ画面へ</button></div>`); }
   let html='<thead><tr><th class="deptCol headSticky1">部署</th><th class="staffCol headSticky2">スタッフ</th>';
-  for(const day of days){ const cls=dayColClass(day); html+=`<th class="dateCol ${cls}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day)}</th>`; }
+  for(const day of days){ const cls=dayColClass(day); html+=`<th class="dateCol ${cls}" data-day="${day.key}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day)}</th>`; }
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const sortedStaff=orderedStaff();
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
@@ -4953,7 +4955,7 @@ function renderCalendar(){
     const deptPill = st.dept ? `<span class="pill pDept">${esc(deptLabel(st.dept))}</span>` : `<span class="pill pDeptUnset" title="部署が未設定です。スタッフ画面で所属部署を設定してください。">部署未設定</span>`;
     html+=`<tr${st.dept?'':' class="unsetRow"'}><td class="deptCol sticky1">${deptPill}</td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で変更可）'}">${work?`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`:`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で空欄・休・有休に変更可）'}">${showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
@@ -5925,22 +5927,35 @@ function showNoticeModal(opts={}){
   });
 }
 // ===== エラー・警告・条件不足 → 該当箇所へジャンプ（画面切替＋スクロール＋一時ハイライト＋補足） =====
-let _jumpHLEls=[], _jumpTimer=null;
-function clearJumpHighlight(){ for(const el of _jumpHLEls){ try{ el.classList.remove('jumpHL','warnHL'); }catch(e){} } _jumpHLEls=[]; const n=document.getElementById('jumpNote'); if(n) n.remove(); if(_jumpTimer){ clearTimeout(_jumpTimer); _jumpTimer=null; } }
-function _placeJumpNote(el, severity, body){
+let _jumpHLEls=[], _jumpTimer=null, _jumpAnchor=null, _jumpReposition=null;
+function clearJumpHighlight(){ for(const el of _jumpHLEls){ try{ el.classList.remove('jumpHL','warnHL','jumpHLcol'); }catch(e){} } _jumpHLEls=[]; const n=document.getElementById('jumpNote'); if(n) n.remove(); if(_jumpTimer){ clearTimeout(_jumpTimer); _jumpTimer=null; } if(_jumpReposition){ window.removeEventListener('scroll', _jumpReposition, true); window.removeEventListener('resize', _jumpReposition); _jumpReposition=null; } _jumpAnchor=null; }
+// 補足ノートを対象（アンカー）の getBoundingClientRect に追従させ、画面外へはみ出さないよう配置する。
+function _repositionJumpNote(){
+  const note=document.getElementById('jumpNote'); if(!note || !_jumpAnchor || !_jumpAnchor.getBoundingClientRect) return;
+  const r=_jumpAnchor.getBoundingClientRect();
+  if(r.width===0 && r.height===0){ note.style.display='none'; return; } note.style.display='';
+  const nw=note.offsetWidth, nh=note.offsetHeight;
+  let top=r.bottom+8; if(top+nh > window.innerHeight-8) top=Math.max(8, r.top-nh-8);
+  let left=Math.min(r.left, window.innerWidth-nw-12); left=Math.max(8,left);
+  top=Math.max(8, Math.min(top, window.innerHeight-nh-8));
+  note.style.top=top+'px'; note.style.left=left+'px';
+}
+function _showJumpNote(anchor, severity, body){
   const old=document.getElementById('jumpNote'); if(old) old.remove();
   const note=document.createElement('div'); note.id='jumpNote'; note.className='jumpNote noPrint'+(severity==='warn'?' warn':''); note.setAttribute('role','status'); note.setAttribute('aria-live','polite');
   note.innerHTML=`<div class="jnTitle">ここを確認してください</div><div>${esc(body||'この箇所を確認してください。')}</div>`;
   document.body.appendChild(note);
-  const r=el.getBoundingClientRect(); const nw=note.offsetWidth, nh=note.offsetHeight;
-  let top=r.bottom+8, left=Math.min(r.left, window.innerWidth-nw-12); if(top+nh>window.innerHeight-8) top=Math.max(8, r.top-nh-8); left=Math.max(8,left);
-  note.style.top=top+'px'; note.style.left=left+'px';
+  _jumpAnchor=anchor; _repositionJumpNote();
+  _jumpReposition=()=>_repositionJumpNote();
+  window.addEventListener('scroll', _jumpReposition, true); // capture:true で表内スクロールにも追従
+  window.addEventListener('resize', _jumpReposition);
 }
 function appJump(target){
   clearJumpHighlight();
   if(!target || typeof target!=='object') return;
   const sev = target.severity==='warn' ? 'warn' : 'error';
   const page = target.page || 'calendar';
+  const scope = target.scope || (target.staff && target.date ? 'cell' : (target.date ? 'dateColumn' : (target.selector?'setting':(target.staff?'staffRow':''))));
   if(page==='deptBuild' && target.dept && DEPTS.includes(target.dept)) activeBuildDept=target.dept;
   if(page==='staff' && target.staffDept && (DEPTS.includes(target.staffDept)||target.staffDept==='全体')) activeStaffDept=target.staffDept;
   if(page==='prefs' && target.prefsTab) prefsTab=target.prefsTab;
@@ -5948,34 +5963,44 @@ function appJump(target){
   setTimeout(()=>{
     const panel=document.querySelector(`.menuPanel[data-panel="${page}"]`)||document;
     const q=(sel)=>{ try{ return panel.querySelector(sel); }catch(e){ return null; } };
-    let el=null, body=target.note||'この箇所を確認してください。';
-    if(target.date && target.staff) el=q(`[data-cell="${target.date}|${encodeURIComponent(target.staff)}"]`);
-    if(!el && target.date) el=q(`[data-cell^="${target.date}|"]`);
-    if(!el && target.staff && page==='staff') el=q(`.staffItem[data-sname="${(target.staff+'').replace(/"/g,'')}"]`);
-    if(!el && target.selector) el=q(target.selector);
-    if(!el){ el=q('h2')||q('h3')||(panel.nodeType?panel:document.body); body='詳細な位置は特定できませんでした。関連する画面を開きました。'; }
-    const hl=(el.closest && el.closest('td,.staffItem,.prefRow,.tagChip,.deptBuildCard'))||el;
-    try{ hl.scrollIntoView({behavior:'smooth',block:'center',inline:'center'}); }catch(e){ try{hl.scrollIntoView();}catch(_){} }
-    try{ hl.classList.add('jumpHL'); if(sev==='warn') hl.classList.add('warnHL'); }catch(e){}
-    _jumpHLEls=[hl];
-    let f=(hl.querySelector&&hl.querySelector('select,input,button,a'))||null; if(!f && hl.matches && hl.matches('select,input,button,a')) f=hl;
-    try{ if(f&&f.focus){ f.focus({preventScroll:true}); } else if(hl.setAttribute){ hl.setAttribute('tabindex','-1'); hl.focus({preventScroll:true}); } }catch(e){}
-    _placeJumpNote(hl, sev, body);
-    _jumpTimer=setTimeout(clearJumpHighlight, 3200);
-  }, 140);
+    const qa=(sel)=>{ try{ return [...panel.querySelectorAll(sel)]; }catch(e){ return []; } };
+    let cells=[], anchor=null, isColumn=false, body=target.note||'この箇所を確認してください。';
+    if(scope==='cell' && target.date && target.staff){ const c=q(`[data-cell="${target.date}|${encodeURIComponent(target.staff)}"]`); if(c){ cells=[c]; anchor=c; } }
+    if(!cells.length && (scope==='dateColumn'||scope==='departmentDateColumn') && target.date){ cells=qa(`[data-cell^="${target.date}|"]`); const th=q(`th[data-day="${target.date}"]`); anchor=th||cells[0]||null; if(th) cells.push(th); isColumn=true; }
+    if(!cells.length && scope==='staffRow' && target.staff){ const c=q(`[data-cell$="|${encodeURIComponent(target.staff)}"]`); const row=c&&c.closest?c.closest('tr'):null; if(row){ const sc=row.querySelector('.staffCol'); anchor=sc||c; cells=[sc||c]; } }
+    if(!cells.length && scope==='cell' && target.date){ const c=q(`[data-cell^="${target.date}|"]`); if(c){ cells=[c]; anchor=c; } }
+    if(!cells.length && target.staff && page==='staff'){ const it=q(`.staffItem[data-sname="${(target.staff+'').replace(/"/g,'')}"]`); if(it){ cells=[it]; anchor=it; } }
+    if(!cells.length && target.selector){ const e=q(target.selector); if(e){ cells=[e]; anchor=e; } }
+    if(!cells.length){ const e=q('h2')||q('h3')||(panel.nodeType===1?panel:document.body); cells=[e]; anchor=e; body='詳細な位置は特定できませんでした。関連する画面を開きました。'; }
+    const scrollT=anchor||cells[0];
+    try{ scrollT.scrollIntoView({block:'center', inline:'center'}); }catch(e){ try{scrollT.scrollIntoView();}catch(_){} }
+    for(const c of cells){ const hl=(c.closest&&c.closest('td,th,.staffItem,.prefRow,.tagChip,.deptBuildCard'))||c; const isHdr=hl.tagName==='TH'; hl.classList.add((isColumn&&!isHdr)?'jumpHLcol':'jumpHL'); if(sev==='warn') hl.classList.add('warnHL'); _jumpHLEls.push(hl); }
+    const af=(anchor&&anchor.querySelector&&anchor.querySelector('select,input,button,a'))||((anchor&&anchor.matches&&anchor.matches('select,input,button,a'))?anchor:null);
+    try{ if(af&&af.focus){ af.focus({preventScroll:true}); } else if(anchor&&anchor.setAttribute){ anchor.setAttribute('tabindex','-1'); anchor.focus({preventScroll:true}); } }catch(e){}
+    requestAnimationFrame(()=>{ _showJumpNote(anchor||cells[0], sev, body); });
+    _jumpTimer=setTimeout(clearJumpHighlight, 3500);
+  }, 160);
 }
 function appJumpStr(s){ try{ appJump(JSON.parse(s)); }catch(e){} }
-// 警告オブジェクトから移動先targetを導く（staff/date/deptが無ければtextから日付を拾う）。
+// 警告→移動先。エラー種別ごとに粒度（scope）と移動先ページを決める。
+//  staff+date（シフト区分の修正）→ 部署別シフトの該当セル / 部署未設定スタッフは全体表
+//  dept+date（部署の必要人数不足）→ 部署別シフトの該当日列 / 全体(date only)→ 全体シフト表の該当日列
+//  staffのみ（勤務日数など）→ 該当スタッフ行
 function warningTarget(w, ctx){
   ctx=ctx||{}; if(!w) return null;
   const date = w.date || (String(w.text||'').match(/\d{4}-\d{2}-\d{2}/)||[])[0] || '';
   const staff = w.staff || '';
   const dept = w.dept || (staff ? (findStaff(staff)?.dept||'') : '');
-  if(!date && !staff && !(dept&&DEPTS.includes(dept))) return null;
-  const page = ctx.page || ((dept&&DEPTS.includes(dept)) ? 'deptBuild' : 'calendar');
-  const t = { page, date, staff, severity: w.level==='bad'?'error':'warn', note:'対象の日付・スタッフのセルを確認してください。' };
-  if(page==='deptBuild') t.dept = ctx.dept || (dept&&DEPTS.includes(dept)?dept:'') || activeBuildDept;
-  return t;
+  const realDept = !!(dept && DEPTS.includes(dept));
+  const sev = w.level==='bad'?'error':'warn';
+  if(staff && date){
+    if(realDept) return {page:'deptBuild', dept, date, staff, scope:'cell', severity:sev, note:'このスタッフのこの日のシフト区分を確認・修正してください。'};
+    return {page:'calendar', date, staff, scope:'cell', severity:sev, note:'このスタッフのこの日のセルを確認してください。'};
+  }
+  if(date && realDept) return {page:'deptBuild', dept, date, scope:'departmentDateColumn', severity:sev, note:`${dept} のこの日の割当（早・中・遅）を確認してください。`};
+  if(date) return {page:'calendar', date, scope:'dateColumn', severity:sev, note:'この日の全体（早・遅）の割当を確認してください。'};
+  if(staff){ if(realDept) return {page:'deptBuild', dept, staff, scope:'staffRow', severity:sev, note:'このスタッフの勤務日数を確認してください。'}; return {page:'calendar', staff, scope:'staffRow', severity:sev, note:'このスタッフの行を確認してください。'}; }
+  return null;
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 // onclick="...('値')" のようにHTML属性内のJS文字列へ埋め込む値用。
