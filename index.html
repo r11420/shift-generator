@@ -28,8 +28,31 @@
 body{margin:0;background:var(--iv);color:var(--ink);font-family:var(--font-ui);font-weight:500;letter-spacing:.005em;font-size:15px;line-height:1.6;height:100vh;overflow:hidden;display:flex;flex-direction:column}
 /* 画面全体を100vhに収め、ヘッダーは上部固定。左メニューと右操作画面はそれぞれ内部スクロール（.appLayout参照）。 */
 header{padding:16px 18px 10px;max-width:1500px;width:100%;margin:0 auto;flex:0 0 auto}
-h1{font-size:26px;margin:0 0 6px;font-weight:900;letter-spacing:.02em}
-header p{margin:0;color:var(--muted);font-size:14px}
+h1{font-size:24px;margin:0 0 4px;font-weight:900;letter-spacing:.02em}
+header p{margin:0;color:var(--muted);font-size:13px}
+/* ===== 全ページ共通の固定作業バー（締め月＋バックアップ） ===== */
+.globalBar{flex:0 0 auto;max-width:1500px;width:100%;margin:0 auto;padding:0 18px 10px}
+.gbInner{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;justify-content:space-between;background:var(--sgs);border:1px solid var(--sgl);border-radius:14px;padding:8px 14px;box-shadow:0 2px 10px rgba(72,111,78,.10)}
+.gbPeriod{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.gbLabel{font-size:11px;font-weight:900;color:var(--sgd);background:#fff;border:1px solid var(--sgl);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.gbPeriodBig{font-size:16px;font-weight:900;color:var(--ink);white-space:nowrap}
+.gbRange{font-size:12.5px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.gbNav{display:inline-flex;align-items:center;gap:4px}
+.gbNav button{flex:0 0 auto;width:auto;padding:5px 9px;border-radius:9px;background:#fff;border:1px solid var(--sgl);color:var(--accent2);font-size:12px;font-weight:900;line-height:1}
+.gbNav button:hover{background:#fff;border-color:var(--sg)}
+.gbNav input{width:50px;min-width:0;text-align:center;padding:4px 4px;font-size:13px;font-weight:800;border-radius:8px;border:1px solid var(--sgl);background:#fff;-moz-appearance:textfield;appearance:textfield}
+.gbNav input.gbY{width:62px}
+.gbNav input::-webkit-outer-spin-button,.gbNav input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.gbNav span{font-size:11px;font-weight:700;color:var(--muted)}
+.gbBackup{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gbBackupBtn{flex:0 0 auto;width:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:900;font-size:13px;box-shadow:0 4px 10px rgba(72,111,78,.18)}
+.gbBackupBtn:hover{background:var(--accent2)}
+.gbBackupBtn .appicon{filter:brightness(0) invert(1)}
+.gbBackupNote{font-size:12.5px;font-weight:800;color:var(--ink2);white-space:nowrap}
+/* 編集後・未取得は「やわらかい注意色」（ハニーゴールド）で見落とし防止 */
+.gbBackupNote.attn{background:var(--gdb);border:1px solid var(--gdl);color:#7a4b00;border-radius:999px;padding:4px 11px}
+.gbBackupBtn-attn{background:var(--gd);box-shadow:0 4px 10px rgba(169,120,31,.22)}
+.gbBackupBtn-attn:hover{filter:brightness(.96);background:var(--gd)}
 .brandClover{width:28px;height:28px;vertical-align:-5px;margin-right:8px}
 .wrap{max-width:1500px;margin:auto;padding:0 18px 36px;display:grid;grid-template-columns:430px 1fr;gap:18px}
 .card{background:var(--sf);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px}
@@ -630,11 +653,12 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
   </div>
 </header>
 
+<!-- 全ページ共通の固定作業バー：締め月（全ページ共通）とバックアップ状態。メニューとは別領域で常時表示。 -->
+<div id="globalBar" class="globalBar noPrint" aria-label="作業バー（締め月・バックアップ）"></div>
+
 <div class="appLayout">
   <nav class="menuRail noPrint" aria-label="メニュー一覧">
     <div class="menuTitle">メニュー</div>
-    <div id="currentPeriodBadge" class="currentPeriodBadge">締め月を読み込み中...</div>
-    <button type="button" class="backupHint" onclick="downloadJSON()"><img class="appicon backupHintIcon" src="assets/icons/svg/action-backup-save.svg" alt=""><span class="backupHintBody"><span class="backupHintTitle">バックアップ取得</span><span class="backupHintText">シフトやスタッフを編集したら、こまめなバックアップをおすすめします</span></span></button>
     <div class="menuGroup">よく使う</div>
     <button class="menuItem active" data-panel="calendar" onclick="showMenuPanel('calendar')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-overall-shift.svg" alt=""></span><span class="menuLabelWrap"><span>全体シフト表</span><small>全体をながめる・編集</small></span></button>
     <button class="menuItem" data-panel="deptBuild" onclick="showMenuPanel('deptBuild')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-department-create.svg" alt=""></span><span class="menuLabelWrap"><span>部署別シフト作成</span><small>部署ごとに自動生成→確定</small></span></button>
@@ -644,7 +668,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     <button type="button" class="menuItem menuLink" onclick="window.open('manual.html','_blank','noopener')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/manual-guide.svg" alt=""></span><span class="menuLabelWrap"><span>使い方マニュアル</span><small>くわしい手順・別タブで開く</small></span></button>
     <button type="button" class="menuItem menuLink menuAsk" onclick="window.open('https://notebooklm.google.com/notebook/1a89e4f2-5381-4d3b-b95c-002ebfe9e0b8','_blank','noopener')" aria-describedby="menuAskNote"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/ask-chat.svg" alt=""></span><span class="menuLabelWrap"><span class="menuAskTitle">使い方を質問する<svg class="extLinkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5"/><path d="M19 5l-7.5 7.5"/><path d="M18 13.8V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h4.2"/></svg></span><small>操作方法を質問・別タブ</small><small class="menuAskService">外部サービス（NotebookLM）</small></span></button>
     <p id="menuAskNote" class="menuAskNote">回答回数には上限があります。まずはクイックマニュアル・使い方マニュアルを確認してください。</p>
-    <div class="menuGroup">管理者向け<svg class="menuLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <div class="menuGroup">管理者・責任者向け<svg class="menuLockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
     <button class="menuItem" data-panel="basic" onclick="showMenuPanel('basic')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-rules.svg" alt=""></span><span class="menuLabelWrap"><span>基本ルール</span><small>連勤・休業日・必要人数</small></span></button>
     <button class="menuItem" data-panel="staff" onclick="showMenuPanel('staff')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-staff.svg" alt=""></span><span class="menuLabelWrap"><span>スタッフ</span><small>登録・タグ・並び替え</small></span></button>
     <button class="menuItem" data-panel="stats" onclick="showMenuPanel('stats')"><span class="menuIcon"><img class="appicon lg" src="assets/icons/svg/nav-warnings.svg" alt=""></span><span class="menuLabelWrap"><span>集計・警告</span><small>不足・違反のチェック</small></span></button>
@@ -2786,21 +2810,45 @@ function currentPeriodText(){
   const {start,end}=getPeriodBounds();
   return `<b>${state.year}年${state.month}月締め</b><br><span>${start.getFullYear()}/${start.getMonth()+1}/${start.getDate()}〜${end.getFullYear()}/${end.getMonth()+1}/${end.getDate()}</span>`;
 }
-// メニュー上部のバッジが締め月変更の共通入口（トリマー月次のみ独立）。
-function updateCurrentPeriodBadge(){
-  const el=document.getElementById('currentPeriodBadge');
+// 全ページ共通の固定作業バー（締め月＋バックアップ）を描画する。締め月変更の共通入口（トリマー月次のみ独立）。
+// バックアップ状態は内容の署名（backupSignature）と最終取得の比較で判定する。
+function globalBackupState(){
+  const sig = backupSignature();
+  if(state.lastBackupAt && state.lastBackupSig===sig) return {kind:'ok', last: state.lastBackupAt};
+  if(!state.lastBackupAt) return {kind:'none'};
+  return {kind:'stale', last: state.lastBackupAt};
+}
+function fmtBackupTime(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function renderGlobalBar(){
+  const el=document.getElementById('globalBar');
   if(!el) return;
   const {start,end}=getPeriodBounds();
-  el.innerHTML = `<div class="periodBadgeTitle">締め月（全ページ共通）</div>
-    <div class="periodBig">${state.year}年${state.month}月締め</div>
-    <div class="periodNav">
-      <button type="button" onclick="shiftPeriod(-1)" title="前の締め月へ" aria-label="前の締め月へ">◀</button>
-      <input id="menuYear" type="text" inputmode="numeric" min="2024" max="2038" value="${state.year}" onchange="setMenuPeriodFromInputs()" aria-label="締め年"><span>年</span>
-      <input id="menuMonth" type="text" inputmode="numeric" min="1" max="12" value="${state.month}" onchange="setMenuPeriodFromInputs()" aria-label="締め月"><span>月</span>
-      <button type="button" onclick="shiftPeriod(1)" title="次の締め月へ" aria-label="次の締め月へ">▶</button>
+  const range = `${start.getMonth()+1}/${start.getDate()}〜${end.getMonth()+1}/${end.getDate()}`;
+  const bk = globalBackupState();
+  let backupHtml;
+  if(bk.kind==='ok'){
+    backupHtml = `<div class="gbBackup gb-ok"><button type="button" class="gbBackupBtn" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">バックアップ取得</button><span class="gbBackupNote">最終：${fmtBackupTime(bk.last)}</span></div>`;
+  }else{
+    const noteText = (bk.kind==='none') ? 'バックアップ未取得' : '編集後のバックアップ未取得';
+    backupHtml = `<div class="gbBackup gb-attn"><span class="gbBackupNote attn">${noteText}</span><button type="button" class="gbBackupBtn gbBackupBtn-attn" onclick="downloadJSON()"><img class="appicon" src="assets/icons/svg/action-backup-save.svg" alt="">取得する</button></div>`;
+  }
+  el.innerHTML = `<div class="gbInner">
+    <div class="gbPeriod">
+      <span class="gbLabel">締め月（全ページ共通）</span>
+      <span class="gbPeriodBig">${state.year}年${state.month}月締め</span>
+      <span class="gbRange">対象 ${range}</span>
+      <span class="gbNav">
+        <button type="button" onclick="shiftPeriod(-1)" title="前の締め月へ" aria-label="前の締め月へ">◀</button>
+        <input id="menuYear" class="gbY" type="text" inputmode="numeric" min="2024" max="2038" value="${state.year}" onchange="setMenuPeriodFromInputs()" aria-label="締め年"><span>年</span>
+        <input id="menuMonth" type="text" inputmode="numeric" min="1" max="12" value="${state.month}" onchange="setMenuPeriodFromInputs()" aria-label="締め月"><span>月</span>
+        <button type="button" onclick="shiftPeriod(1)" title="次の締め月へ" aria-label="次の締め月へ">▶</button>
+      </span>
     </div>
-    <div class="periodRange">対象：${start.getMonth()+1}/${start.getDate()}〜${end.getMonth()+1}/${end.getDate()}</div>`;
+    ${backupHtml}
+  </div>`;
 }
+// 旧称の互換エイリアス（呼び出し箇所が増えても安全なように）。
+function updateCurrentPeriodBadge(){ renderGlobalBar(); }
 function setMenuPeriodFromInputs(){
   const y = clampInt(document.getElementById('menuYear')?.value, 2024, 2038, state.year);
   const m = clampInt(document.getElementById('menuMonth')?.value, 1, 12, state.month);
@@ -3137,7 +3185,7 @@ function renderDeptBuildPanel(){
   const footerNote = `<div class="footerNote">自動生成では、固定公休日・休希望の日だけ「休」を入れ、それ以外の所属スタッフは「入れるシフト」からいずれかの区分を設定します。エラーが出た場合は、同日や前後の日程で他スタッフとの区分交換・区分変更による自動調整を試み、やむを得ない場合のみ赤いセルと警告でお知らせします（自動では「休」を入れません）。「入れるシフト」が空のスタッフは公休・希望休のみ自動設定し、それ以外は空欄のままにします。前月末の確定シフトとのつながり（連勤・遅番→早番）もチェックします。確定後は、全体シフト表上の該当部署セルが編集不可になります。再編集を押すと再度編集・再生成できます。</div>`;
   // 締め月はメニュー上部のバッジで全ページ共通管理（ここでは表示のみ）
   const pb = getPeriodBounds();
-  const periodControl = `<div class="currentPeriodBadge" style="margin:0 0 12px"><div class="periodBadgeTitle">作成対象の締め月</div><div class="periodBig">${state.year}年${state.month}月締め</div><div class="periodRange">対象期間：${pb.start.getFullYear()}/${pb.start.getMonth()+1}/${pb.start.getDate()}〜${pb.end.getFullYear()}/${pb.end.getMonth()+1}/${pb.end.getDate()}　<span class="small">変更はメニューの「締め月」から</span></div></div>`;
+  const periodControl = `<div class="currentPeriodBadge" style="margin:0 0 12px"><div class="periodBadgeTitle">作成対象の締め月</div><div class="periodBig">${state.year}年${state.month}月締め</div><div class="periodRange">対象期間：${pb.start.getFullYear()}/${pb.start.getMonth()+1}/${pb.start.getDate()}〜${pb.end.getFullYear()}/${pb.end.getMonth()+1}/${pb.end.getDate()}　<span class="small">変更は上部の作業バーから</span></div></div>`;
   const monthlyBlock = activeBuildDept===MONTHLY_DEPT ? `<div class="deptActionBox monthlyBox">
       <div class="panelHead noPrint">
         <div><h3 style="margin:0">トリマー月次表</h3><div class="small">1日〜月末のひと月単位の表示です（下書き・確定をまとめて表示、参照専用）。編集は上の15日締めの表から行ってください。</div></div>
@@ -5119,7 +5167,7 @@ function setShiftValue(key, staffName, value, targetDept, markLock=true, noRende
   if(noRender) return; // バッチ適用：呼び出し側で最後に1回だけ描画する
   persist(); renderAll(); restoreScrollState(pos);
 }
-function renderAll(){ applyShiftAppearanceStyle(); renderDeptBuildPanel(); renderSummary(); renderCalendar(); renderMonthlyView(); renderStats(); renderObicView(); }
+function renderAll(){ renderGlobalBar(); applyShiftAppearanceStyle(); renderDeptBuildPanel(); renderSummary(); renderCalendar(); renderMonthlyView(); renderStats(); renderObicView(); }
 function renderSummary(){
   const days=getDays(); const warnings=validate(schedule,days); const shortageList=shortageDetails(days, schedule, assignDept); const shortage=shortageList.reduce((a,s)=>a+s.lack,0); const hard=warnings.filter(w=>w.level==='bad').length; const soft=warnings.filter(w=>w.level==='warn').length; const deptCount=DEPTS.filter(d=>state.staff.some(s=>s.dept===d)).length;
   document.getElementById('summary').innerHTML = `<div class="metric"><b>${days.length}</b><span>対象日数</span></div><div class="metric"><b>${formatPeriodShort()}</b><span>15日締め期間</span></div><div class="metric"><b>${state.staff.length}</b><span>スタッフ数</span></div><div class="metric"><b>${deptCount}</b><span>登録部署数</span></div><div class="metric"><b>${confirmedDeptList().length}</b><span>確定部署</span></div><div class="metric metricLink" role="button" tabindex="0" title="クリックで集計・警告を開く" onclick="showMenuPanel('stats')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showMenuPanel('stats');}"><b class="${shortage?'metricBad':''}">${shortage}</b><span>不足枠（必要人数未達）</span></div>`;
