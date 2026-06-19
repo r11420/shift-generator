@@ -220,6 +220,24 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .monthNav input{flex:1;min-width:0;text-align:center}
 .navBtn{flex:0 0 auto;padding:9px 10px;line-height:1}
 .checkLine{display:flex;align-items:center;gap:8px}
+.visuallyHidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.importantRules{margin:8px 0 4px}
+.importantRules .impHead{margin:0 0 8px}
+.importantRules .impHead h3{margin:0 0 3px}
+.impRuleCard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:8px 0}
+.impRuleCard.isOff{background:var(--gdb);border-color:var(--gdl)}
+.impRuleMain{min-width:0}
+.impRuleTitleRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.impRuleName{font-weight:900;font-size:14px;color:var(--ink)}
+.impBadge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 11px;font-size:11px;font-weight:900;border:1px solid}
+.impBadge.on{background:var(--sgs);color:var(--sgd);border-color:var(--sgl)}
+.impBadge.off{background:var(--gdb);color:var(--gd);border-color:var(--gdl)}
+.impRuleDesc{margin:6px 0 0;font-size:12px;color:var(--ink2);line-height:1.55;font-weight:600}
+.impRuleActions{flex:0 0 auto}
+.btnOutlineSmall{width:auto;background:#fff;border:1.5px solid var(--sgl);color:var(--accent2);font-weight:800;font-size:12px;border-radius:999px;padding:7px 14px;cursor:pointer;white-space:nowrap}
+.btnOutlineSmall:hover{background:var(--sgs);border-color:var(--sg)}
+.impBackupNotice{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--gdb);border:1px solid var(--gdl);border-radius:14px;padding:9px 12px;margin:10px 0 2px;font-size:12px;font-weight:700;color:#6a5320}
+.impBackupNotice[hidden]{display:none}
 .dangerZone{border:1px solid #f1c7c7;background:#fffafa;border-radius:14px;padding:12px;margin-top:14px}
 .safeZone{border:1px solid var(--ln);background:var(--iv);border-radius:14px;padding:12px;margin-top:14px}
 .safeZone h3,.dangerZone h3{margin:0 0 4px}
@@ -542,8 +560,19 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
           <div><label for="maxConsecutive">最大連勤</label><input id="maxConsecutive" type="text" inputmode="numeric" min="2" max="14"></div>
           <div><label for="attempts">試行回数 <span class="small">エラー0の案が見つかると自動で早期終了</span></label><input id="attempts" type="text" inputmode="numeric" min="30" max="1500" step="10"></div>
         </div>
-        <label class="checkLine"><input id="avoidLateEarly" type="checkbox" style="width:auto"> 遅番→翌日早番を避ける / 平日遅番→土・祝早番は原則禁止</label>
-        <label class="checkLine"><input id="holidayAsWeekend" type="checkbox" style="width:auto"> 土日祝を「土日祝」必要人数で扱う</label>
+        <div class="importantRules" id="importantRules">
+          <div class="impHead"><h3>重要な自動作成ルール</h3><p class="small">シフト自動作成の結果に大きく影響します。通常はどちらも「有効」のままご利用ください。変更するときだけ「変更する」を押してください。</p></div>
+          <div class="visuallyHidden" aria-hidden="true"><input id="avoidLateEarly" type="checkbox" tabindex="-1"><input id="holidayAsWeekend" type="checkbox" tabindex="-1"></div>
+          <div class="impRuleCard" id="impCard_avoidLateEarly">
+            <div class="impRuleMain"><div class="impRuleTitleRow"><span class="impRuleName">遅番の翌日に早番を入れない</span><span class="impBadge on" id="impBadge_avoidLateEarly">有効</span></div><p class="impRuleDesc">遅番の次の日に早番が入らないようにします。原則ONのまま使用してください。</p></div>
+            <div class="impRuleActions"><button type="button" class="btnOutlineSmall" onclick="requestRuleChange('avoidLateEarly')">変更する</button></div>
+          </div>
+          <div class="impRuleCard" id="impCard_holidayAsWeekend">
+            <div class="impRuleMain"><div class="impRuleTitleRow"><span class="impRuleName">土日祝は休日用の必要人数で計算する</span><span class="impBadge on" id="impBadge_holidayAsWeekend">有効</span></div><p class="impRuleDesc">土日祝は、平日ではなく土日祝用の必要人数で判定します。原則ONのまま使用してください。</p></div>
+            <div class="impRuleActions"><button type="button" class="btnOutlineSmall" onclick="requestRuleChange('holidayAsWeekend')">変更する</button></div>
+          </div>
+          <div class="impBackupNotice" id="impBackupNotice" hidden><span><b>設定を変更しました。</b>安全のため、バックアップ取得をおすすめします。</span><button type="button" class="btnOutlineSmall" onclick="downloadJSON()">バックアップ取得</button></div>
+        </div>
         <div class="subtleHr"></div>
         <h3>スタッフタグ一覧</h3>
         <div id="tagManager"></div>
@@ -1512,6 +1541,48 @@ function pullInputs(){
   // 画面遷移や自動作成時のpullInputsで再構築すると、未編集中の希望休が消えるためここでは触らない。
 }
 
+// 重要な自動作成ルール（誤操作防止カードUI）。実体は非表示チェックボックス（avoidLateEarly / holidayAsWeekend）で、
+// 既存の pullInputs/renderInputs/persist と自動作成ロジックはそのまま利用する。
+const IMPORTANT_RULES = {
+  avoidLateEarly: {
+    name: '遅番の翌日に早番を入れない',
+    offConfirm: 'この設定をOFFにすると、遅番の翌日に早番が入るシフトが作成される可能性があります。変更しますか？'
+  },
+  holidayAsWeekend: {
+    name: '土日祝は休日用の必要人数で計算する',
+    offConfirm: 'この設定をOFFにすると、土日祝も平日と同じ必要人数で判定される可能性があります。変更しますか？'
+  }
+};
+function renderImportantRuleCards(){
+  for(const id of Object.keys(IMPORTANT_RULES)){
+    const cb=document.getElementById(id);
+    const badge=document.getElementById('impBadge_'+id);
+    const card=document.getElementById('impCard_'+id);
+    if(!cb||!badge) continue;
+    const on=!!cb.checked;
+    badge.textContent = on ? '有効' : '無効';
+    badge.classList.toggle('on', on);
+    badge.classList.toggle('off', !on);
+    if(card) card.classList.toggle('isOff', !on);
+  }
+}
+function requestRuleChange(id){
+  const cfg=IMPORTANT_RULES[id]; if(!cfg) return;
+  const cb=document.getElementById(id); if(!cb) return;
+  const currentlyOn=!!cb.checked;
+  const ok = currentlyOn
+    ? confirmAction(cfg.offConfirm + '\n\n通常はONのまま使用することを推奨しています。')
+    : confirmAction(`「${cfg.name}」をON（有効）に戻します。通常はONのまま使用することを推奨しています。よろしいですか？`);
+  if(!ok) return;
+  cb.checked = !currentlyOn;
+  pullInputs();
+  persist();
+  renderImportantRuleCards();
+  const notice=document.getElementById('impBackupNotice');
+  if(notice) notice.hidden=false;
+  toast('設定を変更しました。シフト作成前に内容を確認してください。', currentlyOn ? 'warn' : 'ok');
+}
+
 function renderInputs(){
   document.getElementById('year').value = state.year;
   document.getElementById('month').value = state.month;
@@ -1519,6 +1590,7 @@ function renderInputs(){
   document.getElementById('attempts').value = state.attempts;
   document.getElementById('avoidLateEarly').checked = state.avoidLateEarly;
   document.getElementById('holidayAsWeekend').checked = state.holidayAsWeekend;
+  renderImportantRuleCards();
   document.getElementById('global_week_E').value = state.globalNeeds.week.E;
   document.getElementById('global_week_L').value = state.globalNeeds.week.L;
   document.getElementById('global_hol_E').value = state.globalNeeds.hol.E;
