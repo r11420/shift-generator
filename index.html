@@ -232,7 +232,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .bulkAssignBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0 14px}.bulkAssignBox h3{margin:0 0 8px}.bulkWeekdayActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bulkWeekdays{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.bulkWeekdays label{margin:0;text-align:center}.bulkWeekdays input{width:auto;margin-right:3px}.otherShiftInput{margin-top:6px}
 
 @media (max-width:1100px){.wrap{grid-template-columns:1fr}.appLayout{grid-template-columns:1fr}.calendarControl{grid-template-columns:1fr}.menuRail{position:static}.contentArea{min-width:0}.summary{grid-template-columns:repeat(2,1fr)}header{padding-top:16px}.card{padding:13px}.tableWrap{max-height:none}.staffHead{grid-template-columns:1fr 96px}.deptTabs{grid-template-columns:repeat(2,1fr)}.staffToolbar{grid-template-columns:1fr}.sticky2,.headSticky2{left:92px}.deptCol{min-width:92px;width:92px}.staffCol{min-width:130px;width:130px}}
-@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52;height:auto;overflow:visible;display:block}.contentArea{overflow:visible;height:auto;min-height:0;padding:0}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
+@media print{@page{size:A4 landscape;margin:3mm}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;zoom:.52;height:auto;overflow:visible;display:block}.contentArea{overflow:visible;height:auto;min-height:0;padding:0}.sumCol{display:none!important}.shiftView:empty{display:none!important}.wrap{display:block;padding:0}.appLayout{display:block;padding:0}.sideStack,.tabs,.menuRail,.noPrint,header p{display:none!important}.card{box-shadow:none;border:0}.tableWrap{overflow:visible;border:0;max-height:none}th{position:static}.sticky1,.sticky2,.headSticky1,.headSticky2{position:static}button,input,textarea,select{display:none}.summary{grid-template-columns:repeat(6,1fr)}.shiftText{display:inline!important}.lock{display:none}.dateCol{min-width:48px;width:48px}th,td{font-size:6.5px;padding:1px 2px;white-space:nowrap;line-height:1.15}.deptCol,.staffCol{white-space:nowrap}.staffCol{min-width:80px;padding-left:4px!important;padding-right:3px!important}.deptCol{min-width:64px;width:64px}.dateCol{min-width:28px;width:28px}th.dateCol .dateNum{display:block;border-bottom:1px solid #bdb2a6;margin:0 -2px 1px;padding-bottom:1px}.dateSub{display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}.dateSub .small{font-size:5.5px;line-height:1}th.dateCol{vertical-align:top;overflow:visible}.dayEvents{display:flex;flex-direction:column;align-items:stretch;gap:1px;min-height:12px}.dayEvent,.dayClosure{font-size:5.5px;font-weight:800;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;word-break:break-word;max-width:100%}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.shiftLegend{page-break-inside:avoid}.tableWrap table{width:100%;min-width:0;table-layout:fixed}}
 .shiftText{display:none}
 
 /* 操作性・視認性の改善 */
@@ -1079,7 +1079,9 @@ function dateHeaderInner(day){
   const evTags = scheduleTagsForDay(day);
   const cMemo = day.closure ? closureMemo(day.key) : '';
   const closureBadge = day.closure ? `<span class="dayClosure" title="臨時休業${cMemo?'：'+esc(cMemo):''}">臨時休業${cMemo?'：'+esc(cMemo):''}</span>` : '';
-  const evHtml = (closureBadge || evTags.length) ? `<div class="dayEvents">${closureBadge}${evTags.map(t=>`<span class="dayEvent">${esc(t)}</span>`).join('')}</div>` : '';
+  // タグ表示エリア（.dayEvents）はタグの有無に関わらず常に確保する。
+  // これにより、印刷/PDFで「日付・曜日」の縦位置が全日で揃い、タグだけが下段に追加される構造になる。
+  const evHtml = `<div class="dayEvents">${closureBadge}${evTags.map(t=>`<span class="dayEvent">${esc(t)}</span>`).join('')}</div>`;
   return `<div class="dateNum ${dow}">${day.m}/${day.day}</div><div class="dateSub ${dow}"><span>${day.wdName}</span>${day.holiday?`<span class="small holiday">祝</span>`:''}${closeMark}</div>${evHtml}`;
 }
 let state; rebuildShiftRuntime(); state = defaultState(); rebuildShiftRuntime();
@@ -5739,11 +5741,16 @@ th{background:#f1ece2;font-weight:800}
 .dateNum{font-weight:800;font-size:7.6pt;letter-spacing:.2pt}
 .dowSun,.dowSun span,.dowSun .small{color:#BD544B!important}
 .dowSat,.dowSat span,.dowSat .small{color:#3F6184!important}
+/* 日付ヘッダーは上揃え。日付→曜日→タグの3段で、タグは下段に積む（タグ有無で日付・曜日がズレない）。
+   タグは重要情報のため省略せず全件表示するので、セルを縦に伸ばせるよう overflow:visible にする。 */
+th.dateCol{vertical-align:top;overflow:visible}
 th.dateCol .dateNum{display:block;border-bottom:0.45pt solid #bdb2a6;margin:0 -0.5pt 1pt;padding-bottom:1pt}
 .dateSub{display:flex;align-items:center;justify-content:center;gap:1pt;white-space:nowrap}
 .dateSub .small{font-size:5.5pt;line-height:1}
-.dayEvents{display:flex;flex-direction:column;gap:0.3pt;margin-top:0.5pt}
-.dayEvent{font-size:5pt;font-weight:800;background:#eef4fb!important;color:#2f5b93!important;border:0.3pt solid #cdddf0;border-radius:2pt;padding:0 1pt;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* タグ表示エリアは常時確保（min-height）。タグはすべて表示し、+1/他N件/折りたたみ/省略記号は使わない。 */
+.dayEvents{display:flex;flex-direction:column;align-items:stretch;gap:0.5pt;margin-top:1pt;min-height:6pt}
+.dayEvent{font-size:5pt;font-weight:800;background:#eef4fb!important;color:#2f5b93!important;border:0.3pt solid #cdddf0;border-radius:2pt;padding:0.3pt 1pt;line-height:1.15;white-space:normal;overflow:visible;overflow-wrap:anywhere;word-break:break-word;text-align:center}
+.dayClosure{display:block;font-size:5pt;font-weight:800;background:#efe7da!important;color:#7a6a52!important;border:0.3pt solid #ddd0bc;border-radius:2pt;padding:0.3pt 1pt;line-height:1.15;white-space:normal;overflow:visible;overflow-wrap:anywhere;word-break:break-word;text-align:center;max-width:100%}
 tr.deptGroupStart td,tr.deptGroupStart th{border-top:1.4pt solid #81776b!important}
 thead{display:table-row-group}
 tr,td,th{break-inside:avoid;page-break-inside:avoid}
