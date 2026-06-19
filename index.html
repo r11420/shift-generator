@@ -484,6 +484,9 @@ body.cellSelecting .editableSelect{cursor:cell}
 .recItem{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 10px}
 .recItem .recItemRule{font-weight:800;color:var(--accent2)}
 .recItem .tagDel{margin-left:auto}
+/* 個別除外（この日だけ非表示）の一覧と「元に戻す」ボタン */
+.exclBox .recItem.exclItem{background:var(--sgs);border-color:var(--sgl)}
+.exclItem .exclUndoBtn{margin-left:auto;width:auto;flex:0 0 auto;padding:5px 12px;font-size:12px;font-weight:800}
 .cellOpHint b{color:var(--accent2)}
 /* 差分確認モーダル：再生成前と現在のシフトを縦に並べて比較する（最大で画面の7割） */
 .genDiffBackdrop{position:fixed;inset:0;background:rgba(40,55,45,.42);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -1076,13 +1079,17 @@ function periodEventRuleText(ev){
 }
 function activeScheduleEvents(){ if(!state.scheduleEventsByPeriod) state.scheduleEventsByPeriod={}; const k=periodKey(); if(!state.scheduleEventsByPeriod[k]) state.scheduleEventsByPeriod[k]=[]; return state.scheduleEventsByPeriod[k]; }
 function scheduleEventsForKey(k){ const o=state.scheduleEventsByPeriod; return (o && Array.isArray(o[k])) ? o[k] : []; }
-function scheduleTagsForDay(day){ // この日に表示する全体予定のタグ（定期＋その日が属する締め月の全体予定）
+// 定期予定由来タグの「この日だけ非表示」個別除外。締め月→[{date,tag,...}] で保持する。
+function scheduleEventExclusionsForKey(k){ const o=state.scheduleEventExclusionsByPeriod; return (o && Array.isArray(o[k])) ? o[k] : []; }
+function isScheduleTagExcluded(pk, dateKey, tag){ return scheduleEventExclusionsForKey(pk).some(x=>x.date===dateKey && x.tag===tag); }
+function scheduleTagsForDay(day){ // この日に表示する全体予定のタグ（定期＋その日が属する締め月の全体予定。個別除外は除く）
   const out=[];
   for(const rs of (state.recurringSchedules||[])){ if(recurringMatchesDay(rs, day)) out.push(rs.tag); }
   // 全体予定は締め月別。月次ビューなど期間をまたぐ表示でも、その日が属する締め月の予定を参照する。
   const pk = (day && day.y!=null && day.m!=null && day.day!=null) ? periodKeyForDate(day.y, day.m, day.day) : periodKey();
   for(const ev of scheduleEventsForKey(pk)){ if(periodEventMatchesDay(ev, day)) out.push(ev.tag); }
-  return [...new Set(out.filter(Boolean))];
+  // 「この日だけ削除」された定期予定由来タグはこの日付では表示しない（定期予定本体・他日付・翌月には影響しない）。
+  return [...new Set(out.filter(Boolean))].filter(t=>!isScheduleTagExcluded(pk, day.key, t));
 }
 function dateHeaderInner(day, opts){
   // opts.editable=true のとき、全体予定タグに削除アイコンを表示する（編集モード/編集可能な部署のみ）。
@@ -1384,6 +1391,7 @@ function defaultState(){
     scheduleTags: DEFAULT_SCHEDULE_TAGS.slice(), // 全体予定タグ一覧
     recurringSchedules: [],                       // 定期予定（毎月/月末/毎週/第N/最終）
     scheduleEventsByPeriod: {},                    // 全体予定（締め月ごと）
+    scheduleEventExclusionsByPeriod: {},          // 定期予定由来タグの「この日だけ非表示」個別除外（締め月ごと、[{date,tag,source,reason}]）
     morningCleanExclude: defaultMorningCleanExclude(), // 朝そうじタグを付けない条件
     morningCleanOverrideByPeriod: {}                  // 朝そうじタグのセル別手動上書き（締め月ごと、key=dateKey|staff → true/false）
   };
@@ -1484,6 +1492,17 @@ function normalizeState(){
       if(ev.axis==='wd' && !Array.isArray(ev.wds)){ const {wds,occ}=wdOccOf(ev); ev.wds=wds; ev.occ=occ; delete ev.wd; }
       return ev;
     });
+  }
+  // 定期予定由来タグの個別除外（この日だけ非表示）。旧データには存在しないため空で補完する（後方互換）。
+  if(!state.scheduleEventExclusionsByPeriod || typeof state.scheduleEventExclusionsByPeriod!=='object' || Array.isArray(state.scheduleEventExclusionsByPeriod)) state.scheduleEventExclusionsByPeriod = {};
+  for(const k in state.scheduleEventExclusionsByPeriod){
+    const arr = state.scheduleEventExclusionsByPeriod[k];
+    if(!Array.isArray(arr)){ delete state.scheduleEventExclusionsByPeriod[k]; continue; }
+    const seen = new Set();
+    state.scheduleEventExclusionsByPeriod[k] = arr
+      .map(x=>({ date:String(x&&x.date||''), tag:String(x&&x.tag||''), source:(x&&x.source)||'recurring', reason:(x&&x.reason)||'manual-delete' }))
+      .filter(x=>{ if(!x.date||!x.tag) return false; const key=x.date+''+x.tag; if(seen.has(key)) return false; seen.add(key); return true; });
+    if(!state.scheduleEventExclusionsByPeriod[k].length) delete state.scheduleEventExclusionsByPeriod[k];
   }
   state.staff = (state.staff||[]).map(s=>{
     // 部署：正規の部署ならそのまま、空文字は「未設定」として許容、それ以外の不正値はトリマーへ
@@ -2322,6 +2341,14 @@ function renderScheduleEventTab(tabs, box){
   const dayOpts=days.filter(d=>!d.outside).map(d=>`<option value="${d.key}">${d.m}/${d.day}（${d.wdName}）</option>`).join('');
   tabs.innerHTML = `<div class="prefDeptControl" style="grid-template-columns:1fr"><div class="small">全体予定は、選んだ締め月（${state.year}年${state.month}月締め）のシフト表に表示されます。タグは「基本ルール」の全体予定タグ一覧から選べます（毎月くり返す予定は基本ルールの「定期予定」で登録してください）。</div></div>`;
   const events=activeScheduleEvents();
+  // 定期予定由来タグの「この日だけ削除」一覧（個別除外）。後から追跡・復元できるよう可視化する。
+  const pkNow=periodKey();
+  const exclusions=scheduleEventExclusionsForKey(pkNow).slice().sort((a,b)=>a.date.localeCompare(b.date)||a.tag.localeCompare(b.tag,'ja'));
+  const exclSection = exclusions.length ? `<div class="prefAddBox exclBox" style="margin-top:14px">
+      <h3>個別に非表示にした定期予定（${state.year}年${state.month}月締め）</h3>
+      <div class="small">定期予定から表示される予定を、この日だけ非表示にしています（定期予定そのものは残っています）。</div>
+      <div class="recList">${exclusions.map(x=>{ const p=x.date.split('-'); const dl=(p.length===3)?`${+p[0]}年${+p[1]}月${+p[2]}日`:x.date; return `<div class="recItem exclItem"><span class="dayEvent recItemTag">${esc(x.tag)}</span><span class="recItemRule">${esc(dl)} を非表示</span><button type="button" class="btn2 exclUndoBtn" onclick="undoScheduleTagExclusion('${escAttr(pkNow)}','${escAttr(x.date)}','${escAttr(x.tag)}')">元に戻す</button></div>`; }).join('')}</div>
+    </div>` : '';
   const closureDays=days.filter(d=>d.closure);
   const closureList = closureDays.length
     ? `<div class="recList">${closureDays.map(d=>{ const memo=closureMemo(d.key); return `<div class="recItem"><span class="dayClosure recItemTag">臨時休業</span><span class="recItemRule">${d.m}/${d.day}（${d.wdName}）${memo?'：'+esc(memo):''}</span><button type="button" class="tagDel" title="解除" onclick="removeClosureDate('${d.key}')">×</button></div>`; }).join('')}</div>`
@@ -2347,7 +2374,7 @@ function renderScheduleEventTab(tabs, box){
       <div id="evtWdOpts" class="recWdBlock" style="display:none">${wdOccCheckboxesHtml('evt', false)}</div>
       <div class="recFormRow"><button type="button" class="btn" onclick="addScheduleEvent()">＋ 追加</button></div>
     </div>
-    ${events.length?`<div class="recList">${events.map((ev,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(ev.tag)}</span><span class="recItemRule">${esc(periodEventRuleText(ev))}</span><button type="button" class="tagDel" title="削除" onclick="deleteScheduleEvent(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">この締め月の全体予定は未登録です。</div>'}` + closureSection;
+    ${events.length?`<div class="recList">${events.map((ev,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(ev.tag)}</span><span class="recItemRule">${esc(periodEventRuleText(ev))}</span><button type="button" class="tagDel" title="削除" onclick="deleteScheduleEvent(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">この締め月の全体予定は未登録です。</div>'}` + exclSection + closureSection;
 }
 async function addScheduleEvent(){
   pullInputs();
@@ -2364,10 +2391,10 @@ async function addScheduleEvent(){
   toast('全体予定を追加しました。');
 }
 async function deleteScheduleEvent(i){ pullInputs(); const ev=activeScheduleEvents()[i]; if(!ev) return; if(!await showConfirmModal({title:'全体予定を削除しますか？', message:`${ev.tag}（${periodEventRuleText(ev)}）を削除します。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; activeScheduleEvents().splice(i,1); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('全体予定を削除しました。'); }
-// 日付ヘッダーのタグから、その日付に紐づく「全体予定（日付指定）」だけを削除する。
-// ・タグ定義そのものは削除しない（一覧の「チーフMTG」は残す）
-// ・同じタグが別の日付にある場合、その別日の予定は残す
-// ・定期予定／曜日くり返し由来で表示されているタグは、この場では削除せず案内を出す（誤って全体を消さないため）
+// 日付ヘッダーのタグを、その日付だけ削除する。
+// ・個別登録（日付指定）の予定 → その日付の予定データを削除（タグ定義・別日付は残す）
+// ・定期予定／曜日くり返し由来の表示 → 定期予定本体は触らず、「この日だけ非表示」の個別除外を保存する
+//   （対象締め月・対象日・対象タグのみ。翌月や同月の別日付には影響しない）
 async function deleteDayScheduleEvent(dayKey, tag){
   pullInputs();
   const day = dayByKey(getDays(), dayKey); if(!day) return;
@@ -2380,13 +2407,18 @@ async function deleteDayScheduleEvent(dayKey, tag){
   const fromWdEvent = events.some(ev=>ev.tag===tag && ev.axis==='wd' && periodEventMatchesDay(ev, day));
   const dateLabel = `${day.y}年${day.m}月${day.day}日`;
   if(fromRecurring || fromWdEvent){
-    // ルール由来：この場では消さず、「シフト希望・全体予定」での編集へ誘導する
-    const go = await showConfirmModal({
-      title:'定期予定から表示されています',
-      message:`「${tag}」は定期予定（くり返し）から表示されています。\n\n日付：${dateLabel}\n予定：${tag}\n\nこの予定を変更・削除する場合は、「シフト希望・全体予定」画面で定期予定を編集してください。`,
-      confirmText:'全体予定を開く', cancelText:'キャンセル', variant:'primary'
+    // ルール由来：定期予定本体は残し、この締め月・この日付・このタグだけ「個別除外」で非表示にする
+    const ok = await showConfirmModal({
+      title:'この日だけ全体予定を削除しますか？',
+      message:`この予定は定期予定から表示されています。\n\n定期予定そのものは残したまま、この日付の表示だけ削除します。\n\n日付：${dateLabel}\n予定：${tag}`,
+      confirmText:'この日だけ削除', cancelText:'キャンセル', variant:'caution'
     });
-    if(go){ showMenuPanel('prefs'); setPrefsTab('event'); }
+    if(!ok) return;
+    if(!state.scheduleEventExclusionsByPeriod || typeof state.scheduleEventExclusionsByPeriod!=='object') state.scheduleEventExclusionsByPeriod={};
+    if(!Array.isArray(state.scheduleEventExclusionsByPeriod[pk])) state.scheduleEventExclusionsByPeriod[pk]=[];
+    if(!isScheduleTagExcluded(pk, dayKey, tag)) state.scheduleEventExclusionsByPeriod[pk].push({date:dayKey, tag, source:'recurring', reason:'manual-delete'});
+    preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+    toast('この日だけ全体予定を削除しました。');
     return;
   }
   if(!hasDateEvent) return;
@@ -2400,6 +2432,18 @@ async function deleteDayScheduleEvent(dayKey, tag){
   for(let i=arr.length-1;i>=0;i--){ if(isDateEvent(arr[i])) arr.splice(i,1); }
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   toast('全体予定を削除しました。');
+}
+// 定期予定由来タグの「この日だけ削除」（個別除外）を元に戻す。
+function undoScheduleTagExclusion(pk, dateKey, tag){
+  pullInputs();
+  const arr = (state.scheduleEventExclusionsByPeriod && Array.isArray(state.scheduleEventExclusionsByPeriod[pk])) ? state.scheduleEventExclusionsByPeriod[pk] : null;
+  if(!arr) return;
+  const idx = arr.findIndex(x=>x.date===dateKey && x.tag===tag);
+  if(idx<0) return;
+  arr.splice(idx,1);
+  if(!arr.length) delete state.scheduleEventExclusionsByPeriod[pk];
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
+  toast('全体予定の個別削除を元に戻しました。');
 }
 async function addClosureDate(){
   pullInputs();
