@@ -833,6 +833,18 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
 <script>
 const STORAGE_KEY = 'local_shift_solver_dept_15th_v17_nontrimmer_autogen_fix';
 const DEPTS = ['店長','CA','管理','SCA','用品','トリマー','トレーナー'];
+// 画面・出力の「表示順」だけを固定する共通定義。DEPTS本体（データ／生成・検証ロジックの順序）は変更しない。
+// 希望順：店長 → CA → 管理 → 用品 → SCA → トリマー → トレーナー。一覧に無い部署は後ろ（日本語順）。
+const DEPARTMENT_ORDER = ['店長','CA','管理','用品','SCA','トリマー','トレーナー'];
+function compareDepartmentOrder(a, b){
+  const ai = DEPARTMENT_ORDER.indexOf(a), bi = DEPARTMENT_ORDER.indexOf(b);
+  if(ai===-1 && bi===-1) return String(a).localeCompare(String(b), 'ja');
+  if(ai===-1) return 1;
+  if(bi===-1) return -1;
+  return ai - bi;
+}
+// 表示用に並べ替えた部署リスト（DEPTSのメンバーを DEPARTMENT_ORDER 基準で整列）。表示・出力の並びはこれを参照する。
+function orderedDepts(){ return DEPTS.slice().sort(compareDepartmentOrder); }
 const DEFAULT_TAGS = ['社員','パート','店長','副店長','チーフ','園長'];
 const DEFAULT_SCHEDULE_TAGS = ['納品','Pシェア','SALE最終','チーフMTG'];
 // 社員番号の数値帯から雇用区分タグを自動判定する（10000台＝社員 / 50000〜99999＝パート）。
@@ -1818,7 +1830,7 @@ function applyBasicTab(){
   if(cb) cb.classList.toggle('active', basicTab==='common');
   if(db) db.classList.toggle('active', basicTab==='dept');
 }
-function buildableDepts(){ return DEPTS.slice(); }
+function buildableDepts(){ return orderedDepts(); }
 function renderBasicDeptTabs(){
   const box=document.getElementById('basicDeptTabs'); if(!box) return;
   const depts=buildableDepts();
@@ -1952,9 +1964,9 @@ function autoAssignAllShiftGroups(){ preserveScroll(()=>{ pullInputs(); state.sh
 function renderStaffDeptTabs(){
   const box = document.getElementById('staffDeptTabs');
   if(!box) return;
-  const counts = Object.fromEntries(DEPTS.map(d=>[d,state.staff.filter(s=>s.dept===d).length]));
+  const counts = Object.fromEntries(orderedDepts().map(d=>[d,state.staff.filter(s=>s.dept===d).length]));
   const tabs = [`<button type="button" class="${activeStaffDept==='全体'?'active':''}" onclick="setActiveStaffDept('全体')">全体<span class="staffCount">${state.staff.length}</span></button>`,
-    ...DEPTS.map(d=>`<button type="button" class="${activeStaffDept===d?'active':''}" onclick="setActiveStaffDept('${escAttr(d)}')">${esc(d)}<span class="staffCount">${counts[d]||0}</span></button>`)];
+    ...orderedDepts().map(d=>`<button type="button" class="${activeStaffDept===d?'active':''}" onclick="setActiveStaffDept('${escAttr(d)}')">${esc(d)}<span class="staffCount">${counts[d]||0}</span></button>`)];
   box.innerHTML = tabs.join('');
 }
 function setActiveStaffDept(dept){
@@ -2269,7 +2281,7 @@ function setShiftChecks(btn, checked){
 }
 function deptCheckboxes(values=[], homeDept=''){
   const selected = new Set(values&&values.length?values:[homeDept]); selected.add(homeDept);
-  return `<div class="deptCheckGrid">${DEPTS.map(d=>`<label class="badge"><input class="stSupportDept" type="checkbox" value="${esc(d)}" ${selected.has(d)?'checked':''}>${esc(d)}</label>`).join('')}</div>`;
+  return `<div class="deptCheckGrid">${orderedDepts().map(d=>`<label class="badge"><input class="stSupportDept" type="checkbox" value="${esc(d)}" ${selected.has(d)?'checked':''}>${esc(d)}</label>`).join('')}</div>`;
 }
 function renderStaffList(){
   renderStaffAddForm();
@@ -2307,7 +2319,7 @@ function renderStaffList(){
     <div class="staffItem" data-i="${i}" data-staff-id="${escAttr(s.id)}" data-local-idx="${localIdx}" data-sname="${escAttr(s.name||'未入力スタッフ')}" data-skana="${escAttr(s.kana||'')}">
       <div class="staffHead" onclick="onStaffHeadClick(event,'${escAttr(s.id)}')" title="この見出しエリアをクリックで折りたたみ">
         <div class="staffNameLine"><input class="stSei stNamePart" id="stSei_${escAttr(s.id)}" value="${esc(enm.sei)}" placeholder="姓 例：山田"><input class="stMei stNamePart" id="stMei_${escAttr(s.id)}" value="${esc(enm.mei)}" placeholder="名 例：太郎"><span class="headTags">${tagBadgesHtml(s)}</span><span class="editingBadge">編集中</span><span class="collapseHint" aria-hidden="true">▲ 閉じる</span></div>
-        <select class="stDept" id="stDept_${escAttr(s.id)}"><option value="" ${s.dept===''?'selected':''}>（部署未設定）</option>${DEPTS.map(d=>`<option value="${esc(d)}" ${s.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
+        <select class="stDept" id="stDept_${escAttr(s.id)}"><option value="" ${s.dept===''?'selected':''}>（部署未設定）</option>${orderedDepts().map(d=>`<option value="${esc(d)}" ${s.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
       </div>
       <div class="staffDetails">
         <div class="staffMeta"><label class="small">よみがな（五十音順の並び替え用・漢字入力時は自動補完）</label><div class="grid"><input class="stSeiKana" id="stSeiKana_${escAttr(s.id)}" data-kana-auto="${ekn.sei?'0':'1'}" value="${esc(ekn.sei)}" placeholder="姓のよみ 例：やまだ"><input class="stMeiKana" id="stMeiKana_${escAttr(s.id)}" data-kana-auto="${ekn.mei?'0':'1'}" value="${esc(ekn.mei)}" placeholder="名のよみ 例：たろう"></div></div>
@@ -2513,7 +2525,7 @@ function renderPrefList(){
     if(!activeStaffObj || activePrefDept === '全体' || (activePrefDept !== '全体' && activeStaffObj.dept !== activePrefDept)) activePrefStaff = '全体';
   }
   const deptOptions = `<option value="全体" ${activePrefDept==='全体'?'selected':''}>申請一覧（全${state.staff.length}名）</option>`
-    + DEPTS.map(d=>`<option value="${esc(d)}" ${activePrefDept===d?'selected':''}>${esc(d)}（${state.staff.filter(s=>s.dept===d).length}名）</option>`).join('')
+    + orderedDepts().map(d=>`<option value="${esc(d)}" ${activePrefDept===d?'selected':''}>${esc(d)}（${state.staff.filter(s=>s.dept===d).length}名）</option>`).join('')
     ;
   const staffTabs = [`<button type="button" class="${activePrefStaff==='全体'?'active':''}" onclick="setActivePrefStaff('全体')">全体 <span class="staffCount">${prefs.length}</span></button>`]
     .concat(visibleStaff.map(st=>`<button type="button" class="${activePrefStaff===st.name?'active':''}" onclick="setActivePrefStaff('${escAttr(st.name)}')">${esc(st.name)} <span class="staffCount">${counts.get(st.name)||0}</span></button>`));
@@ -2554,7 +2566,7 @@ function renderStoreClosurePanel(tabs, box){
   const days=getDays();
   const {start,end}=getPeriodBounds();
   const deptOptions = `<option value="全体">申請一覧（全${state.staff.length}名）</option>`
-    + DEPTS.map(d=>`<option value="${esc(d)}">${esc(d)}（${state.staff.filter(s=>s.dept===d).length}名）</option>`).join('')
+    + orderedDepts().map(d=>`<option value="${esc(d)}">${esc(d)}（${state.staff.filter(s=>s.dept===d).length}名）</option>`).join('')
     + `<option value="店舗" selected>店舗（臨時休業）</option>`;
   tabs.innerHTML = `<div class="prefDeptControl">
     <div><label>表示する部署</label><select id="prefDeptSelect" onchange="setActivePrefDept(this.value)">${deptOptions}</select></div>
@@ -2665,7 +2677,7 @@ function renderStaffAddForm(){
       <div><label>名 <span class="reqMark">必須</span></label><input id="addStaffMei" placeholder="例：太郎"></div>
       <div><label>社員番号 <span class="reqMark">必須</span> <span class="small">（5桁・帯で社員/パート自動）</span></label><input id="addStaffEmpNo" inputmode="numeric" maxlength="5" placeholder="例：10001" oninput="onEmpNoInput(this)"></div>
     </div>
-    ${isAll?`<div class="grid3"><div><label>部署 <span class="small">（未設定なら後で割り当て）</span></label><select id="addStaffDept"><option value="" selected>（部署未設定）</option>${DEPTS.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('')}</select></div></div>`:''}
+    ${isAll?`<div class="grid3"><div><label>部署 <span class="small">（未設定なら後で割り当て）</span></label><select id="addStaffDept"><option value="" selected>（部署未設定）</option>${orderedDepts().map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('')}</select></div></div>`:''}
     <div class="grid3">
       <div><label>姓のよみがな <span class="reqMark">必須</span> <span class="small">（漢字入力時に自動補完）</span></label><input id="addStaffSeiKana" data-kana-auto="1" placeholder="例：やまだ"></div>
       <div><label>名のよみがな <span class="reqMark">必須</span> <span class="small">（漢字入力時に自動補完）</span></label><input id="addStaffMeiKana" data-kana-auto="1" placeholder="例：たろう"></div>
@@ -3016,7 +3028,7 @@ function deptId(d){return d.replace(/[^a-zA-Z0-9一-龠ぁ-んァ-ヶ]/g,'_');}
 
 
 function isDeptConfirmed(dept){ syncConfirmedForCurrentPeriod(); return !!confirmedDepts?.[dept]; }
-function confirmedDeptList(){ return DEPTS.filter(d=>isDeptConfirmed(d)); }
+function confirmedDeptList(){ return orderedDepts().filter(d=>isDeptConfirmed(d)); }
 // スタッフの所属・兼務先のうち、現在の締め月で確定済みの部署一覧。
 // 1つでもあればそのスタッフのシフトは編集・自動変更とも不可（確定部署の前提を崩さないため）。
 function staffConfirmedDepts(st){
@@ -5184,7 +5196,7 @@ function formatPeriodShort(){const {start,end}=getPeriodBounds(); return `${star
 // 全体シフト表の並び：通常部署の順 → 末尾に部署未設定（DEPTSに無い／空）をまとめる。
 // 部署未設定スタッフは表示のみ。部署別の自動生成候補（staffCanDept）には入らないため割当はされない。
 function unsetDeptStaff(){ return staffSortedByEmpNo(state.staff.filter(s=>!s.dept || !DEPTS.includes(s.dept))); }
-function orderedStaff(){ return [...DEPTS.flatMap(d=>staffSortedByEmpNo(state.staff.filter(s=>s.dept===d))), ...unsetDeptStaff()]; }
+function orderedStaff(){ return [...orderedDepts().flatMap(d=>staffSortedByEmpNo(state.staff.filter(s=>s.dept===d))), ...unsetDeptStaff()]; }
 function renderCalendar(){
   const days=getDays();
   const renderData = calendarRenderData();
@@ -5249,7 +5261,7 @@ function renderNeedRows(days, baseSchedule=schedule, baseAssignDept=assignDept){
     for(const sh of ['E','L']){ const got=countShiftAll(ass,sh,day), need=g[sh]||0; let cls=got<need?'shortage':got>need?'over':''; if(got<need && countIssueAllowed(countIssue('globalMin', day, '全体', sh, got, need))) cls='allowedShortage'; gParts.push(`<span class="${cls}" title="${groupLabel(sh)}：必要${need}名 / 実績${got}名">${groupLabel(sh)} ${need}-${got}</span>`); }
     globalRow+=`<td class="dateCol">${gParts.join('<br>')}</td>`;
     const parts=[];
-    for(const dept of DEPTS){ const need=deptNeedsForDay(day,dept); for(const sh of ['E','M','L']){ const got=countShiftDept(ass,sh,dept,staffByName,baseAssignDept[day.key]||{}, day); if(got<need[sh]){ const issue=countIssue('deptMin', day, dept, sh, got, need[sh]); parts.push({text:`${dept}:${groupLabel(sh)}${need[sh]-got}`, allowed:countIssueAllowed(issue)}); } } }
+    for(const dept of orderedDepts()){ const need=deptNeedsForDay(day,dept); for(const sh of ['E','M','L']){ const got=countShiftDept(ass,sh,dept,staffByName,baseAssignDept[day.key]||{}, day); if(got<need[sh]){ const issue=countIssue('deptMin', day, dept, sh, got, need[sh]); parts.push({text:`${dept}:${groupLabel(sh)}${need[sh]-got}`, allowed:countIssueAllowed(issue)}); } } }
     const text=parts.length?parts.slice(0,3).map(x=>`<span class="${x.allowed?'allowedShortage':'shortage'}">${esc(x.text)}</span>`).join('<br>')+(parts.length>3?`<br><span class="small">他${parts.length-3}</span>`:''):'';
     deptRow+=`<td class="dateCol">${text}</td>`;
   }
