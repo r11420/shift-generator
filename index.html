@@ -153,6 +153,10 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 .shiftCodeBadge b{font-size:15px}
 .shiftCodeBadge small{font-size:11px;color:var(--muted);font-weight:700}
 .shiftDefEditor{margin-top:10px}.shiftDefTable{min-width:820px}.shiftDefTable input,.shiftDefTable select{padding:6px 7px;border-radius:9px}.shiftDefActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shiftDefNote{font-size:11px;color:var(--muted)}.nowrapCell{white-space:nowrap}.printOnly{display:none}.outputNoWrap{white-space:nowrap}.legendCompactTable{min-width:720px}.legendCompactTable th,.legendCompactTable td{font-size:12px;text-align:center;white-space:nowrap}.shiftUseChecks{display:flex;gap:8px;justify-content:center;align-items:center}.shiftUseChecks label{margin:0;font-size:12px;font-weight:800}.shiftUseChecks input{width:auto;margin-right:3px}
+.shiftDefTable .sdMcToggle{display:inline-flex;align-items:center;gap:5px;margin:0;font-size:12px;font-weight:800;color:var(--accent2);white-space:nowrap;cursor:pointer}
+.shiftDefTable .sdMcToggle input{width:auto;margin:0}
+.shiftDefTable .sdMcDisabled{color:var(--muted);cursor:not-allowed}
+.shiftDefTable .sdMcHint{font-size:11px;font-weight:700;color:var(--muted)}
 
 
 .weekendCol{background:#fff0f4!important}
@@ -925,7 +929,7 @@ function closureMemo(key){ const c=state.closures && state.closures[key]; return
 function defaultShiftDefs(){
   return [
     ['A','8:00-17:00'],['B','8:30-17:30'],['C','9:00-18:00'],['D','9:30-18:30'],['E','10:00-19:00'],['F','10:30-19:30'],['G','11:00-20:00'],['H','11:30-20:30'],['I','12:00-21:00'],['J','9:00-17:00'],['K','13:30-20:30'],['L','10:45-19:45'],['M','9:00-14:00'],['N','15:00-20:00'],['O','16:00-20:00'],['P','9:45-18:45'],['Q','9:00-16:00'],['W','9:00-16:00'],['X','10:00-17:00'],['S','8:30-14:30']
-  ].map(([code,time])=>({code,time,weekGroup:autoGroupByTime(time,false),holGroup:autoGroupByTime(time,true),useWeek:true,useHol:true}));
+  ].map(([code,time])=>{ const wg=autoGroupByTime(time,false), hg=autoGroupByTime(time,true); return {code,time,weekGroup:wg,holGroup:hg,useWeek:true,useHol:true,morningClean:(wg==='E'||hg==='E')}; });
 }
 let SHIFT_TIMES = {};
 let SHIFT_CODES = [];
@@ -933,6 +937,7 @@ let SHIFT_GROUP = {};
 let SHIFT_GROUP_HOL = {};
 let SHIFT_USE_WEEK = {};
 let SHIFT_USE_HOL = {};
+let SHIFT_MORNINGCLEAN = {}; // 区分コード→朝そうじタグを付けるか（早番帯の区分のみ有効）
 let SHIFT_LABEL = {};
 let SHIFT_FULL = {};
 function timeToMinutes(t){ const m=String(t||'').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1])*60+(+m[2]) : null; }
@@ -955,7 +960,11 @@ function normalizeShiftDefs(defs){
     const holGroup = ['E','M','L'].includes(d.holGroup) ? d.holGroup : autoGroupByTime(time,true);
     const useWeek = d.useWeek === undefined ? true : !!d.useWeek;
     const useHol = d.useHol === undefined ? true : !!d.useHol;
-    seen.add(code); out.push({code,time,weekGroup,holGroup,useWeek,useHol});
+    // 朝そうじ：平日／土日祝のいずれかが「早」の区分のみ有効。
+    // 既存データ（プロパティ無し）は「早ならON」で補完。手動値があれば維持（早でなければ無効＝false）。
+    const hasEarly = (weekGroup==='E' || holGroup==='E');
+    const morningClean = (typeof d.morningClean==='boolean') ? (hasEarly && d.morningClean) : hasEarly;
+    seen.add(code); out.push({code,time,weekGroup,holGroup,useWeek,useHol,morningClean});
   }
   return out.length ? out : defaultShiftDefs();
 }
@@ -967,6 +976,7 @@ function rebuildShiftRuntime(){
   SHIFT_GROUP_HOL = Object.fromEntries(defs.map(d=>[d.code,d.holGroup]));
   SHIFT_USE_WEEK = Object.fromEntries(defs.map(d=>[d.code, d.useWeek !== false]));
   SHIFT_USE_HOL = Object.fromEntries(defs.map(d=>[d.code, d.useHol !== false]));
+  SHIFT_MORNINGCLEAN = Object.fromEntries(defs.map(d=>[d.code, !!d.morningClean]));
   SHIFT_LABEL = Object.fromEntries([['',''],['OFF','休'],[PAID_LEAVE,'有休'], ...SHIFT_CODES.map(c=>[c,c])]);
   SHIFT_FULL = Object.fromEntries([['OFF','休'],[PAID_LEAVE,'有休'], ...SHIFT_CODES.map(c=>[c,`${c}：${SHIFT_TIMES[c]}`])]);
   if(state) state.shiftDefs = defs;
@@ -1025,6 +1035,8 @@ function shiftLegendExcelHtml(){ const defs=normalizeShiftDefs(state.shiftDefs);
 function groupOfShift(v, dayObj=null){ v=normalizeStoredShift(v); if(!v || isRestShift(v) || isCustomShift(v)) return ''; if(dayObj && dayObj.holType && SHIFT_GROUP_HOL[v]) return SHIFT_GROUP_HOL[v]; return SHIFT_GROUP[v] || (['E','M','L'].includes(v)?v:''); }
 function isShiftUsableOnDay(code, dayObj){ if(!code || !SHIFT_CODES.includes(code)) return false; if(dayObj && dayObj.holType) return SHIFT_USE_HOL[code] !== false; return SHIFT_USE_WEEK[code] !== false; }
 function isEarlyGroup(v, dayObj=null){ return groupOfShift(v, dayObj)==='E'; }
+// この区分コードが朝そうじ対象か（区分ごとのON/OFF設定。早番でない区分は実質OFF）。既定（未登録）はtrue。
+function shiftCodeMorningClean(v){ return SHIFT_MORNINGCLEAN[normalizeStoredShift(v)] !== false; }
 function isLateGroup(v, dayObj=null){ return groupOfShift(v, dayObj)==='L'; }
 function groupLabel(g){ return GROUP_LABEL[g] || g || ''; }
 function groupKeyFromLabel(label){ const hit=Object.entries(GROUP_LABEL).find(([,v])=>v===label); return hit ? hit[0] : label; }
@@ -1872,6 +1884,12 @@ function renderBasicDeptRulePanel(){
   </div>` + morningCleanDeptHtml(d);
 }
 function groupSelectHtml(value, cls){ return `<select class="${cls}"><option value="E" ${value==='E'?'selected':''}>早</option><option value="M" ${value==='M'?'selected':''}>中</option><option value="L" ${value==='L'?'selected':''}>遅</option></select>`; }
+// シフト区分編集の「朝そうじ」セル。早番帯（平日／土日祝のいずれかが早）の区分のみ操作可能。
+function shiftDefMorningCleanCellHtml(d){
+  const hasEarly = (d.weekGroup==='E' || d.holGroup==='E');
+  if(!hasEarly) return `<label class="sdMcToggle sdMcDisabled" title="早番扱いではないため、朝そうじ対象にはできません"><input class="sdMorningClean" type="checkbox" disabled><span class="sdMcHint">早番区分のみ</span></label>`;
+  return `<label class="sdMcToggle" title="このシフト区分を入れたとき、シフト表に朝そうじタグを表示します"><input class="sdMorningClean" type="checkbox" ${d.morningClean?'checked':''}><span class="sdMcText">付ける</span></label>`;
+}
 function renderShiftDefEditor(){
   const box=document.getElementById('shiftDefEditor'); if(!box) return;
   bindShiftAppearanceDelegation();
@@ -1879,8 +1897,8 @@ function renderShiftDefEditor(){
   let html='<div class="shiftDefEditor">';
   html += `<button type="button" class="btn2 sapToggle" data-sapact="defToggle">${shiftDefOpen?'▼':'▶'} シフト区分を編集（区分名・時間・割当）</button>`;
   if(shiftDefOpen){
-    html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>操作</th></tr></thead><tbody>';
-    html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
+    html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>朝そうじ</th><th>操作</th></tr></thead><tbody>';
+    html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td>${shiftDefMorningCleanCellHtml(d)}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
     html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
   }
   html += `<div class="shiftAppearanceWrap"><button type="button" class="btn2 sapToggle" data-sapact="toggle">${shiftAppearanceOpen?'▼':'▶'} 区分デザイン設定（背景・文字・枠・太枠）</button>${shiftAppearanceOpen?renderShiftAppearancePanelHtml():''}</div>`;
@@ -1946,21 +1964,32 @@ async function resetAllShiftAppearance(){
 function pullShiftDefsFromInputs(){
   const rows=[...document.querySelectorAll('.shiftDefRow')];
   if(!rows.length) return;
-  state.shiftDefs = normalizeShiftDefs(rows.map(row=>({
-    code: row.querySelector('.sdCode')?.value || '',
-    time: row.querySelector('.sdTime')?.value || '',
-    weekGroup: row.querySelector('.sdWeekGroup')?.value || 'M',
-    holGroup: row.querySelector('.sdHolGroup')?.value || 'M',
-    useWeek: !!row.querySelector('.sdUseWeek')?.checked,
-    useHol: !!row.querySelector('.sdUseHol')?.checked
-  })));
+  const oldByCode={}; (state.shiftDefs||[]).forEach(d=>{ if(d&&d.code) oldByCode[String(d.code).trim().toUpperCase()]=d; });
+  state.shiftDefs = normalizeShiftDefs(rows.map(row=>{
+    const rawCode = row.querySelector('.sdCode')?.value || '';
+    const code = rawCode.trim().toUpperCase();
+    const time = row.querySelector('.sdTime')?.value || '';
+    const weekGroup = row.querySelector('.sdWeekGroup')?.value || 'M';
+    const holGroup = row.querySelector('.sdHolGroup')?.value || 'M';
+    const useWeek = !!row.querySelector('.sdUseWeek')?.checked;
+    const useHol = !!row.querySelector('.sdUseHol')?.checked;
+    // 朝そうじの連動：早が無い→OFF／新たに早が付いた→既定ON／早のまま→チェック値（手動OFFを維持）
+    const hasEarly = (weekGroup==='E' || holGroup==='E');
+    const old = oldByCode[code];
+    const oldHadEarly = old ? (old.weekGroup==='E' || old.holGroup==='E') : false;
+    let morningClean;
+    if(!hasEarly) morningClean = false;
+    else if(!oldHadEarly) morningClean = true;
+    else { const cb=row.querySelector('.sdMorningClean'); morningClean = cb ? !!cb.checked : (old ? old.morningClean!==false : true); }
+    return { code: rawCode, time, weekGroup, holGroup, useWeek, useHol, morningClean };
+  }));
   rebuildShiftRuntime();
 }
 async function addShiftDefRow(){ pullInputs(); const code=await showInputModal({title:'シフト区分を追加', message:'追加するシフト区分名を入力してください。', placeholder:'例：R', confirmText:'次へ', cancelText:'キャンセル', validate:v=>state.shiftDefs.some(d=>d.code===v.trim().toUpperCase())?'同じ区分名がすでにあります。':null}); if(!code) return; const time=(await showInputModal({title:'時間を入力', message:`「${code.trim().toUpperCase()}」の時間を入力してください。`, placeholder:'例：10:00-18:00', confirmText:'追加する', cancelText:'入力せず追加'})) || '時間未設定'; state.shiftDefs.push({code:code.trim().toUpperCase(), time:time.trim(), weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('シフト区分を追加しました。','success'); }
 async function deleteShiftDefRow(index){ pullInputs(); const d=state.shiftDefs[index]; if(!d) return; if(!await showConfirmModal({title:'シフト区分を削除しますか？', message:`シフト区分 ${d.code} を削除します。\n既存シフトで使っている場合、表示は残ることがありますが候補からは外れます。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; state.shiftDefs.splice(index,1); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function moveShiftDefRow(index, dir){ pullInputs(); const j=index+dir; if(j<0 || j>=state.shiftDefs.length) return; const d=state.shiftDefs[index]; state.shiftDefs[index]=state.shiftDefs[j]; state.shiftDefs[j]=d; normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function autoAssignShiftRow(btn){ preserveScroll(()=>{ const row=btn.closest('.shiftDefRow'); if(!row) return; const time=row.querySelector('.sdTime')?.value||''; row.querySelector('.sdWeekGroup').value=autoGroupByTime(time,false); row.querySelector('.sdHolGroup').value=autoGroupByTime(time,true); save(); renderInputs(); renderAll(); }); }
-function autoAssignAllShiftGroups(){ preserveScroll(()=>{ pullInputs(); state.shiftDefs=state.shiftDefs.map(d=>({...d, weekGroup:autoGroupByTime(d.time,false), holGroup:autoGroupByTime(d.time,true)})); normalizeState(); persist(); renderInputs(); renderAll(); }); }
+function autoAssignAllShiftGroups(){ preserveScroll(()=>{ pullInputs(); state.shiftDefs=state.shiftDefs.map(d=>{ const wg=autoGroupByTime(d.time,false), hg=autoGroupByTime(d.time,true); const hadEarly=(d.weekGroup==='E'||d.holGroup==='E'), hasEarly=(wg==='E'||hg==='E'); const morningClean = !hasEarly ? false : (!hadEarly ? true : d.morningClean!==false); return {...d, weekGroup:wg, holGroup:hg, morningClean}; }); normalizeState(); persist(); renderInputs(); renderAll(); }); }
 function renderStaffDeptTabs(){
   const box = document.getElementById('staffDeptTabs');
   if(!box) return;
@@ -4749,6 +4778,7 @@ function effectiveAppearanceForDay(v, day){ return effectiveAppearance(appearanc
 // 朝そうじの自動判定：早番の勤務に付ける。所属部署ごとの除外条件に当たる場合は付けない。
 function morningCleanAuto(day, v, dept){
   if(!isWorkingShift(v) || !isEarlyGroup(v, day)) return false;
+  if(!shiftCodeMorningClean(v)) return false; // 区分ごとの朝そうじOFFが最優先（除外設定より前に判定）
   const cfg=state.morningCleanExclude && state.morningCleanExclude.byDept && state.morningCleanExclude.byDept[dept];
   const tags=scheduleTagsForDay(day);
   if(cfg && Array.isArray(cfg.rules)){
