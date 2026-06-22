@@ -4147,15 +4147,10 @@ async function generateDeptSchedule(dept, options={}){
       if(progress){
         const note = document.createElement('div');
         note.className = 'ok';
-        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}生成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。`;
+        // 「前案と比較」ボタンは上の操作列（diffBtn）に1つだけ表示する。ここでは重複ボタンを出さず、導線だけ案内する。
+        const compareHint = genDiff ? '前案と見比べるときは、上の「前案と比較」を押してください。' : '';
+        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}生成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。${compareHint}`;
         progress.insertAdjacentElement('afterend', note);
-        if(genDiff){
-          const cmp = document.createElement('button');
-          cmp.type='button'; cmp.className='btn2'; cmp.style.marginTop='6px';
-          cmp.textContent='前案と比較（差分を確認）';
-          cmp.onclick=()=>openGenDiffModal();
-          note.insertAdjacentElement('afterend', cmp);
-        }
       }
     }
   }finally{
