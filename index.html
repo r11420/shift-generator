@@ -457,10 +457,17 @@ td.errorCell.allowedDayCountErr{background:#fcefee!important;box-shadow:inset 0 
 .availInline.avail-caution{color:#7a4b00}
 .availInline.avail-caution::before{background:var(--gd)}
 /* ===== エラー→該当箇所ジャンプ：ハイライト・補足ノート・移動ボタン ===== */
-.jumpHL{outline:3px solid var(--rd)!important;box-shadow:0 0 0 6px rgba(189,84,75,.18)!important;border-radius:8px!important;position:relative;z-index:6;transition:outline .15s,box-shadow .15s}
-.jumpHL.warnHL{outline-color:var(--gd)!important;box-shadow:0 0 0 6px rgba(169,120,31,.18)!important}
-.jumpHLcol{background:rgba(189,84,75,.14)!important}
-.jumpHLcol.warnHL{background:rgba(169,120,31,.16)!important}
+/* ジャンプ強調は寸法・レイアウトに影響しない描画だけで行う：outlineは内側オフセット、
+   塗りは inset box-shadow。position:relative は付けない（固定列 .sticky2 等の position:sticky を
+   壊さないため）。border も変えない＝セル寸法・行高・列幅は不変。 */
+.jumpHL{outline:3px solid var(--rd);outline-offset:-3px;box-shadow:inset 0 0 0 9999px rgba(189,84,75,.12)!important;transition:outline .15s}
+.jumpHL.warnHL{outline-color:var(--gd);box-shadow:inset 0 0 0 9999px rgba(169,120,31,.14)!important}
+.jumpHLcol{box-shadow:inset 0 0 0 9999px rgba(189,84,75,.12)!important}
+.jumpHLcol.warnHL{box-shadow:inset 0 0 0 9999px rgba(169,120,31,.14)!important}
+/* 週の出勤可能日数超過：対象週のセル群。出勤扱いは強め、休・有休・空欄は薄め。すべて inset＝寸法不変。 */
+.jumpHLweek{outline:2px solid rgba(196,82,74,.5);outline-offset:-2px;box-shadow:inset 0 0 0 9999px rgba(196,82,74,.08)!important}
+.jumpHLweekWork{outline:3px solid rgba(196,82,74,.92);outline-offset:-3px;box-shadow:inset 0 0 0 9999px rgba(196,82,74,.2)!important}
+.jumpHLweek.warnHL,.jumpHLweekWork.warnHL{outline-color:rgba(169,120,31,.9)}
 .jumpNote{position:fixed;z-index:100060;background:var(--iv);border:1px solid var(--ln);border-left:5px solid var(--rd);border-radius:12px;box-shadow:0 14px 36px rgba(40,30,15,.28);padding:10px 14px;max-width:300px;font-size:12px;color:var(--ink2);font-weight:700;line-height:1.6}
 .jumpNote.warn{border-left-color:var(--gd)}
 .jumpNote .jnTitle{font-size:13px;font-weight:900;color:var(--ink);margin-bottom:2px}
@@ -6302,17 +6309,43 @@ function showNoticeModal(opts={}){
 }
 // ===== エラー・警告・条件不足 → 該当箇所へジャンプ（画面切替＋スクロール＋一時ハイライト＋補足） =====
 let _jumpHLEls=[], _jumpTimer=null, _jumpAnchor=null, _jumpReposition=null;
-function clearJumpHighlight(){ for(const el of _jumpHLEls){ try{ el.classList.remove('jumpHL','warnHL','jumpHLcol'); }catch(e){} } _jumpHLEls=[]; const n=document.getElementById('jumpNote'); if(n) n.remove(); if(_jumpTimer){ clearTimeout(_jumpTimer); _jumpTimer=null; } if(_jumpReposition){ window.removeEventListener('scroll', _jumpReposition, true); window.removeEventListener('resize', _jumpReposition); _jumpReposition=null; } _jumpAnchor=null; }
+function clearJumpHighlight(){ for(const el of _jumpHLEls){ try{ el.classList.remove('jumpHL','warnHL','jumpHLcol','jumpHLweek','jumpHLweekWork'); }catch(e){} } _jumpHLEls=[]; const n=document.getElementById('jumpNote'); if(n) n.remove(); if(_jumpTimer){ clearTimeout(_jumpTimer); _jumpTimer=null; } if(_jumpReposition){ window.removeEventListener('scroll', _jumpReposition, true); window.removeEventListener('resize', _jumpReposition); _jumpReposition=null; } _jumpAnchor=null; }
 // 補足ノートを対象（アンカー）の getBoundingClientRect に追従させ、画面外へはみ出さないよう配置する。
+// 位置は window ではなく「右操作画面（.contentArea）の可視領域」を基準にクランプする。
+// アンカーが表（.tableWrap）内なら、その表の下端も上限にして、表の下の凡例（シフト区分対応表）に
+// 重ならないようにする。原則はセルの上側に出し、入らないときだけ下側に出す。
 function _repositionJumpNote(){
   const note=document.getElementById('jumpNote'); if(!note || !_jumpAnchor || !_jumpAnchor.getBoundingClientRect) return;
   const r=_jumpAnchor.getBoundingClientRect();
   if(r.width===0 && r.height===0){ note.style.display='none'; return; } note.style.display='';
   const nw=note.offsetWidth, nh=note.offsetHeight;
-  let top=r.bottom+8; if(top+nh > window.innerHeight-8) top=Math.max(8, r.top-nh-8);
-  let left=Math.min(r.left, window.innerWidth-nw-12); left=Math.max(8,left);
-  top=Math.max(8, Math.min(top, window.innerHeight-nh-8));
+  const vp={left:8, top:8, right:window.innerWidth-8, bottom:window.innerHeight-8};
+  const ca=document.querySelector('.menuPanel.active')?.closest?.('.contentArea') || document.querySelector('.contentArea');
+  if(ca){ const c=ca.getBoundingClientRect(); vp.left=Math.max(vp.left,c.left+6); vp.right=Math.min(vp.right,c.right-6); vp.top=Math.max(vp.top,c.top+6); vp.bottom=Math.min(vp.bottom,c.bottom-6); }
+  const wrap=_jumpAnchor.closest ? _jumpAnchor.closest('.tableWrap') : null;
+  let bottomLimit=vp.bottom; if(wrap){ const w=wrap.getBoundingClientRect(); bottomLimit=Math.min(bottomLimit, w.bottom-6); }
+  // 縦：原則セルの上。上に入らなければ下（凡例に被らないよう bottomLimit で抑える）。
+  let top=r.top-nh-10;
+  if(top<vp.top){ top=r.bottom+10; if(top+nh>bottomLimit) top=Math.max(vp.top, bottomLimit-nh); }
+  // 横：セル左に合わせ、可視領域内にクランプ。
+  let left=Math.min(r.left, vp.right-nw); left=Math.max(vp.left,left);
+  top=Math.max(vp.top, Math.min(top, vp.bottom-nh));
   note.style.top=top+'px'; note.style.left=left+'px';
+}
+// 部署別シフト表（.tableWrap）内のセル群を、右操作画面と表の両スクロールを使って見える位置へ寄せる。
+// sticky の左固定列・ヘッダに隠れないよう、可視領域から固定列幅・ヘッダ高を差し引いて中央寄せする。
+function _scrollDeptCellsIntoView(anchor){
+  const wrap = anchor && anchor.closest ? anchor.closest('.tableWrap') : null;
+  if(!wrap){ try{ anchor.scrollIntoView({block:'center', inline:'center'}); }catch(e){} return; }
+  const ca = wrap.closest('.contentArea');
+  if(ca){ const car=ca.getBoundingClientRect(), wr0=wrap.getBoundingClientRect(); if(wr0.top<car.top+6 || wr0.top>car.bottom-120){ ca.scrollTop += (wr0.top-(car.top+10)); } }
+  const sw=(()=>{ const a=wrap.querySelector('.sticky1'), b=wrap.querySelector('.sticky2'); return (a?a.offsetWidth:0)+(b?b.offsetWidth:0); })();
+  const hh=(()=>{ const th=wrap.querySelector('thead'); return th?th.getBoundingClientRect().height:0; })();
+  const wr=wrap.getBoundingClientRect(), cr=anchor.getBoundingClientRect();
+  const visLeft=wr.left+sw, visRight=wr.right-12;
+  if(cr.left<visLeft+4 || cr.right>visRight){ const targetX=visLeft+Math.max(0,(visRight-visLeft)/2 - cr.width/2); wrap.scrollLeft += (cr.left-targetX); }
+  const visTop=wr.top+hh, visBottom=wr.bottom-12;
+  if(cr.top<visTop+4 || cr.bottom>visBottom){ const targetY=visTop+Math.max(0,(visBottom-visTop)/2 - cr.height/2); wrap.scrollTop += (cr.top-targetY); }
 }
 function _showJumpNote(anchor, severity, body){
   const old=document.getElementById('jumpNote'); if(old) old.remove();
@@ -6338,8 +6371,19 @@ function appJump(target){
     const panel=document.querySelector(`.menuPanel[data-panel="${page}"]`)||document;
     const q=(sel)=>{ try{ return panel.querySelector(sel); }catch(e){ return null; } };
     const qa=(sel)=>{ try{ return [...panel.querySelectorAll(sel)]; }catch(e){ return []; } };
-    let cells=[], anchor=null, isColumn=false, body=target.note||'この箇所を確認してください。';
-    if(scope==='cell' && target.date && target.staff){ const c=q(`[data-cell="${target.date}|${encodeURIComponent(target.staff)}"]`); if(c){ cells=[c]; anchor=c; } }
+    let cells=[], anchor=null, isColumn=false, isWeek=false, body=target.note||'この箇所を確認してください。';
+    const weekWorkSet=new Set();
+    // 週の出勤可能日数超過：対象スタッフ行の「その週（日曜〜土曜）の当月内セル群」を強調する。
+    if(scope==='weekRow' && target.staff && target.weekKey){
+      const staffEnc=encodeURIComponent(target.staff);
+      const inPeriod=new Set(getDays().map(d=>d.key));
+      const dks=getCalendarWeekDates(target.weekKey).filter(dk=>inPeriod.has(dk));
+      let firstWork=null, firstAny=null;
+      for(const dk of dks){ const c=q(`[data-cell="${dk}|${staffEnc}"]`); if(!c) continue; cells.push(c); if(!firstAny) firstAny=c; const v=normalizeStoredShift(schedule[dk]?.[target.staff]||''); if(isWorkingShift(v)){ weekWorkSet.add(c); if(!firstWork) firstWork=c; } }
+      const row=firstAny&&firstAny.closest?firstAny.closest('tr'):null; const sc=row?row.querySelector('.staffCol'):null; if(sc) cells.push(sc);
+      anchor=firstWork||firstAny||sc; isWeek=cells.length>0;
+    }
+    if(!cells.length && scope==='cell' && target.date && target.staff){ const c=q(`[data-cell="${target.date}|${encodeURIComponent(target.staff)}"]`); if(c){ cells=[c]; anchor=c; } }
     if(!cells.length && (scope==='dateColumn'||scope==='departmentDateColumn') && target.date){ cells=qa(`[data-cell^="${target.date}|"]`); const th=q(`th[data-day="${target.date}"]`); anchor=th||cells[0]||null; if(th) cells.push(th); isColumn=true; }
     if(!cells.length && scope==='staffRow' && target.staff){ const c=q(`[data-cell$="|${encodeURIComponent(target.staff)}"]`); const row=c&&c.closest?c.closest('tr'):null; if(row){ const sc=row.querySelector('.staffCol'); anchor=sc||c; cells=[sc||c]; } }
     if(!cells.length && scope==='cell' && target.date){ const c=q(`[data-cell^="${target.date}|"]`); if(c){ cells=[c]; anchor=c; } }
@@ -6347,8 +6391,12 @@ function appJump(target){
     if(!cells.length && target.selector){ const e=q(target.selector); if(e){ cells=[e]; anchor=e; } }
     if(!cells.length){ const e=q('h2')||q('h3')||(panel.nodeType===1?panel:document.body); cells=[e]; anchor=e; body='詳細な位置は特定できませんでした。関連する画面を開きました。'; }
     const scrollT=anchor||cells[0];
-    try{ scrollT.scrollIntoView({block:'center', inline:'center'}); }catch(e){ try{scrollT.scrollIntoView();}catch(_){} }
-    for(const c of cells){ const hl=(c.closest&&c.closest('td,th,.staffItem,.prefRow,.tagChip,.deptBuildCard'))||c; const isHdr=hl.tagName==='TH'; hl.classList.add((isColumn&&!isHdr)?'jumpHLcol':'jumpHL'); if(sev==='warn') hl.classList.add('warnHL'); _jumpHLEls.push(hl); }
+    if(isWeek){ _scrollDeptCellsIntoView(scrollT); }
+    else { try{ scrollT.scrollIntoView({block:'center', inline:'center'}); }catch(e){ try{scrollT.scrollIntoView();}catch(_){} } }
+    for(const c of cells){ const hl=(c.closest&&c.closest('td,th,.staffItem,.prefRow,.tagChip,.deptBuildCard'))||c;
+      if(isWeek){ const isStaffCell=hl.classList&&hl.classList.contains('staffCol'); hl.classList.add(isStaffCell?'jumpHL':(weekWorkSet.has(c)?'jumpHLweekWork':'jumpHLweek')); }
+      else { const isHdr=hl.tagName==='TH'; hl.classList.add((isColumn&&!isHdr)?'jumpHLcol':'jumpHL'); }
+      if(sev==='warn') hl.classList.add('warnHL'); _jumpHLEls.push(hl); }
     const af=(anchor&&anchor.querySelector&&anchor.querySelector('select,input,button,a'))||((anchor&&anchor.matches&&anchor.matches('select,input,button,a'))?anchor:null);
     try{ if(af&&af.focus){ af.focus({preventScroll:true}); } else if(anchor&&anchor.setAttribute){ anchor.setAttribute('tabindex','-1'); anchor.focus({preventScroll:true}); } }catch(e){}
     requestAnimationFrame(()=>{ _showJumpNote(anchor||cells[0], sev, body); });
@@ -6367,6 +6415,16 @@ function warningTarget(w, ctx){
   const dept = w.dept || (staff ? (findStaff(staff)?.dept||'') : '');
   const realDept = !!(dept && DEPTS.includes(dept));
   const sev = w.level==='bad'?'error':'warn';
+  // 週の出勤可能日数超過：日付単体ではなく「対象スタッフのその週（日曜〜土曜）のセル群」を強調する。
+  // 締め月をまたぐ週は当月側のセルを示し、前後の締め月も関係する旨を補足する。
+  if(staff && w.weekKey){
+    const crosses = /またいで/.test(w.text||'');
+    const note = crosses
+      ? 'この週の出勤日数が上限を超えています。現在の締め月内の該当セルを表示しています。前後の締め月の勤務も含めて確認してください。'
+      : 'この週の出勤日数が上限を超えています。対象スタッフのこの週のセル（出勤扱い）を確認してください。';
+    if(realDept) return {page:'deptBuild', dept, staff, weekKey:w.weekKey, scope:'weekRow', severity:sev, note};
+    return {page:'calendar', staff, weekKey:w.weekKey, scope:'weekRow', severity:sev, note};
+  }
   if(staff && date){
     if(realDept) return {page:'deptBuild', dept, date, staff, scope:'cell', severity:sev, note:'このスタッフのこの日のシフト区分を確認・修正してください。'};
     return {page:'calendar', date, staff, scope:'cell', severity:sev, note:'このスタッフのこの日のセルを確認してください。'};
