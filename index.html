@@ -340,6 +340,19 @@ h2:has(.appicon),h3:has(.appicon){display:flex;align-items:center;gap:8px}
 .ruleCatDanger .ruleCatIcon{background:#f7e9e6}.ruleCatDanger .ruleCatImpact{color:var(--bad)}
 .dangerOpRow{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#fffafa;border:1px solid #f1c7c7;border-radius:12px;padding:11px 13px;margin:8px 0}
 .dangerOpRow b{color:var(--ink);font-size:13.5px}.dangerOpRow .small{color:var(--ink2)}.dangerOpRow button{width:auto;flex:0 0 auto}
+/* 基本ルール：カード内のサブアコーディオン（タグ設定のスタッフ／全体予定、シフト区分の区分の色） */
+.ruleSub{border:1px solid var(--ln);background:var(--iv);border-radius:12px;margin:10px 0;overflow:hidden}
+.ruleSub.open{background:#fff;box-shadow:0 2px 8px rgba(40,30,15,.05)}
+.ruleSubHead{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:0;padding:11px 13px;cursor:pointer;font:inherit;color:var(--ink)}
+.ruleSubHead:hover{background:var(--bg2)}
+.ruleSub.open .ruleSubHead{border-bottom:1px solid var(--ln)}
+.ruleSubChevron{flex:0 0 auto;width:9px;height:9px;border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);transform:rotate(-45deg);transition:transform .18s}
+.ruleSub.open .ruleSubChevron{transform:rotate(45deg)}
+.ruleSubTitle{font-weight:800;font-size:13.5px;flex:1;min-width:0}
+.ruleSubDesc{display:block;font-weight:600;font-size:11.5px;color:var(--ink2);margin-top:1px}
+.ruleSubBadge{flex:0 0 auto;font-size:10.5px;font-weight:800;color:#fff;background:var(--warn);border-radius:999px;padding:2px 9px}
+.ruleSubBody{padding:12px 13px 14px}.ruleSubBody[hidden]{display:none}
+.ruleSubLead{margin:0 0 10px;color:var(--ink2);font-size:12.5px;line-height:1.55}
 .shiftAppearanceWrap{margin-top:12px}
 .sapToggle{font-weight:800}
 .sapPanel{margin-top:10px;border:1px solid var(--ln);border-radius:14px;background:var(--iv);padding:12px}
@@ -739,18 +752,17 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
       </div>
       <div class="ruleInfoBanner" role="note">
         <span class="ruleInfoIcon"><img class="appicon" src="assets/icons/svg/status-info.svg" alt=""></span>
-        <div><b>基本ルールは、シフト自動生成の前提設定です。</b><div class="small">変更すると、部署別シフト・全体シフト表・印刷／PDFに影響することがあります。通常は変更しません。変更後はバックアップ取得をおすすめします。</div></div>
-        <button type="button" class="btnOutlineSmall" onclick="downloadJSON()">バックアップ取得</button>
+        <div><b>基本ルールは、シフト自動生成の前提設定です。</b><div class="small">変更すると、部署別シフト・全体シフト表・印刷／PDFに影響することがあります。通常は変更しません。</div></div>
       </div>
       <div class="ruleCats" id="ruleCats">
         <section class="ruleCat" data-cat="work">
           <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_work" onclick="toggleBasicCat('work')">
             <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-rules.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">勤務ルール</span><span class="ruleCatDesc">連勤・遅番→早番などの働き方ルール</span><span class="ruleCatImpact">影響：自動生成／部署別シフト／全体シフト表</span></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">勤務ルール</span><span class="ruleCatDesc">連勤や遅番→早番などの働き方ルール</span><span class="ruleCatImpact">影響：自動生成／下書きチェック／集計・警告</span></span>
             <span class="ruleCatChevron" aria-hidden="true"></span>
           </button>
           <div class="ruleCatBody" id="ruleCatBody_work" hidden>
-            <p class="ruleCatLead">連勤や遅番→早番など、スタッフの働き方に関わるルールを設定します。</p>
+            <p class="ruleCatLead">連勤や遅番→早番など、スタッフの働き方に関わるルールを設定します。重要な自動生成ルールのため、変更すると自動生成・下書きチェックの結果に影響します。</p>
             <h3>連勤・全体設定</h3>
             <div class="grid">
               <div><label for="maxConsecutive">最大連勤</label><input id="maxConsecutive" type="text" inputmode="numeric" min="2" max="14"></div>
@@ -767,7 +779,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
                 <div class="impRuleMain"><div class="impRuleTitleRow"><span class="impRuleName">土日祝は休日用の必要人数で計算する</span><span class="impBadge on" id="impBadge_holidayAsWeekend">有効</span></div><p class="impRuleDesc">土日祝は、平日ではなく土日祝用の必要人数で判定します。原則ONのまま使用してください。</p></div>
                 <div class="impRuleActions"><button type="button" class="btnOutlineSmall" onclick="requestRuleChange('holidayAsWeekend')">変更する</button></div>
               </div>
-              <div class="impBackupNotice" id="impBackupNotice" hidden><span><b>設定を変更しました。</b>安全のため、バックアップ取得をおすすめします。</span><button type="button" class="btnOutlineSmall" onclick="downloadJSON()">バックアップ取得</button></div>
+              <div class="impBackupNotice" id="impBackupNotice" hidden><span><b>設定を変更しました。</b>必要に応じて上部バーからバックアップを取得してください。</span></div>
             </div>
             <div class="subtleHr"></div>
             <label>定休日の曜日</label>
@@ -780,11 +792,11 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <section class="ruleCat" data-cat="needs">
           <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_needs" onclick="toggleBasicCat('needs')">
             <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/person.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">必要人数</span><span class="ruleCatDesc">部署ごとの早番・中番・遅番人数、全体の最低人数</span><span class="ruleCatImpact">影響：自動生成／部署別シフト／全体シフト表</span></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">必要人数・部署別ルール</span><span class="ruleCatDesc">部署ごとの早番・中番・遅番人数、責任者人数</span><span class="ruleCatImpact">影響：部署別シフト作成／下書きチェック／集計・警告</span></span>
             <span class="ruleCatChevron" aria-hidden="true"></span>
           </button>
           <div class="ruleCatBody" id="ruleCatBody_needs" hidden>
-            <p class="ruleCatLead">部署ごとに、早番・中番・遅番で必要な人数を設定します。店舗全体の最低人数もここで設定します。</p>
+            <p class="ruleCatLead">部署ごとに、早番・中番・遅番で必要な人数や責任者人数を設定します。必要人数だけでなく、部署単位のルール（使用する帯など）もここで扱います。部署別シフトの自動生成に影響します。</p>
             <h3>全体の最低人数</h3>
             <div class="small">部署をまたいで、店舗全体として最低限ほしい早番・遅番の人数です。</div>
             <label>平日</label>
@@ -798,8 +810,8 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
               <div><span class="pill pL">全体 遅</span><input id="global_hol_L" type="text" inputmode="numeric" min="0" max="50"></div>
             </div>
             <div class="subtleHr"></div>
-            <h3>部署別の必要人数</h3>
-            <div class="small">タブで部署を選び、平日・土日祝それぞれの早・中・遅で、使用する帯と最低人数・最大人数を設定します。</div>
+            <h3>部署別の必要人数・ルール</h3>
+            <div class="small">タブで部署を選び、平日・土日祝それぞれの早・中・遅で、使用する帯と最低人数・最大人数（責任者人数を含む）を設定します。</div>
             <div class="deptTabs" id="basicDeptTabs"></div>
             <div id="basicDeptRulePanel"></div>
           </div>
@@ -808,62 +820,66 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <section class="ruleCat" data-cat="shifts">
           <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_shifts" onclick="toggleBasicCat('shifts')">
             <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/sheet-edit.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">シフト区分</span><span class="ruleCatDesc">A〜Sの時間・早中遅割当・朝そうじ設定</span><span class="ruleCatImpact">影響：自動生成／部署別シフト表／全体シフト表／印刷PDF／Excel出力</span></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">シフト区分</span><span class="ruleCatDesc">A〜Sの時間・早中遅割当・朝そうじ・色</span><span class="ruleCatImpact">影響：自動生成／シフト表表示／朝そうじ表示／印刷PDF／Excel出力</span></span>
             <span class="ruleCatChevron" aria-hidden="true"></span>
           </button>
           <div class="ruleCatBody" id="ruleCatBody_shifts" hidden>
-            <p class="ruleCatLead">A〜Sの時間や、早番・中番・遅番の扱いを設定します。朝そうじタグを付ける区分もここで設定します。</p>
+            <p class="ruleCatLead">A〜Sの時間、早番・中番・遅番の扱い、朝そうじタグ、表示色を設定します。<b>時間・割当・朝そうじ</b>は自動生成に影響します。<b>区分の色</b>は見た目だけの設定です。</p>
             <div id="shiftDefEditor"></div>
+            <div class="ruleSub" data-sub="sub_colors">
+              <button type="button" class="ruleSubHead" aria-expanded="false" aria-controls="ruleSubBody_colors" onclick="toggleBasicCat('sub_colors')">
+                <span class="ruleSubChevron" aria-hidden="true"></span>
+                <span class="ruleSubTitle">区分の色（背景・文字・枠・太枠）<span class="ruleSubDesc">シフト表の見た目だけの設定。勤務ルールは変わりません。</span></span>
+              </button>
+              <div class="ruleSubBody" id="ruleSubBody_colors" hidden>
+                <div id="shiftAppearanceEditor"></div>
+              </div>
+            </div>
           </div>
         </section>
 
         <section class="ruleCat" data-cat="tags">
           <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_tags" onclick="toggleBasicCat('tags')">
-            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-requests.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">タグ設定</span><span class="ruleCatDesc">スタッフタグ・全体予定タグ・定期予定</span><span class="ruleCatImpact">影響：スタッフ表示／全体予定／日付ヘッダー／下書きチェック</span></span>
+            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-staff.svg" alt=""></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">タグ設定</span><span class="ruleCatDesc">スタッフタグ・全体予定タグ</span><span class="ruleCatImpact">影響：スタッフ表示／全体予定／日付ヘッダー</span></span>
             <span class="ruleCatChevron" aria-hidden="true"></span>
           </button>
           <div class="ruleCatBody" id="ruleCatBody_tags" hidden>
-            <p class="ruleCatLead">スタッフや全体予定に付けるタグを管理します。標準タグは変更できません。</p>
-            <h3>スタッフタグ一覧</h3>
-            <div id="tagManager"></div>
-            <div class="subtleHr"></div>
-            <h3>全体予定タグ一覧 <span class="small">定期予定・全体予定で使うタグ</span></h3>
-            <div id="scheduleTagManager"></div>
-            <div class="subtleHr"></div>
-            <h3>定期予定 <span class="small">毎月・曜日などで、シフト表の日付の下にタグを表示</span></h3>
+            <p class="ruleCatLead">スタッフや全体予定に付けるタグを管理します。標準タグは変更できません。使用中のタグは削除できません。</p>
+            <div class="ruleSub" data-sub="sub_staffTags">
+              <button type="button" class="ruleSubHead" aria-expanded="false" aria-controls="ruleSubBody_staffTags" onclick="toggleBasicCat('sub_staffTags')">
+                <span class="ruleSubChevron" aria-hidden="true"></span>
+                <span class="ruleSubTitle">スタッフタグ<span class="ruleSubDesc">社員・パート・チーフ・店長・部署未設定など</span></span>
+                <span class="ruleSubBadge" id="subBadge_staffTags" hidden>要確認</span>
+              </button>
+              <div class="ruleSubBody" id="ruleSubBody_staffTags" hidden>
+                <p class="ruleSubLead">スタッフに付けるタグを管理します。標準タグは変更できません。</p>
+                <div id="tagManager"></div>
+              </div>
+            </div>
+            <div class="ruleSub" data-sub="sub_schedTags">
+              <button type="button" class="ruleSubHead" aria-expanded="false" aria-controls="ruleSubBody_schedTags" onclick="toggleBasicCat('sub_schedTags')">
+                <span class="ruleSubChevron" aria-hidden="true"></span>
+                <span class="ruleSubTitle">全体予定タグ<span class="ruleSubDesc">納品・チーフMTG・SALE最終など</span></span>
+                <span class="ruleSubBadge" id="subBadge_schedTags" hidden>要確認</span>
+              </button>
+              <div class="ruleSubBody" id="ruleSubBody_schedTags" hidden>
+                <p class="ruleSubLead">日付ヘッダーや全体予定で使うタグを管理します。標準タグは変更できません。</p>
+                <div id="scheduleTagManager"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ruleCat" data-cat="recurring">
+          <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_recurring" onclick="toggleBasicCat('recurring')">
+            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-requests.svg" alt=""></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">定期予定</span><span class="ruleCatDesc">毎月・毎週のくり返し予定</span><span class="ruleCatImpact">影響：全体予定／日付ヘッダー／印刷PDF／Excel出力</span></span>
+            <span class="ruleCatChevron" aria-hidden="true"></span>
+          </button>
+          <div class="ruleCatBody" id="ruleCatBody_recurring" hidden>
+            <p class="ruleCatLead">毎月・毎週など、くり返し表示する全体予定を設定します。タグそのものの管理は「タグ設定」で行います。定期予定を削除すると、今後のシフト表の表示に影響します。</p>
             <div id="recurringScheduleBox"></div>
-          </div>
-        </section>
-
-        <section class="ruleCat" data-cat="colors">
-          <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_colors" onclick="toggleBasicCat('colors')">
-            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/shift-middle.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">区分の色</span><span class="ruleCatDesc">シフト表の色・太枠（見た目のみ）</span><span class="ruleCatImpact">影響：画面表示／印刷PDF／Excel出力</span></span>
-            <span class="ruleCatChevron" aria-hidden="true"></span>
-          </button>
-          <div class="ruleCatBody" id="ruleCatBody_colors" hidden>
-            <p class="ruleCatLead">シフト表に表示される区分の色を設定します。見た目だけの設定で、勤務ルールは変わりません。</p>
-            <div id="shiftAppearanceEditor"></div>
-          </div>
-        </section>
-
-        <section class="ruleCat ruleCatDanger" data-cat="danger">
-          <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_danger" onclick="toggleBasicCat('danger')">
-            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-warnings.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">注意が必要な操作</span><span class="ruleCatDesc">既定に戻す・初期化など、影響範囲の大きい操作</span><span class="ruleCatImpact">実行前に内容と影響範囲を確認してください</span></span>
-            <span class="ruleCatChevron" aria-hidden="true"></span>
-          </button>
-          <div class="ruleCatBody" id="ruleCatBody_danger" hidden>
-            <p class="ruleCatLead">設定を元に戻す・初期化する操作です。実行前に内容を確認してください。削除・初期化は確認画面が表示されます。</p>
-            <div class="dangerOpRow">
-              <div><b>区分の色をすべて既定に戻す</b><div class="small">早番＝オレンジ、休＝グレーなどの既定配色に戻します。勤務ルールは変わりません。影響：画面表示／印刷PDF／Excel出力</div></div>
-              <button type="button" class="btnCaution" onclick="resetAllShiftAppearance()">既定に戻す</button>
-            </div>
-            <div class="dangerOpRow">
-              <div><b>すべてのデータを初期化</b><div class="small">スタッフ・シフト・設定をすべて消去します。誤操作防止のため「バックアップ」画面に隔離しています。実行前に必ずバックアップを取得してください。</div></div>
-              <button type="button" class="btn2" onclick="showMenuPanel('actions')">バックアップ画面を開く</button>
-            </div>
           </div>
         </section>
       </div>
@@ -1943,12 +1959,21 @@ function toggleBasicCat(key){
   applyBasicCats();
 }
 function applyBasicCats(){
+  // カード（.ruleCat）と内部のサブアコーディオン（.ruleSub）を同じ basicOpenCats マップで開閉する。
+  // 直下の本文だけを対象にするため :scope > を使う（カード内のサブ本文を巻き込まない）。
   document.querySelectorAll('#ruleCats .ruleCat').forEach(cat=>{
     const key=cat.dataset.cat; const open=!!basicOpenCats[key];
-    const body=cat.querySelector('.ruleCatBody'); const head=cat.querySelector('.ruleCatHead');
+    const body=cat.querySelector(':scope > .ruleCatBody'); const head=cat.querySelector(':scope > .ruleCatHead');
     if(body) body.hidden=!open;
     if(head) head.setAttribute('aria-expanded', open?'true':'false');
     cat.classList.toggle('open', open);
+  });
+  document.querySelectorAll('#ruleCats .ruleSub').forEach(sub=>{
+    const key=sub.dataset.sub; const open=!!basicOpenCats[key];
+    const body=sub.querySelector(':scope > .ruleSubBody'); const head=sub.querySelector(':scope > .ruleSubHead');
+    if(body) body.hidden=!open;
+    if(head) head.setAttribute('aria-expanded', open?'true':'false');
+    sub.classList.toggle('open', open);
   });
 }
 // 旧：共通ルール／部署別ルールのタブ切替（カテゴリ化前の互換用。現在は未使用だが参照安全のため残す）
@@ -2044,7 +2069,8 @@ function shiftAppearanceRowsHtml(){
   }).join('');
 }
 function renderShiftAppearancePanelHtml(){
-  return `<div class="sapPanel"><div class="small"><b>早番・中番・遅番・休・有休・その他</b>の6グループごとに背景・文字・枠の色、太枠を設定します。同じグループのすべての区分（例：早番ならE・Iなど）にまとめて反映されます。設定は全体シフト表・部署別シフト・印刷／PDFに反映されます（既定：早番＝オレンジ、休＝グレー）。全グループを既定に戻す操作は「注意が必要な操作」にあります。</div>`+
+  return `<div class="sapPanel"><div class="small"><b>早番・中番・遅番・休・有休・その他</b>の6グループごとに背景・文字・枠の色、太枠を設定します。同じグループのすべての区分（例：早番ならE・Iなど）にまとめて反映されます。設定は全体シフト表・部署別シフト・印刷／PDFに反映されます（既定：早番＝オレンジ、休＝グレー）。</div>`+
+    `<div class="sapActions"><button type="button" class="btnCaution" data-sapact="reset-all">全グループを既定に戻す</button></div>`+
     `<div class="tableWrap"><table class="sapTable"><thead><tr><th>グループ</th><th>背景</th><th>文字</th><th>枠</th><th>太枠</th><th>操作</th></tr></thead><tbody>${shiftAppearanceRowsHtml()}</tbody></table></div></div>`;
 }
 // 見た目編集はイベント委譲で処理（動的生成の input でも確実に発火させる）
@@ -2312,6 +2338,8 @@ function renderTagManager(){
     ${orphanWarnHtml('master')}
     <div class="tagChipList">${tags.map((t,i)=>tagChipHtml('master',t,i,tags.length)).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addMasterTag()">＋ タグ追加</button></div>`;
+  // タグ設定カードの「スタッフタグ」アコーディオン見出しに、孤児タグ警告がある場合だけ「要確認」を出す。
+  const badge=document.getElementById('subBadge_staffTags'); if(badge) badge.hidden = orphanStaffTagRefs().size===0;
 }
 function moveMasterTag(i, dir){
   pullInputs();
@@ -2350,6 +2378,8 @@ function renderScheduleTagManager(){
     ${orphanWarnHtml('schedule')}
     <div class="tagChipList">${tags.map((t,i)=>tagChipHtml('schedule',t,i,tags.length)).join('') || '<span class="small">タグはありません。</span>'}
     <button type="button" class="btn2 tagAddMasterBtn" onclick="addScheduleTag()">＋ タグ追加</button></div>`;
+  // タグ設定カードの「全体予定タグ」アコーディオン見出しに、孤児タグ警告がある場合だけ「要確認」を出す。
+  const badge=document.getElementById('subBadge_schedTags'); if(badge) badge.hidden = orphanScheduleRefs().size===0;
 }
 function moveScheduleTag(i, dir){ pullInputs(); const j=i+dir; if(j<0||j>=state.scheduleTags.length) return; const t=state.scheduleTags[i]; state.scheduleTags[i]=state.scheduleTags[j]; state.scheduleTags[j]=t; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 async function addScheduleTag(){ pullInputs(); const name=await showInputModal({title:'タグを追加', message:'追加する全体予定タグ名を入力してください。', placeholder:'タグ名を入力（例：棚卸）', confirmText:'追加する', cancelText:'キャンセル', validate:v=>state.scheduleTags.includes(v)?'同じ名前のタグがすでにあります。':null}); if(!name) return; state.scheduleTags.push(name); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('タグを追加しました。','success'); }
@@ -2399,7 +2429,17 @@ function renderRecurringSchedule(){
       <div class="recFormRow"><button type="button" class="btn" onclick="addRecurringSchedule()">＋ 追加</button></div>
       <div class="small">例：毎月10日に「納品」／火曜の第2・第4に「チーフMTG」。登録するとシフト表の日付下に表示されます。</div>
     </div>
-    ${list.length?`<div class="recList">${list.map((rs,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(rs.tag)}</span><span class="recItemRule">${esc(recurringRuleText(rs))}</span><button type="button" class="tagDel" title="削除" onclick="deleteRecurringSchedule(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">定期予定は未登録です。</div>'}`;
+    ${list.length?`<div class="recList">${list.map((rs,i)=>`<div class="recItem"><span class="dayEvent recItemTag">${esc(rs.tag)}</span><span class="recItemRule">${esc(recurringRuleText(rs))}</span><button type="button" class="tagDel" title="削除" onclick="deleteRecurringSchedule(${i})">×</button></div>`).join('')}</div>`:'<div class="small" style="margin-top:8px">定期予定は未登録です。</div>'}`
+    + recurringExclusionsHtml();
+}
+// 定期予定由来タグの「この日だけ非表示」個別除外（当月締め）の一覧と「元に戻す」。定期予定カード内に表示する。
+function recurringExclusionsHtml(){
+  const pkNow=periodKey();
+  const exclusions=scheduleEventExclusionsForKey(pkNow).slice().sort((a,b)=>a.date.localeCompare(b.date)||a.tag.localeCompare(b.tag,'ja'));
+  if(!exclusions.length) return '';
+  return `<div class="subtleHr"></div><div class="exclBox"><h4 style="margin:0 0 4px">個別に非表示にした定期予定（${state.year}年${state.month}月締め）</h4>`
+    + `<div class="small">定期予定から表示される予定を、この日だけ非表示にしています（定期予定そのものは残っています）。</div>`
+    + `<div class="recList">${exclusions.map(x=>{ const p=x.date.split('-'); const dl=(p.length===3)?`${+p[1]}/${+p[2]}`:x.date; return `<div class="recItem exclItem"><span class="dayEvent recItemTag">${esc(x.tag)}</span><span class="recItemRule">${esc(dl)} を非表示</span><button type="button" class="btn2 exclUndoBtn" onclick="undoScheduleTagExclusion('${escAttr(pkNow)}','${escAttr(x.date)}','${escAttr(x.tag)}')">元に戻す</button></div>`; }).join('')}</div></div>`;
 }
 async function addRecurringSchedule(){
   pullInputs();
