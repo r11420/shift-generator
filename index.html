@@ -2933,10 +2933,41 @@ function weekRangeLabel(weekKey){
   const sun=new Date(y, m-1, d), sat=new Date(y, m-1, d+6);
   return `${sun.getMonth()+1}/${sun.getDate()}(日)〜${sat.getMonth()+1}/${sat.getDate()}(土)`;
 }
+// 日曜〜土曜の7日分の日付キー（YYYY-MM-DD）を返す。weekKey はその週の日曜日。
+// 純粋関数なので結果はキャッシュする（自動生成の判定ループから多数回呼ばれるため）。
+const _weekDatesCache = new Map();
+function getCalendarWeekDates(weekKey){
+  let cached=_weekDatesCache.get(weekKey); if(cached) return cached;
+  const [y,m,d]=String(weekKey).split('-').map(Number); const arr=[];
+  if(y&&m&&d){ const base=new Date(y, m-1, d); for(let i=0;i<7;i++){ const t=new Date(base.getFullYear(), base.getMonth(), base.getDate()+i); arr.push(fmtDate(t)); } }
+  _weekDatesCache.set(weekKey, arr); return arr;
+}
+// 週内の1日のシフト値を取得する。現在表示中の締め月の日付は評価対象の盤面 out から、
+// 隣接締め月の日付は保存済みの schedule から参照する。これにより日曜〜土曜の週が締め月を
+// またいでも境界でリセットされず、保存済みの隣接月シフトも合算できる（無ければ空＝非勤務）。
+function weekCellShift(out, dateKey, staffName){
+  const [y,m,d]=dateKey.split('-').map(Number);
+  const inCurrent = periodKeyForDate(y,m,d)===periodKey();
+  const cell = inCurrent ? (out ? out[dateKey] : null) : ((typeof schedule!=='undefined' && schedule) ? schedule[dateKey] : null);
+  return normalizeStoredShift((cell && cell[staffName]) || '');
+}
+// 日曜〜土曜の7日間で勤務日数を数える（締め月をまたいでも合算。隣接月データが無くてもエラーにしない）。
+function countWeeklyWorkingDaysAcross(out, staffName, weekKey){
+  let n=0; for(const dk of getCalendarWeekDates(weekKey)){ if(isWorkingShift(weekCellShift(out, dk, staffName))) n++; } return n;
+}
+// 警告表示用：合計・締め月別内訳・締め月またぎ判定を返す。
+function weeklyWorkBreakdownAcross(out, staffName, weekKey){
+  const byPeriod={}; const periods=new Set(); let total=0;
+  for(const dk of getCalendarWeekDates(weekKey)){
+    const [y,m,d]=dk.split('-').map(Number); const pk=periodKeyForDate(y,m,d); periods.add(pk);
+    if(isWorkingShift(weekCellShift(out, dk, staffName))){ total++; byPeriod[pk]=(byPeriod[pk]||0)+1; }
+  }
+  return {total, byPeriod, crosses: periods.size>1};
+}
+function periodLabelShortFromKey(pk){ const p=String(pk).split('-'); return `${+p[1]||'?'}月締め`; }
 function countWeeklyWorkingDaysFor(out, days, staffName, day){
-  const wk=weekKeyForDay(day); let n=0;
-  for(const d of days){ if(weekKeyForDay(d)!==wk) continue; const v=normalizeStoredShift(out[d.key]?.[staffName]); if(isWorkingShift(v)) n++; }
-  return n;
+  // 互換のため days は受けるが、判定は日曜〜土曜の暦週（締め月をまたいで合算）で行う。
+  return countWeeklyWorkingDaysAcross(out, staffName, weekKeyForDay(day));
 }
 function wouldExceedWeeklyAvailable(out, days, day, staffName){
   const st=findStaff(staffName);
@@ -4734,9 +4765,19 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
   for(const st of state.staff){
     if(st.useWeeklyLimit===false) continue;
     const limit=+(st.weeklyAvailableDays ?? 5);
-    const weekly={};
-    for(const day of days){ const v=out[day.key]?.[st.name]; if(isWorkingShift(v)){ const wk=weekKeyForDay(day); weekly[wk]=(weekly[wk]||0)+1; } }
-    for(const [wk,n] of Object.entries(weekly)){ if(n>limit) warnings.push({level:'bad', text:`${st.name}：${weekRangeLabel(wk)} の出勤が${n}日です。週の出勤可能日数は${limit}日です。`, staff:st.name}); }
+    if(!(limit>=0)) continue;
+    // この期間に含まれる日曜〜土曜の週ごとに、締め月をまたいで合算して判定する。
+    for(const wk of [...new Set(days.map(d=>d.weekKey))]){
+      const info=weeklyWorkBreakdownAcross(out, st.name, wk);
+      if(info.total>limit){
+        let text=`${st.name}：${weekRangeLabel(wk)} の出勤が${info.total}日です。週の出勤可能日数は${limit}日です。`;
+        if(info.crosses){
+          const parts=Object.keys(info.byPeriod).sort().map(pk=>`${periodLabelShortFromKey(pk)}${info.byPeriod[pk]}日`);
+          text+=`（この週は締め月をまたいでいます：${parts.join('・')}）`;
+        }
+        warnings.push({level:'bad', text, staff:st.name, weekKey:wk});
+      }
+    }
   }
   for(const p of activePreferences()){
     for(const day of days){
