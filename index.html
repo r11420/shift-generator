@@ -758,11 +758,11 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <section class="ruleCat" data-cat="work">
           <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_work" onclick="toggleBasicCat('work')">
             <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/nav-rules.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">勤務ルール</span><span class="ruleCatDesc">連勤や遅番→早番などの働き方ルール</span><span class="ruleCatImpact">影響：自動生成／下書きチェック／集計・警告</span></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">勤務ルール</span><span class="ruleCatDesc">連勤・遅番→早番・全体の最低人数など</span><span class="ruleCatImpact">影響：自動生成／下書きチェック／集計・警告</span></span>
             <span class="ruleCatChevron" aria-hidden="true"></span>
           </button>
           <div class="ruleCatBody" id="ruleCatBody_work" hidden>
-            <p class="ruleCatLead">連勤や遅番→早番など、スタッフの働き方に関わるルールを設定します。重要な自動生成ルールのため、変更すると自動生成・下書きチェックの結果に影響します。</p>
+            <p class="ruleCatLead">連勤・遅番→早番・全体の最低人数など、シフト全体の成立条件を設定します。重要な自動生成ルールのため、変更すると自動生成・下書きチェックの結果に影響します。</p>
             <h3>連勤・全体設定</h3>
             <div class="grid">
               <div><label for="maxConsecutive">最大連勤</label><input id="maxConsecutive" type="text" inputmode="numeric" min="2" max="14"></div>
@@ -786,19 +786,9 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
             <div class="row" id="closedWeekdays"></div>
             <div class="subtleHr"></div>
             <div class="ruleHintCard"><b>週の出勤可能日数について</b><div class="small">スタッフごとの「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間でカウントします。人数や上限の変更は「スタッフ」画面の各スタッフ設定で行えます。</div></div>
-          </div>
-        </section>
-
-        <section class="ruleCat" data-cat="needs">
-          <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_needs" onclick="toggleBasicCat('needs')">
-            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/person.svg" alt=""></span>
-            <span class="ruleCatText"><span class="ruleCatTitle">必要人数・部署別ルール</span><span class="ruleCatDesc">部署ごとの早番・中番・遅番人数、責任者人数</span><span class="ruleCatImpact">影響：部署別シフト作成／下書きチェック／集計・警告</span></span>
-            <span class="ruleCatChevron" aria-hidden="true"></span>
-          </button>
-          <div class="ruleCatBody" id="ruleCatBody_needs" hidden>
-            <p class="ruleCatLead">部署ごとに、早番・中番・遅番で必要な人数や責任者人数を設定します。必要人数だけでなく、部署単位のルール（使用する帯など）もここで扱います。部署別シフトの自動生成に影響します。</p>
+            <div class="subtleHr"></div>
             <h3>全体の最低人数</h3>
-            <div class="small">部署をまたいで、店舗全体として最低限ほしい早番・遅番の人数です。</div>
+            <div class="small">部署をまたいで、店舗全体として最低限ほしい早番・遅番の人数です。全体シフトを成立させるための共通条件で、部署別の必要人数とは別に判定します。</div>
             <label>平日</label>
             <div class="grid">
               <div><span class="pill pE">全体 早</span><input id="global_week_E" type="text" inputmode="numeric" min="0" max="50"></div>
@@ -809,7 +799,17 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
               <div><span class="pill pE">全体 早</span><input id="global_hol_E" type="text" inputmode="numeric" min="0" max="50"></div>
               <div><span class="pill pL">全体 遅</span><input id="global_hol_L" type="text" inputmode="numeric" min="0" max="50"></div>
             </div>
-            <div class="subtleHr"></div>
+          </div>
+        </section>
+
+        <section class="ruleCat" data-cat="needs">
+          <button type="button" class="ruleCatHead" aria-expanded="false" aria-controls="ruleCatBody_needs" onclick="toggleBasicCat('needs')">
+            <span class="ruleCatIcon"><img class="appicon" src="assets/icons/svg/person.svg" alt=""></span>
+            <span class="ruleCatText"><span class="ruleCatTitle">必要人数・部署別ルール</span><span class="ruleCatDesc">部署ごとの早番・中番・遅番人数、責任者人数</span><span class="ruleCatImpact">影響：部署別シフト作成／下書きチェック／集計・警告</span></span>
+            <span class="ruleCatChevron" aria-hidden="true"></span>
+          </button>
+          <div class="ruleCatBody" id="ruleCatBody_needs" hidden>
+            <p class="ruleCatLead">部署ごとに、早番・中番・遅番で必要な人数や責任者人数を設定します。必要人数だけでなく、部署単位のルール（使用する帯など）もここで扱います。部署別シフトの自動生成に影響します。（店舗全体の最低人数は「勤務ルール」で設定します。）</p>
             <h3>部署別の必要人数・ルール</h3>
             <div class="small">タブで部署を選び、平日・土日祝それぞれの早・中・遅で、使用する帯と最低人数・最大人数（責任者人数を含む）を設定します。</div>
             <div class="deptTabs" id="basicDeptTabs"></div>
@@ -825,11 +825,19 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
           </button>
           <div class="ruleCatBody" id="ruleCatBody_shifts" hidden>
             <p class="ruleCatLead">A〜Sの時間、早番・中番・遅番の扱い、朝そうじタグ、表示色を設定します。<b>時間・割当・朝そうじ</b>は自動生成に影響します。<b>区分の色</b>は見た目だけの設定です。</p>
-            <div id="shiftDefEditor"></div>
+            <div class="ruleSub" data-sub="sub_shiftDefs">
+              <button type="button" class="ruleSubHead" aria-expanded="false" aria-controls="ruleSubBody_shiftDefs" onclick="toggleBasicCat('sub_shiftDefs')">
+                <span class="ruleSubChevron" aria-hidden="true"></span>
+                <span class="ruleSubTitle">シフト区分を編集（区分名・時間・割当）<span class="ruleSubDesc">A〜Sの時間、平日割当・土日祝割当、朝そうじタグを設定します。</span></span>
+              </button>
+              <div class="ruleSubBody" id="ruleSubBody_shiftDefs" hidden>
+                <div id="shiftDefEditor"></div>
+              </div>
+            </div>
             <div class="ruleSub" data-sub="sub_colors">
               <button type="button" class="ruleSubHead" aria-expanded="false" aria-controls="ruleSubBody_colors" onclick="toggleBasicCat('sub_colors')">
                 <span class="ruleSubChevron" aria-hidden="true"></span>
-                <span class="ruleSubTitle">区分の色（背景・文字・枠・太枠）<span class="ruleSubDesc">シフト表の見た目だけの設定。勤務ルールは変わりません。</span></span>
+                <span class="ruleSubTitle">区分の色（背景・文字・枠・太枠）<span class="ruleSubDesc">早番・中番・遅番・休・有休などの表示色・太枠を設定します。</span></span>
               </button>
               <div class="ruleSubBody" id="ruleSubBody_colors" hidden>
                 <div id="shiftAppearanceEditor"></div>
@@ -2038,13 +2046,12 @@ function renderShiftDefEditor(){
   const box=document.getElementById('shiftDefEditor'); if(!box) return;
   bindShiftAppearanceDelegation();
   const defs=normalizeShiftDefs(state.shiftDefs);
+  // 開閉は「シフト区分を編集」サブアコーディオン（.ruleSub data-sub=sub_shiftDefs）が担うため、
+  // ここでは内側のトグルを持たず、表を常に描画する（区分の色アコーディオンと見た目を揃える）。
   let html='<div class="shiftDefEditor">';
-  html += `<button type="button" class="btn2 sapToggle" data-sapact="defToggle">${shiftDefOpen?'▼':'▶'} シフト区分を編集（区分名・時間・割当）</button>`;
-  if(shiftDefOpen){
-    html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>朝そうじ</th><th>操作</th></tr></thead><tbody>';
-    html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td>${shiftDefMorningCleanCellHtml(d)}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
-    html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
-  }
+  html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>朝そうじ</th><th>操作</th></tr></thead><tbody>';
+  html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td>${shiftDefMorningCleanCellHtml(d)}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
+  html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
   html += '</div>';
   box.innerHTML=html;
 }
