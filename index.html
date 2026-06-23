@@ -2367,7 +2367,7 @@ function renderStaffList(){
             <label class="badge"><input class="stUseWeeklyLimit" type="checkbox" ${s.useWeeklyLimit!==false?'checked':''}>週の出勤可能日数を考慮</label>
             <div><label>週の出勤可能日数</label><input class="stWeeklyAvailableDays" id="stWeeklyAvailableDays_${escAttr(s.id)}" type="text" inputmode="numeric" min="0" max="7" value="${s.weeklyAvailableDays ?? 5}"></div>
           </div>
-          <div class="small">両方チェックで、曜日公休と週の出勤可能日数の両方を考慮します。</div>
+          <div class="small">「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。両方チェックで、曜日公休と週の出勤可能日数の両方を考慮します。</div>
         </div>
         <label>入れるシフト</label>
         ${shiftCheckboxes(Array.isArray(s.canShifts)?s.canShifts:SHIFT_CODES)}
@@ -2721,6 +2721,7 @@ function renderStaffAddForm(){
         <label class="badge"><input class="stUseWeeklyLimit" type="checkbox" checked>週の出勤可能日数を考慮</label>
         <div><label>週の出勤可能日数</label><input class="stWeeklyAvailableDays" type="text" inputmode="numeric" min="0" max="7" value="5"></div>
       </div>
+      <div class="small">「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。</div>
     </div>
     <label>入れるシフト</label>${shiftCheckboxes([])}
     <label>固定公休日（曜日・祝日）</label>${weekdayCheckboxes([], false)}
@@ -2917,11 +2918,20 @@ function fixedWeeklyOffMap(days){
     return [st.name, new Set(days.filter(day=>fixed.has(day.wd) || (offHolidays && !!day.holiday)).map(day=>day.key))];
   }));
 }
+// 週の区切りは「日曜〜土曜」のカレンダー週で判定する（締め月開始日からの7日ごとや月曜始まりにはしない）。
+// 週キー＝その週の日曜日の日付。getDays() でも同じ式で day.weekKey を事前計算している。
 function weekKeyForDay(day){
   if(day.weekKey) return day.weekKey;
   const d=new Date(day.date); const tmp=new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const dayNum=(tmp.getDay()+6)%7; tmp.setDate(tmp.getDate()-dayNum);
+  tmp.setDate(tmp.getDate()-tmp.getDay()); // 日曜始まり：その週の日曜まで戻す
   return fmtDate(tmp);
+}
+// 週キー（日曜日）から「8/16(日)〜8/22(土)」形式の範囲ラベルを作る（警告表示用）。
+function weekRangeLabel(weekKey){
+  const [y,m,d]=String(weekKey).split('-').map(Number);
+  if(!y||!m||!d) return weekKey;
+  const sun=new Date(y, m-1, d), sat=new Date(y, m-1, d+6);
+  return `${sun.getMonth()+1}/${sun.getDate()}(日)〜${sat.getMonth()+1}/${sat.getDate()}(土)`;
 }
 function countWeeklyWorkingDaysFor(out, days, staffName, day){
   const wk=weekKeyForDay(day); let n=0;
@@ -2958,7 +2968,7 @@ function getDays(){
   for(let i=0;i<list.length;i++){
     list[i].prev = list[i-1] || null;
     list[i].next = list[i+1] || null;
-    const t=new Date(list[i].date); const dayNum=(t.getDay()+6)%7; t.setDate(t.getDate()-dayNum);
+    const t=new Date(list[i].date); t.setDate(t.getDate()-t.getDay()); // 日曜始まり：その週の日曜まで戻す
     list[i].weekKey = fmtDate(t);
     byKey.set(list[i].key, list[i]);
   }
@@ -4726,7 +4736,7 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
     const limit=+(st.weeklyAvailableDays ?? 5);
     const weekly={};
     for(const day of days){ const v=out[day.key]?.[st.name]; if(isWorkingShift(v)){ const wk=weekKeyForDay(day); weekly[wk]=(weekly[wk]||0)+1; } }
-    for(const [wk,n] of Object.entries(weekly)){ if(n>limit) warnings.push({level:'bad', text:`${st.name}：週の出勤可能日数 ${limit}日を超過（週${wk}：${n}日）`}); }
+    for(const [wk,n] of Object.entries(weekly)){ if(n>limit) warnings.push({level:'bad', text:`${st.name}：${weekRangeLabel(wk)} の出勤が${n}日です。週の出勤可能日数は${limit}日です。`, staff:st.name}); }
   }
   for(const p of activePreferences()){
     for(const day of days){
