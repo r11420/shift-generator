@@ -785,8 +785,6 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
             <label>定休日の曜日</label>
             <div class="row" id="closedWeekdays"></div>
             <div class="subtleHr"></div>
-            <div class="ruleHintCard"><b>週の出勤可能日数について</b><div class="small">スタッフごとの「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間でカウントします。人数や上限の変更は「スタッフ」画面の各スタッフ設定で行えます。</div></div>
-            <div class="subtleHr"></div>
             <h3>全体の最低人数</h3>
             <div class="small">部署をまたいで、店舗全体として最低限ほしい早番・遅番の人数です。全体シフトを成立させるための共通条件で、部署別の必要人数とは別に判定します。</div>
             <label>平日</label>
@@ -2538,7 +2536,8 @@ function renderStaffList(){
             <label class="badge"><input class="stUseWeeklyLimit" type="checkbox" ${s.useWeeklyLimit!==false?'checked':''}>週の出勤可能日数を考慮</label>
             <div><label>週の出勤可能日数</label><input class="stWeeklyAvailableDays" id="stWeeklyAvailableDays_${escAttr(s.id)}" type="text" inputmode="numeric" min="0" max="7" value="${s.weeklyAvailableDays ?? 5}"></div>
           </div>
-          <div class="small">「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。両方チェックで、曜日公休と週の出勤可能日数の両方を考慮します。</div>
+          <div class="ruleHintCard"><b>週の出勤可能日数</b><div class="small"><b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。スタッフごとに設定できます。この日数を超えると、下書きチェックや集計・警告に表示されます。</div></div>
+          <div class="small">「固定公休を考慮」「週の出勤可能日数を考慮」の両方をチェックすると、曜日公休と週の出勤可能日数の両方を考慮します。</div>
         </div>
         <label>入れるシフト</label>
         ${shiftCheckboxes(Array.isArray(s.canShifts)?s.canShifts:SHIFT_CODES)}
@@ -2892,7 +2891,7 @@ function renderStaffAddForm(){
         <label class="badge"><input class="stUseWeeklyLimit" type="checkbox" checked>週の出勤可能日数を考慮</label>
         <div><label>週の出勤可能日数</label><input class="stWeeklyAvailableDays" type="text" inputmode="numeric" min="0" max="7" value="5"></div>
       </div>
-      <div class="small">「週の出勤可能日数」は<b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。</div>
+      <div class="ruleHintCard"><b>週の出勤可能日数</b><div class="small"><b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。スタッフごとに設定できます。この日数を超えると、下書きチェックや集計・警告に表示されます。</div></div>
     </div>
     <label>入れるシフト</label>${shiftCheckboxes([])}
     <label>固定公休日（曜日・祝日）</label>${weekdayCheckboxes([], false)}
