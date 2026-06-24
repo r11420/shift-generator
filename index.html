@@ -152,7 +152,16 @@ mark.searchHit{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px;
 .shiftCodeBadge span{display:flex;flex-direction:column;gap:1px;line-height:1.15}
 .shiftCodeBadge b{font-size:15px}
 .shiftCodeBadge small{font-size:11px;color:var(--muted);font-weight:700}
-.shiftDefEditor{margin-top:10px}.shiftDefTable{min-width:820px}.shiftDefTable input,.shiftDefTable select{padding:6px 7px;border-radius:9px}.shiftDefActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shiftDefNote{font-size:11px;color:var(--muted)}.nowrapCell{white-space:nowrap}.printOnly{display:none}.outputNoWrap{white-space:nowrap}.legendCompactTable{min-width:720px}.legendCompactTable th,.legendCompactTable td{font-size:12px;text-align:center;white-space:nowrap}.shiftUseChecks{display:flex;gap:8px;justify-content:center;align-items:center}.shiftUseChecks label{margin:0;font-size:12px;font-weight:800}.shiftUseChecks input{width:auto;margin-right:3px}
+.shiftDefEditor{margin-top:10px}.shiftDefTable{min-width:880px}.shiftDefTable input,.shiftDefTable select{padding:6px 7px;border-radius:9px}.shiftDefActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shiftDefNote{font-size:11px;color:var(--muted);line-height:1.5}
+/* シフト区分の時間ステッパー（出勤・退勤を時/分の±で設定。手入力なし＝表記ゆれが起きない） */
+.sdTimeStepper{display:flex;flex-direction:column;gap:3px}
+.timeStepRow{display:flex;align-items:center;gap:3px}
+.timeStepRow .tsLabel{font-size:11px;font-weight:800;color:var(--ink2);width:30px;flex:0 0 auto}
+.timeStepRow .tsColon{font-weight:900;padding:0 1px}
+.tStepper{display:inline-flex;align-items:center;gap:2px;flex:0 0 auto;white-space:nowrap;flex-wrap:nowrap}
+.stepBtn{width:24px;height:26px;min-width:24px;padding:0;border:1px solid var(--ln);background:#fff;border-radius:7px;font-weight:900;font-size:14px;color:var(--accent2);cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.stepBtn:hover{background:var(--sgs);border-color:var(--sgl)}.stepBtn:active{transform:translateY(1px)}
+.stepVal{display:inline-block;min-width:23px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}.nowrapCell{white-space:nowrap}.printOnly{display:none}.outputNoWrap{white-space:nowrap}.legendCompactTable{min-width:720px}.legendCompactTable th,.legendCompactTable td{font-size:12px;text-align:center;white-space:nowrap}.shiftUseChecks{display:flex;gap:8px;justify-content:center;align-items:center}.shiftUseChecks label{margin:0;font-size:12px;font-weight:800}.shiftUseChecks input{width:auto;margin-right:3px}
 .shiftDefTable .sdMcToggle{display:inline-flex;align-items:center;gap:5px;margin:0;font-size:12px;font-weight:800;color:var(--accent2);white-space:nowrap;cursor:pointer}
 .shiftDefTable .sdMcToggle input{width:auto;margin:0}
 .shiftDefTable .sdMcDisabled{color:var(--muted);cursor:not-allowed}
@@ -1066,14 +1075,42 @@ let SHIFT_USE_HOL = {};
 let SHIFT_MORNINGCLEAN = {}; // 区分コード→朝そうじタグを付けるか（早番帯の区分のみ有効）
 let SHIFT_LABEL = {};
 let SHIFT_FULL = {};
-function timeToMinutes(t){ const m=String(t||'').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1])*60+(+m[2]) : null; }
-function parseShiftTimeRange(time){ const m=String(time||'').match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/); return m ? {start:timeToMinutes(m[1]), end:timeToMinutes(m[2])} : {start:null,end:null}; }
-function autoGroupByTime(time, holiday=false){
-  const {start,end}=parseShiftTimeRange(time);
-  if(start===null || end===null) return 'M';
+// 時刻文字列の表記ゆれを吸収して分（0:00からの通算分）に変換する。
+// 全角数字・全角コロン(：)・全角スペース・「時」「分」表記・前後空白に対応。24時超（例：26:00）も扱う。
+function _toHalfWidthTime(s){ return String(s==null?'':s).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[：]/g,':').replace(/[　]/g,' '); }
+function parseTimeToMinutes(token){
+  if(token==null) return null;
+  const s=_toHalfWidthTime(token).trim();
+  if(!s) return null;
+  let m=s.match(/(\d{1,2})\s*時\s*(\d{1,2})?\s*分?/);            // 9時 / 9時30分
+  if(m){ return (+m[1])*60 + (m[2]!=null?+m[2]:0); }
+  m=s.match(/(\d{1,2})\s*:\s*(\d{1,2})/);                         // 9:00 / 09:5
+  if(m){ return (+m[1])*60 + (+m[2]); }
+  m=s.match(/^(\d{1,2})$/);                                       // 9 → 9:00
+  if(m){ return (+m[1])*60; }
+  return null;
+}
+function timeToMinutes(t){ return parseTimeToMinutes(t); } // 後方互換のエイリアス
+// 「出勤-退勤」を表す文字列を、区切りの表記ゆれ（-／－／ー／〜／～／~／―／–／—／to／から）に依存せず解析する。
+function parseShiftTimeRange(time){
+  const s=_toHalfWidthTime(time);
+  const parts=s.split(/\s*(?:[-－ー〜～~―–—]|to|から)\s*/i).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>=2){ return {start:parseTimeToMinutes(parts[0]), end:parseTimeToMinutes(parts[parts.length-1])}; }
+  const m=s.match(/(\d{1,2}\s*:\s*\d{1,2})\D+(\d{1,2}\s*:\s*\d{1,2})/);
+  if(m) return {start:parseTimeToMinutes(m[1]), end:parseTimeToMinutes(m[2])};
+  return {start:null, end:null};
+}
+// 分（通算分）→「H:MM」（時は0埋めなし＝既存表示形式に合わせる）。
+function fmtTimeHM(min){ const h=Math.floor(min/60), m=((min%60)+60)%60; return `${h}:${String(m).padStart(2,'0')}`; }
+// 出勤・退勤（通算分）から正規化した time 文字列「H:MM-H:MM」を生成する。
+function canonicalShiftTime(startMin, endMin){ return `${fmtTimeHM(startMin)}-${fmtTimeHM(endMin)}`; }
+// 早中遅の自動判定は、見た目の文字列ではなく正規化済みの分で行う（既存ルールを維持）。
+function autoGroupByMinutes(start, end, holiday=false){
+  if(start==null || end==null) return 'M';
   if(holiday){ if(start <= 9*60) return 'E'; if(end >= 20*60) return 'L'; return 'M'; }
   if(start <= 10*60) return 'E'; if(end >= 20*60) return 'L'; return 'M';
 }
+function autoGroupByTime(time, holiday=false){ const {start,end}=parseShiftTimeRange(time); return autoGroupByMinutes(start, end, holiday); }
 function normalizeShiftDefs(defs){
   const base = Array.isArray(defs) && defs.length ? defs : defaultShiftDefs();
   const seen = new Set();
@@ -1081,7 +1118,13 @@ function normalizeShiftDefs(defs){
   for(const d of base){
     const code = String(d.code||'').trim().toUpperCase();
     if(!code || code==='OFF' || code===PAID_LEAVE || code==='有休' || code==='__OTHER__' || code.startsWith('OTHER:') || seen.has(code)) continue;
-    const time = String(d.time||'').trim() || '時間未設定';
+    // 時間は必ず正規化（H:MM-H:MM）して保持。既存の表記ゆれ（〜／～／：／全角など）も解析する。
+    // 解析できない場合は画面エラーにせず、出勤9:00／退勤18:00へ安全に補正し console.warn で知らせる。
+    const rawTime = String(d.time||'').trim();
+    const _tr = parseShiftTimeRange(rawTime);
+    let time;
+    if(_tr.start!=null && _tr.end!=null){ time = canonicalShiftTime(_tr.start, _tr.end); }
+    else { if(rawTime && rawTime!=='時間未設定') console.warn('シフト区分の時間を解析できませんでした。出勤9:00／退勤18:00に補正します：', code, JSON.stringify(rawTime)); time = '9:00-18:00'; }
     const weekGroup = ['E','M','L'].includes(d.weekGroup) ? d.weekGroup : autoGroupByTime(time,false);
     const holGroup = ['E','M','L'].includes(d.holGroup) ? d.holGroup : autoGroupByTime(time,true);
     const useWeek = d.useWeek === undefined ? true : !!d.useWeek;
@@ -2047,11 +2090,50 @@ function renderShiftDefEditor(){
   // 開閉は「シフト区分を編集」サブアコーディオン（.ruleSub data-sub=sub_shiftDefs）が担うため、
   // ここでは内側のトグルを持たず、表を常に描画する（区分の色アコーディオンと見た目を揃える）。
   let html='<div class="shiftDefEditor">';
-  html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button><button type="button" class="btn2" onclick="autoAssignAllShiftGroups()">全区分を時間から自動割当</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>朝そうじ</th><th>操作</th></tr></thead><tbody>';
-  html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}"><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td><input class="sdTime" value="${esc(d.time)}" placeholder="例：9:00-18:00"></td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td>${shiftDefMorningCleanCellHtml(d)}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
-  html += '</tbody></table></div><div class="shiftDefNote">既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
+  html += '<div class="shiftDefActions"><button type="button" class="btn2" onclick="addShiftDefRow()">＋ シフト区分追加</button></div><div class="tableWrap"><table class="shiftDefTable"><thead><tr><th>区分名</th><th>時間（出勤・退勤）</th><th>使用日</th><th>平日 割当</th><th>土日祝 割当</th><th>朝そうじ</th><th>操作</th></tr></thead><tbody>';
+  html += defs.map((d,i)=>`<tr class="shiftDefRow" data-index="${i}" ${shiftDefRowTimeData(d)}><td><input class="sdCode" value="${esc(d.code)}" maxlength="8"></td><td>${shiftTimeStepperHtml(d)}</td><td><div class="shiftUseChecks"><label><input class="sdUseWeek" type="checkbox" ${d.useWeek!==false?'checked':''}>平日</label><label><input class="sdUseHol" type="checkbox" ${d.useHol!==false?'checked':''}>土日祝</label></div></td><td>${groupSelectHtml(d.weekGroup,'sdWeekGroup')}</td><td>${groupSelectHtml(d.holGroup,'sdHolGroup')}</td><td>${shiftDefMorningCleanCellHtml(d)}</td><td><button type="button" class="btn2" onclick="moveShiftDefRow(${i},-1)" ${i===0?'disabled':''} title="上へ">↑</button> <button type="button" class="btn2" onclick="moveShiftDefRow(${i},1)" ${i===defs.length-1?'disabled':''} title="下へ">↓</button> <button type="button" class="btn2" onclick="autoAssignShiftRow(this)">時間から自動割当</button> <button type="button" class="btnDanger" onclick="deleteShiftDefRow(${i})">削除</button></td></tr>`).join('');
+  html += '</tbody></table></div><div class="shiftDefNote">時間は出勤・退勤それぞれの「−／＋」で設定します（時は1時間、分は5分きざみ。0:00〜26:00まで＝翌2:00対応）。手入力は不要です。「時間から自動割当」で、設定した時間から平日・土日祝の早中遅を判定します。既定割当：平日＝開始10:00以前は早、終了20:00以降は遅、それ以外は中。土日祝＝開始9:00以前は早、終了20:00以降は遅、それ以外は中。「使用日」のチェックがない日は自動生成候補に入りません。</div>';
   html += '</div>';
   box.innerHTML=html;
+}
+// ===== シフト区分の時間ステッパー（手入力を廃し、出勤・退勤を時/分の±で設定）=====
+const SHIFT_TIME_MIN=0, SHIFT_TIME_MAX=26*60; // 0:00〜26:00（翌2:00まで対応）
+function _clampShiftTotal(t){ return Math.max(SHIFT_TIME_MIN, Math.min(SHIFT_TIME_MAX, t)); }
+// d.time（正規化済み）から 出勤/退勤の時・分を取り出す。万一解析できなければ 9:00/18:00。
+function shiftDefTimeParts(d){
+  const tr=parseShiftTimeRange(d&&d.time);
+  let s=tr.start!=null?tr.start:9*60, e=tr.end!=null?tr.end:18*60;
+  s=_clampShiftTotal(s); e=_clampShiftTotal(e);
+  return {sh:Math.floor(s/60), sm:s%60, eh:Math.floor(e/60), em:e%60};
+}
+// 行に現在の時・分を data 属性として持たせる（保存・自動割当はここを参照する）。
+function shiftDefRowTimeData(d){ const p=shiftDefTimeParts(d); return `data-sh="${p.sh}" data-sm="${p.sm}" data-eh="${p.eh}" data-em="${p.em}"`; }
+function shiftTimeStepperHtml(d){
+  const p=shiftDefTimeParts(d); const pad=n=>String(n).padStart(2,'0');
+  const grp=(part,val,cls,label)=>`<span class="tStepper" role="group" aria-label="${label}"><button type="button" class="stepBtn" data-step="${part}" data-dir="-1" onclick="stepShiftTime(this)" aria-label="${label}を減らす" title="−">−</button><span class="stepVal ${cls}">${pad(val)}</span><button type="button" class="stepBtn" data-step="${part}" data-dir="1" onclick="stepShiftTime(this)" aria-label="${label}を増やす" title="＋">＋</button></span>`;
+  return `<div class="sdTimeStepper">`
+    + `<div class="timeStepRow"><span class="tsLabel">出勤</span>${grp('sh',p.sh,'sdStartH','出勤の時')}<span class="tsColon">:</span>${grp('sm',p.sm,'sdStartM','出勤の分')}</div>`
+    + `<div class="timeStepRow"><span class="tsLabel">退勤</span>${grp('eh',p.eh,'sdEndH','退勤の時')}<span class="tsColon">:</span>${grp('em',p.em,'sdEndM','退勤の分')}</div>`
+    + `</div>`;
+}
+function updateShiftStepSpans(row){
+  const pad=n=>String(+n||0).padStart(2,'0');
+  const set=(sel,v)=>{ const el=row.querySelector(sel); if(el) el.textContent=pad(v); };
+  set('.sdStartH',row.dataset.sh); set('.sdStartM',row.dataset.sm); set('.sdEndH',row.dataset.eh); set('.sdEndM',row.dataset.em);
+}
+function stepShiftTime(btn){
+  const row=btn.closest('.shiftDefRow'); if(!row) return;
+  const which=btn.dataset.step, dir=+btn.dataset.dir;
+  let sh=+row.dataset.sh||0, sm=+row.dataset.sm||0, eh=+row.dataset.eh||0, em=+row.dataset.em||0;
+  const clampH=h=>Math.max(0,Math.min(26,h));
+  if(which==='sh'){ sh=clampH(sh+dir); if(sh*60+sm>SHIFT_TIME_MAX) sm=0; }          // 時：1時間きざみ（分は維持）
+  else if(which==='eh'){ eh=clampH(eh+dir); if(eh*60+em>SHIFT_TIME_MAX) em=0; }
+  else if(which==='sm'){ const t=_clampShiftTotal(sh*60+sm+dir*5); sh=Math.floor(t/60); sm=t%60; } // 分：5分きざみ（55超で時+1・00割れで時-1）
+  else if(which==='em'){ const t=_clampShiftTotal(eh*60+em+dir*5); eh=Math.floor(t/60); em=t%60; }
+  row.dataset.sh=sh; row.dataset.sm=sm; row.dataset.eh=eh; row.dataset.em=em;
+  updateShiftStepSpans(row);
+  // 表は作り直さず（フォーカス維持・軽量）、状態へ正規化保存し、凡例など他表示だけ更新する。
+  pullShiftDefsFromInputs(); persist(); preserveScroll(()=>renderAll());
 }
 // 区分の色（区分デザイン設定）は「区分の色」カテゴリ内に常時表示する。
 // 入力・既定リセット（per-row）は bindShiftAppearanceDelegation の委譲で処理される。
@@ -2123,7 +2205,9 @@ function pullShiftDefsFromInputs(){
   state.shiftDefs = normalizeShiftDefs(rows.map(row=>{
     const rawCode = row.querySelector('.sdCode')?.value || '';
     const code = rawCode.trim().toUpperCase();
-    const time = row.querySelector('.sdTime')?.value || '';
+    // 時間は手入力欄ではなくステッパーの data 属性（時・分）から正規化して組み立てる。
+    const sh=+row.dataset.sh||0, sm=+row.dataset.sm||0, eh=+row.dataset.eh||0, em=+row.dataset.em||0;
+    const time = canonicalShiftTime(sh*60+sm, eh*60+em);
     const weekGroup = row.querySelector('.sdWeekGroup')?.value || 'M';
     const holGroup = row.querySelector('.sdHolGroup')?.value || 'M';
     const useWeek = !!row.querySelector('.sdUseWeek')?.checked;
@@ -2140,11 +2224,10 @@ function pullShiftDefsFromInputs(){
   }));
   rebuildShiftRuntime();
 }
-async function addShiftDefRow(){ pullInputs(); const code=await showInputModal({title:'シフト区分を追加', message:'追加するシフト区分名を入力してください。', placeholder:'例：R', confirmText:'次へ', cancelText:'キャンセル', validate:v=>state.shiftDefs.some(d=>d.code===v.trim().toUpperCase())?'同じ区分名がすでにあります。':null}); if(!code) return; const time=(await showInputModal({title:'時間を入力', message:`「${code.trim().toUpperCase()}」の時間を入力してください。`, placeholder:'例：10:00-18:00', confirmText:'追加する', cancelText:'入力せず追加'})) || '時間未設定'; state.shiftDefs.push({code:code.trim().toUpperCase(), time:time.trim(), weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('シフト区分を追加しました。','success'); }
+async function addShiftDefRow(){ pullInputs(); const code=await showInputModal({title:'シフト区分を追加', message:'追加するシフト区分名を入力してください。時間（出勤・退勤）は追加後に「−／＋」ボタンで設定できます。', placeholder:'例：R', confirmText:'追加する', cancelText:'キャンセル', validate:v=>state.shiftDefs.some(d=>d.code===v.trim().toUpperCase())?'同じ区分名がすでにあります。':null}); if(!code) return; const time='9:00-18:00'; state.shiftDefs.push({code:code.trim().toUpperCase(), time, weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('シフト区分を追加しました。時間は出勤・退勤の「−／＋」で設定してください。','success'); }
 async function deleteShiftDefRow(index){ pullInputs(); const d=state.shiftDefs[index]; if(!d) return; if(!await showConfirmModal({title:'シフト区分を削除しますか？', message:`シフト区分 ${d.code} を削除します。\n既存シフトで使っている場合、表示は残ることがありますが候補からは外れます。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; state.shiftDefs.splice(index,1); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function moveShiftDefRow(index, dir){ pullInputs(); const j=index+dir; if(j<0 || j>=state.shiftDefs.length) return; const d=state.shiftDefs[index]; state.shiftDefs[index]=state.shiftDefs[j]; state.shiftDefs[j]=d; normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
-function autoAssignShiftRow(btn){ preserveScroll(()=>{ const row=btn.closest('.shiftDefRow'); if(!row) return; const time=row.querySelector('.sdTime')?.value||''; row.querySelector('.sdWeekGroup').value=autoGroupByTime(time,false); row.querySelector('.sdHolGroup').value=autoGroupByTime(time,true); save(); renderInputs(); renderAll(); }); }
-function autoAssignAllShiftGroups(){ preserveScroll(()=>{ pullInputs(); state.shiftDefs=state.shiftDefs.map(d=>{ const wg=autoGroupByTime(d.time,false), hg=autoGroupByTime(d.time,true); const hadEarly=(d.weekGroup==='E'||d.holGroup==='E'), hasEarly=(wg==='E'||hg==='E'); const morningClean = !hasEarly ? false : (!hadEarly ? true : d.morningClean!==false); return {...d, weekGroup:wg, holGroup:hg, morningClean}; }); normalizeState(); persist(); renderInputs(); renderAll(); }); }
+function autoAssignShiftRow(btn){ preserveScroll(()=>{ const row=btn.closest('.shiftDefRow'); if(!row) return; const sMin=(+row.dataset.sh||0)*60+(+row.dataset.sm||0), eMin=(+row.dataset.eh||0)*60+(+row.dataset.em||0); row.querySelector('.sdWeekGroup').value=autoGroupByMinutes(sMin,eMin,false); row.querySelector('.sdHolGroup').value=autoGroupByMinutes(sMin,eMin,true); save(); renderInputs(); renderAll(); }); }
 function renderStaffDeptTabs(){
   const box = document.getElementById('staffDeptTabs');
   if(!box) return;
