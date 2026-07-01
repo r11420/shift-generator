@@ -264,6 +264,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .periodRange{font-size:11.5px;color:var(--muted);font-weight:600}
 .errorCell{background:#fcefee!important;box-shadow:inset 0 0 0 2px #dcaaa6!important}.errorCell .shiftView,.errorCell select{border-color:#c98785!important}
 .allowedErrorCell{background:#edf8ed!important;box-shadow:inset 0 0 0 2px #72b678!important}.allowedErrorCell .shiftView,.allowedErrorCell select{border-color:#72b678!important}
+/* 全体シフト表：赤枠の代わりに出す、やわらかい案内（ハニーゴールド系・角丸・印刷には出さない） */
+.calErrHint{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--gdb);border:1px solid var(--gdl);border-left:5px solid var(--gd);border-radius:12px;padding:9px 13px;margin:0 0 10px;font-size:12.5px;font-weight:700;color:#6a5320}
+.calErrHint b{color:#5a4616}.calErrHint .btnOutlineSmall{margin-left:auto;flex:0 0 auto}
 .allowedErrorText{color:#237a3a!important}.allowErrorLine{display:flex;gap:8px;align-items:flex-start;margin:6px 0}.allowErrorLine input{width:auto;margin-top:5px}.allowErrorLine .msg{flex:1}.allowErrorLine .msg.allowedErrorText{font-weight:700}.draftPager{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}.draftPager button{width:auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:800}.draftPager button.active{background:var(--accent);color:#fff;border-color:var(--accent)}.draftPager button:disabled{opacity:.45}.draftWarnHeader{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.draftWarnHeader .small{font-weight:500}
 .bulkAssignBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0 14px}.bulkAssignBox h3{margin:0 0 8px}.bulkWeekdayActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bulkWeekdays{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.bulkWeekdays label{margin:0;text-align:center}.bulkWeekdays input{width:auto;margin-right:3px}.otherShiftInput{margin-top:6px}
 
@@ -752,6 +755,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <span class="small" style="align-self:center">行＝スタッフ、列＝日付。色は「基本ルール＞シフト区分＞区分デザイン設定」で変更できます。全体表で編集した内容は同じデータとして部署別シフトにも反映されます。</span>
       </div>
       <div id="messages"></div>
+      <div id="calendarErrorHint" class="noPrint"></div>
       <div id="viewCalendar"><div class="tableWrap" id="calendarTableWrap"><table id="calendarTable"></table></div><div id="calendarShiftLegend"></div></div>
       <div id="calendarHScroll" class="hScrollProxy noPrint" aria-hidden="true"><div id="calendarHScrollInner"></div></div>
     </section>
@@ -5542,20 +5546,24 @@ function renderCalendar(){
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const sortedStaff=orderedStaff();
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
+  let hasCellIssue=false; // 全体表にセル赤枠は出さないが、未解消の個人シフトエラーの有無だけ拾い、上部の案内に使う
   for(const st of sortedStaff){
     const c=counts[st.name]||{total:0,E:0,M:0,L:0,hol:0};
     const lockedLabel=staffLockedLabel(st);
     const deptPill = st.dept ? `<span class="pill pDept">${esc(deptLabel(st.dept))}</span>` : `<span class="pill pDeptUnset" title="部署が未設定です。スタッフ画面で所属部署を設定してください。">部署未設定</span>`;
     html+=`<tr${st.dept?'':' class="unsetRow"'}><td class="deptCol sticky1">${deptPill}</td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead${work?' errorCell':''}" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています':'臨時休業（部署別で空欄・休・有休に変更可）'}">${shiftCellInner(showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`, '')}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています（修正は部署別シフト作成で）':'臨時休業（部署別で空欄・休・有休に変更可）'}">${shiftCellInner(showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`, '')}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
       const staffEnc=encodeURIComponent(st.name);
       const deptMini=(isWorkingShift(v)&&adep!==st.dept)?`<div class="miniBadge">${esc(adep)}</div>`:'';
       const lockMark='';
-      const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls=err?(errInfo.allowed?'':'errorCell'):''; /* 全体シフト表では許容済みの緑表示は出さない */
+      // 全体シフト表ではセル単位の赤枠（個人シフトエラー）を出さない。個人エラーは部署別シフト作成で確認・修正する。
+      // err は説明用ツールチップにのみ使用し、errorCell クラス（赤枠・緑枠）は付与しない（印刷/PDF・Excelにも赤枠を出さないため）。
+      const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls='';
+      if(err && !errInfo.allowed) hasCellIssue=true;
       const calNotes=`${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}`;
       if(calendarEditMode && !confirmed){
         html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>`, calNotes)}</td>`;
@@ -5569,6 +5577,11 @@ function renderCalendar(){
   html += renderMorningCleanRow(days, displaySchedule, sortedStaff);
   html += renderNeedRows(days, displaySchedule, displayAssignDept);
   html+='</tbody>'; tbl.innerHTML=html; const calLegend=document.getElementById('calendarShiftLegend'); if(calLegend) calLegend.innerHTML=shiftLegendHtml();
+  // 全体シフト表はセル赤枠を出さない代わりに、未解消の個人シフトエラーがあるときだけ上部にやわらかく案内する（印刷には出さない）。
+  const calHint=document.getElementById('calendarErrorHint');
+  if(calHint) calHint.innerHTML = hasCellIssue
+    ? `<div class="calErrHint"><span>シフト区分のエラーは全体シフト表には表示していません。詳細の確認・修正は<b>「部署別シフト作成」</b>または<b>「集計・警告」</b>で行えます。</span><button type="button" class="btnOutlineSmall" onclick="showMenuPanel('stats')">集計・警告を開く</button></div>`
+    : '';
   // ファイル出力（CSV/Excel/印刷PDF）：出力できるデータが無いときは非活性＋理由表示
   const calAvail=getCalendarOutputAvailability();
   const calExp=document.getElementById('calendarExportSlot');
