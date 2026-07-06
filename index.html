@@ -1916,14 +1916,29 @@ function pullInputs(){
     const updatedById = new Map(updatedVisible.map(s=>[s.id,s]));
     const visibleIds = new Set(visibleStaffEls.map(el=>el.dataset.staffId));
     const nextStaff = [];
+    // 改名の検知と保護：氏名はschedule等のデータキーのため、
+    //  ・氏名を空にされた行は旧状態を維持（黙ってスタッフ消滅・データ孤児化を防ぐ）
+    //  ・他スタッフと同名への変更は旧名へ戻す（同名はキー衝突するため不可）
+    //  ・正当な改名はキー移行（renameStaffData）で全データを追従させる
+    const renames=[]; const revertedDup=[];
     for(const old of (state.staff||[])){
       if(visibleIds.has(old.id)){
         const upd = updatedById.get(old.id);
-        if(upd) nextStaff.push(upd);
+        if(!upd){ continue; }
+        if(old.name && !upd.name){ nextStaff.push(old); continue; }
+        if(old.name && upd.name && upd.name!==old.name){
+          const dup = (state.staff||[]).some(s=>s.id!==old.id && s.name===upd.name) || updatedVisible.some(u=>u.id!==old.id && u.name===upd.name);
+          if(dup){ Object.assign(upd, {name:old.name, kana:old.kana, sei:old.sei, mei:old.mei, seiKana:old.seiKana, meiKana:old.meiKana}); revertedDup.push(old.name); }
+          else renames.push([old.name, upd.name]);
+        }
+        nextStaff.push(upd);
       }else nextStaff.push(old);
     }
     const seen = new Set();
     state.staff = nextStaff.filter(st=>{ if(!st.name) return false; if(seen.has(st.id)) return false; seen.add(st.id); return true; });
+    for(const [o,n] of renames) renameStaffData(o,n);
+    if(renames.length) toast('氏名の変更に合わせて、作成済みシフト・希望・許容の設定を新しい氏名へ引き継ぎました。','ok');
+    if(revertedDup.length) showToast(`同じ氏名のスタッフがいるため氏名を変更できません（${revertedDup[0]}）。識別できる表記にしてください。`,'warn');
   }
   // 希望休は追加・保存・削除ボタンでのみ更新する。
   // 画面遷移や自動生成時のpullInputsで再構築すると、未編集中の希望休が消えるためここでは触らない。
@@ -2608,7 +2623,7 @@ function renderStaffList(){
       </div>
       <div class="staffDetails">
         <div class="staffMeta"><label class="small">よみがな（五十音順の並び替え用・漢字入力時は自動補完）</label><div class="grid"><input class="stSeiKana" id="stSeiKana_${escAttr(s.id)}" data-kana-auto="${ekn.sei?'0':'1'}" value="${esc(ekn.sei)}" placeholder="姓のよみ 例：やまだ"><input class="stMeiKana" id="stMeiKana_${escAttr(s.id)}" data-kana-auto="${ekn.mei?'0':'1'}" value="${esc(ekn.mei)}" placeholder="名のよみ 例：たろう"></div></div>
-        <div class="staffMeta"><label class="small" for="stEmpNo_${escAttr(s.id)}">社員番号（5桁・帯で社員/パート自動）${isValidEmpNo(s.empNo)?'':' <span class="reqMark">未設定</span>'}</label><input class="stEmpNo" id="stEmpNo_${escAttr(s.id)}" inputmode="numeric" maxlength="5" value="${esc(s.empNo||'')}" placeholder="例：10001" oninput="onEmpNoInput(this)"></div>
+        <div class="staffMeta"><label class="small" for="stEmpNo_${escAttr(s.id)}">社員番号（5桁・帯で社員/パート自動）${isValidEmpNo(s.empNo)?(state.staff.some(o=>o.id!==s.id && String(o.empNo||'').trim()===String(s.empNo).trim())?' <span class="reqMark">他のスタッフと重複</span>':''):' <span class="reqMark">未設定</span>'}</label><input class="stEmpNo" id="stEmpNo_${escAttr(s.id)}" inputmode="numeric" maxlength="5" value="${esc(s.empNo||'')}" placeholder="例：10001" oninput="onEmpNoInput(this)"></div>
         <label>タグ（最大${MAX_STAFF_TAGS}個）</label>
         ${tagSelectsHtml(s.tags||[])}
         <div class="staffMeta"><input class="stSkill" id="stSkill_${escAttr(s.id)}" value="${esc(s.skill||'')}" placeholder="メモ 任意：猫対応可 / 閉店作業可 / 新人など"></div>
@@ -3061,8 +3076,11 @@ async function confirmAddStaffFromForm(){
   const meiKana=(document.getElementById('addStaffMeiKana')?.value||'').trim();
   const kana=[seiKana, meiKana].filter(Boolean).join(' ');
   if(!kana){ showToast('よみがなを入力してください。よみがなは必須です（五十音順の並び替えに使用します）。','warn'); document.getElementById('addStaffSeiKana')?.focus(); return; }
+  // 氏名はschedule等のデータキーのため、同姓同名（同一表記）は登録不可（S03：キー衝突でシフトが混ざる）
+  if(state.staff.some(s=>s.name===name)){ showToast('同じ氏名のスタッフがすでに登録されています。識別できる表記（例：名の後ろに区別を追加）にしてください。','warn'); document.getElementById('addStaffSei')?.focus(); return; }
   const empNo=(document.getElementById('addStaffEmpNo')?.value||'').trim();
   if(!isValidEmpNo(empNo)){ showToast('社員番号を5桁の数字で入力してください（必須）。','warn'); document.getElementById('addStaffEmpNo')?.focus(); return; }
+  if(state.staff.some(s=>String(s.empNo||'').trim()===empNo)){ showToast('この社員番号は他のスタッフに使われています。重複しない番号を入力してください。','warn'); document.getElementById('addStaffEmpNo')?.focus(); return; }
   const formEl=document.getElementById('staffAddForm');
   const dept = activeStaffDept==='全体' ? (document.getElementById('addStaffDept')?.value ?? '') : activeStaffDept;
   const tags=readTagSelects(formEl);
@@ -3080,12 +3098,47 @@ async function confirmAddStaffFromForm(){
   showToast('スタッフを追加しました。','success');
 }
 function addStaff(){ showStaffAddForm(); }
+// ===== スタッフ氏名キーのデータ追従 =====
+// schedule/assignDept/locks/希望/許容/朝そうじ上書きは「氏名」をキーに保持しているため、
+// 改名時は移行・削除時は掃除をしないと、旧名の孤児データが残って集計・人数充足を汚染する。
+function _eachNameKeyedStore(fn){ for(const store of [schedule, assignDept, locks]) fn(store); }
+function staffDataCounts(name){
+  let cells=0; for(const k in (schedule||{})){ const v=schedule[k] && schedule[k][name]; if(v!==undefined && v!=='') cells++; }
+  let prefs=0; for(const k in (state.preferencesByPeriod||{})){ prefs += (state.preferencesByPeriod[k]||[]).filter(p=>p && p.staff===name).length; }
+  return {cells, prefs};
+}
+function renameStaffData(oldName, newName){
+  _eachNameKeyedStore(store=>{ for(const k in store){ const row=store[k]; if(row && Object.prototype.hasOwnProperty.call(row, oldName)){ row[newName]=row[oldName]; delete row[oldName]; } } });
+  for(const k in (state.preferencesByPeriod||{})){ for(const p of (state.preferencesByPeriod[k]||[])){ if(p && p.staff===oldName) p.staff=newName; } }
+  for(const pk in (state.morningCleanOverrideByPeriod||{})){ const store=state.morningCleanOverrideByPeriod[pk]||{}; for(const k of Object.keys(store)){ const i=k.indexOf('|'); if(i>=0 && k.slice(i+1)===oldName){ store[k.slice(0,i+1)+newName]=store[k]; delete store[k]; } } }
+  for(const k of Object.keys(allowedErrors||{})){ const parts=k.split('|'); if(parts[0]==='cell' && parts[3]===oldName){ parts[3]=newName; allowedErrors[parts.join('|')]=allowedErrors[k]; delete allowedErrors[k]; } }
+  for(const d in (bulkAssignState||{})){ if(bulkAssignState[d] && bulkAssignState[d].staff===oldName) bulkAssignState[d].staff=newName; }
+  if(activePrefStaff===oldName) activePrefStaff=newName;
+}
+function purgeStaffData(name){
+  _eachNameKeyedStore(store=>{ for(const k in store){ const row=store[k]; if(row && row[name]!==undefined) delete row[name]; } });
+  for(const k in (state.preferencesByPeriod||{})){ state.preferencesByPeriod[k]=(state.preferencesByPeriod[k]||[]).filter(p=>!p || p.staff!==name); }
+  if(Array.isArray(state.preferences)) state.preferences = state.preferences.filter(p=>!p || p.staff!==name);
+  for(const pk in (state.morningCleanOverrideByPeriod||{})){ const store=state.morningCleanOverrideByPeriod[pk]||{}; for(const k of Object.keys(store)){ const i=k.indexOf('|'); if(i>=0 && k.slice(i+1)===name) delete store[k]; } }
+  for(const k of Object.keys(allowedErrors||{})){ const parts=k.split('|'); if(parts[0]==='cell' && parts[3]===name) delete allowedErrors[k]; }
+}
+// 自動生成の適用時に、この部署に関わるスタッフの「セル単位の許容」を掃除する。
+// 盤面が変わったのに旧許容が残ると、再発した同種の違反が未確認のまま緑（許容済み）になるため。
+function clearCellAllowancesForStaff(names){
+  const set=new Set(names); const pk=periodKey(); let n=0;
+  for(const k of Object.keys(allowedErrors||{})){ const parts=k.split('|'); if(parts[0]!=='cell' || !set.has(parts[3])) continue; if(parts[1]===pk || parts[1]==='WEEK' || parts[1]==='PAIR'){ delete allowedErrors[k]; n++; } }
+  return n;
+}
 async function removeStaffById(id){
   pullInputs();
   const st = state.staff.find(s=>s.id===id);
   if(!st) return;
-  if(!await showConfirmModal({title:'スタッフを削除しますか？', message:`${st.name} をスタッフ一覧から削除します。\n作成済みシフトや希望設定にも影響する可能性があります。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。実行前にバックアップの取得をおすすめします。'})) return;
+  const stats=staffDataCounts(st.name);
+  const hasDup = state.staff.filter(s=>s.name===st.name).length>1; // 同姓同名が他に残る場合はデータ共有中のため消さない
+  const detail = hasDup ? '\n同じ氏名のスタッフが他にもいるため、シフトデータは削除しません。' : `\n作成済みシフト ${stats.cells}件・希望 ${stats.prefs}件も全締め月からあわせて削除します。`;
+  if(!await showConfirmModal({title:'スタッフを削除しますか？', message:`${st.name} をスタッフ一覧から削除します。${detail}`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。実行前にバックアップの取得をおすすめします。'})) return;
   state.staff = state.staff.filter(s=>s.id!==id);
+  if(!hasDup) purgeStaffData(st.name);
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   toast('スタッフを削除しました。');
 }
@@ -4435,6 +4488,8 @@ async function generateDeptSchedule(dept, options={}){
             staff: candidates.map(s=>s.name), prev: prevSnap, after: afterSnap, changed }
         : null;
       markDeptGenerated(dept);
+      // 盤面が変わったため、この部署に関わるスタッフの「セル単位の許容」を掃除する（旧許容の自動適用を防ぐ）
+      const clearedAllow = clearCellAllowancesForStaff(state.staff.filter(s=>staffCanDept(s, dept)).map(s=>s.name));
       preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
       const doneText = earlyStopped
         ? `${dept} の${options.variant?'別パターン':''}自動生成が完了しました（${attemptsUsed}回目でエラー0の案が見つかったため早期終了）。別案を見たい場合は「別パターン再生成」を押してください。`
@@ -4447,7 +4502,8 @@ async function generateDeptSchedule(dept, options={}){
         note.className = 'ok';
         // 「前案と比較」ボタンは上の操作列（diffBtn）に1つだけ表示する。ここでは重複ボタンを出さず、導線だけ案内する。
         const compareHint = genDiff ? '前案と見比べるときは、上の「前案と比較」を押してください。' : '';
-        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}生成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。${compareHint}`;
+        const allowHint = clearedAllow ? `以前に「許容」した ${clearedAllow}件 は、盤面が変わったためリセットしました。下書きチェックで再確認してください。` : '';
+        note.textContent = `${dept} の${options.variant?'別パターンを':'シフトを'}生成しました。下の表で内容を確認し、問題なければ「確定」を押すと全体シフト表に反映されます。${compareHint}${allowHint}`;
         progress.insertAdjacentElement('afterend', note);
       }
     }
@@ -6148,6 +6204,10 @@ function obicExportBlockReasons(){
   if(unassigned) reasons.push({text:`部署未設定のスタッフが ${unassigned}名 います。「スタッフ」画面で部署を割り当ててください。`, jump:{page:'staff',note:'部署未設定のスタッフに所属部署を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
   const missing = staff.filter(st=>!isValidEmpNo(st.empNo)).length;
   if(missing) reasons.push({text:`社員番号が未設定のスタッフが ${missing}名 います。OBICに貼り付けたとき全員の行がずれます。「スタッフ」画面で社員番号（5桁）を設定してください。`, jump:{page:'staff',note:'社員番号（5桁）を設定してください。'}, jumpLabel:'スタッフ設定を開く'});
+  // 社員番号の重複は行の対応が崩れるためブロックする（B18）
+  const byNo={}; for(const st of staff){ if(isValidEmpNo(st.empNo)){ const k=String(st.empNo).trim(); (byNo[k]=byNo[k]||[]).push(st.name); } }
+  const dups=Object.entries(byNo).filter(([,v])=>v.length>1);
+  if(dups.length) reasons.push({text:`社員番号が重複しています（${dups.map(([no,names])=>`${no}：${names.join('・')}`).join(' ／ ')}）。OBICの行対応が崩れるため修正してください。`, jump:{page:'staff',note:'重複している社員番号を修正してください。'}, jumpLabel:'スタッフ設定を開く'});
   return reasons;
 }
 // OBIC連携シート貼り付け用：日付セル（休日/空欄）だけをタブ区切りで返す（Excelのセルコピーと同形式）。
