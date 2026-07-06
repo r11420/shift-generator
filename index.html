@@ -3696,6 +3696,9 @@ async function applyBulkShiftToDept(dept){
 // 部署スコープの警告抽出（下書きチェック・確定ガード共通）
 function scopeWarnsForDept(dept, warns){
   return warns.filter(w=>{
+    // 構造化フィールドを最優先（本文の部分文字列一致は氏名の包含関係などで誤爆するため後方互換のみ：A08）
+    if(w.dept) return w.dept===dept;
+    if(w.staff){ const st=findStaff(w.staff); if(st) return staffCanDept(st, dept); }
     const t=w.text||'';
     return t.includes(` ${dept} `) || t.includes(`${dept} の`) || state.staff.some(st=>staffCanDept(st, dept) && t.includes(st.name));
   });
@@ -4788,7 +4791,13 @@ function staffCanShift(st, groupKey, dayObj=null){
   return st.canShifts.some(c=>isShiftUsableOnDay(c, dayObj) && groupOfShift(c, dayObj)===groupKey);
 }
 // 責任者（リーダー）機構は廃止しました。
-function countWorkingDaysFor(out, staffName){ let n=0; for(const dayMap of Object.values(out||{})){ const v=normalizeStoredShift(dayMap?.[staffName]); if(isWorkingShift(v)) n++; } return n; }
+function countWorkingDaysFor(out, staffName, days=null){
+  // days指定時は期間内のみカウント（未指定はout全体＝生成中の期間限定盤面向け）。
+  let n=0;
+  if(days){ for(const d of days){ const v=normalizeStoredShift(out[d.key]?.[staffName]); if(isWorkingShift(v)) n++; } return n; }
+  for(const dayMap of Object.values(out||{})){ const v=normalizeStoredShift(dayMap?.[staffName]); if(isWorkingShift(v)) n++; }
+  return n;
+}
 function canAssign(out, days, day, staffName, sh, dept, offMap, prefMap){ return !whyCannotAssign(out, days, day, staffName, sh, dept, offMap, prefMap, assignDept); }
 function whyCannotAssign(out, days, day, staffName, sh, dept, offMap=fixedWeeklyOffMap(days), prefMap=buildPreferenceMap(days), deptOut=assignDept){
   const st = findStaff(staffName);
@@ -4810,7 +4819,7 @@ function whyCannotAssign(out, days, day, staffName, sh, dept, offMap=fixedWeekly
   const lateReason = lateEarlyReasonForAssignment(out, days, day, staffName, sh);
   if(lateReason) return lateReason;
   if(wouldExceedConsecutive(out, day, staffName, sh)) return '連勤上限';
-  if(st.maxDays && countWorkingDaysFor(out, staffName) >= st.maxDays) return '勤務上限';
+  if(st.maxDays && countWorkingDaysFor(out, staffName, days) >= st.maxDays) return '勤務上限';
   return '';
 }
 function wouldExceedConsecutive(out, day, staffName, sh){
@@ -4917,7 +4926,7 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
     const ass = out[day.key]||{};
     if(day.closed){
       const dayLabel = day.closure ? '臨時休業日' : '休業日';
-      for(const [s,v] of Object.entries(ass)){ if(isWorkingShift(v)) warnings.push({level:'bad', text:`${day.key} は${dayLabel}ですが、${s} に${shiftFull(v)||shiftLabel(v)||v}が入っています。`, staff:s, date:day.key}); }
+      for(const [s,v] of Object.entries(ass)){ if(isWorkingShift(v)) warnings.push({level:'bad', text:`${day.key} は${dayLabel}ですが、${s} に${shiftFull(v)||shiftLabel(v)||v}が入っています。`, staff:s, date:day.key, allowKey:cellErrorKey(day.key, s, '休業日出勤')}); }
       continue;
     }
     for(const dept of DEPTS){
@@ -4944,15 +4953,31 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
     for(const day of days){
       const v = out[day.key]?.[s];
       if(isWorkingShift(v)) con++; else { con=0; runFromPrevPeriod=false; }
-      if(con > state.maxConsecutive) warnings.push({level:'bad', text: runFromPrevPeriod ? `${s}：前月末からの連勤が${day.key}時点で最大連勤${state.maxConsecutive}を超過` : `${s}：${day.key}時点で最大連勤${state.maxConsecutive}を超過`, staff:s, date:day.key});
-      if(state.avoidLateEarly){ const reason=lateEarlyReasonFromPrevious(out, days, day, s, groupOfShift(v, day)); if(reason) { const prevKey=fmtDate(addDays(day.date,-1)); warnings.push({level:'bad', text:`${s}：${prevKey}遅番→${day.key}早番（${reason}）`, staff:s, date:day.key}); } }
+      if(con > state.maxConsecutive) warnings.push({level:'bad', text: runFromPrevPeriod ? `${s}：前月末からの連勤が${day.key}時点で最大連勤${state.maxConsecutive}を超過` : `${s}：${day.key}時点で最大連勤${state.maxConsecutive}を超過`, staff:s, date:day.key, allowKey:cellErrorKey(day.key, s, '連勤上限')});
+      if(state.avoidLateEarly){ const reason=lateEarlyReasonFromPrevious(out, days, day, s, groupOfShift(v, day)); if(reason) { const prevKey=fmtDate(addDays(day.date,-1)); warnings.push({level:'bad', text:`${s}：${prevKey}遅番→${day.key}早番（${reason}）`, staff:s, date:day.key, allowKey:lateEarlyPairKey(prevKey, s), allowKeys:pairAllowKeyCandidates(prevKey, s)}); } }
+    }
+    // 期間末→翌締め月の境界チェック（A01）：赤セル（cellErrorInfo）と同じ判定を警告一覧にも出す。
+    if(days.length){
+      const last=days[days.length-1];
+      const lv=out[last.key]?.[s];
+      if(isWorkingShift(lv)){
+        if(state.avoidLateEarly){
+          const reasonNext=lateEarlyReasonToNext(out, days, last, s, groupOfShift(lv, last));
+          if(reasonNext) warnings.push({level:'bad', text:`${s}：${last.key}遅番→翌締め月初日の早番（${reasonNext}）`, staff:s, date:last.key, allowKey:lateEarlyPairKey(last.key, s), allowKeys:pairAllowKeyCandidates(last.key, s)});
+        }
+        const fwd=consecutiveRunLength(out, last, s, 1);
+        if(fwd>0){
+          const total=1+consecutiveRunLength(out, last, s, -1)+fwd;
+          if(total>state.maxConsecutive) warnings.push({level:'bad', text:`${s}：期間末から翌締め月にかけての連勤が最大連勤${state.maxConsecutive}を超過（${total}連勤）`, staff:s, date:last.key, allowKey:cellErrorKey(last.key, s, '連勤上限')});
+        }
+      }
     }
   }
   const offMapForValidate = fixedWeeklyOffMap(days);
   for(const st of state.staff){
     for(const day of days){
       const v=out[day.key]?.[st.name];
-      if(isWorkingShift(v) && offMapForValidate.get(st.name)?.has(day.key)) warnings.push({level:'bad', text:`固定公休違反：${day.key} ${st.name} は固定公休ですが${shiftLabel(v)}が入っています`, staff:st.name, date:day.key});
+      if(isWorkingShift(v) && offMapForValidate.get(st.name)?.has(day.key)) warnings.push({level:'bad', text:`固定公休違反：${day.key} ${st.name} は固定公休ですが${shiftLabel(v)}が入っています`, staff:st.name, date:day.key, allowKey:cellErrorKey(day.key, st.name, '公休・希望休違反')});
     }
   }
   // セル単位の構造違反も漏れなく重大エラーにする（赤セルと同じ判定を警告一覧にも出す）
@@ -4962,14 +4987,15 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
       if(!isWorkingShift(v) || isCustomShift(v) || day.closed) continue;
       const dept=deptOut[day.key]?.[st.name] || st.dept;
       const g=groupOfShift(v, day);
-      if(!staffCanDept(st, dept)) warnings.push({level:'bad', text:`${day.key} ${st.name}：対応部署外（${dept}）に割り当てられています`, staff:st.name, date:day.key, dept});
-      else if(!isShiftUsableOnDay(v, day)) warnings.push({level:'bad', text:`${day.key} ${st.name}：区分${shiftLabel(v)}は${day.holType?'土日祝':'平日'}に使用しない設定です`, staff:st.name, date:day.key, dept});
-      else if(!g || !groupEnabledForDay(day, dept, g)) warnings.push({level:'bad', text:`${day.key} ${st.name}：${dept} で使用しない帯（${groupLabel(g)||'不明'}）に入っています`, staff:st.name, date:day.key, dept});
-      else if(Array.isArray(st.canShifts) && st.canShifts.length && !st.canShifts.includes(v)) warnings.push({level:'bad', text:`${day.key} ${st.name}：「入れるシフト」に無い区分${shiftLabel(v)}が設定されています`, staff:st.name, date:day.key, dept});
+      // 1セルに複数の構造違反がある場合も全件出す（else-ifで先頭1件に打ち切らない：A05）
+      if(!staffCanDept(st, dept)) warnings.push({level:'bad', text:`${day.key} ${st.name}：対応部署外（${dept}）に割り当てられています`, staff:st.name, date:day.key, dept, allowKey:cellErrorKey(day.key, st.name, '対応部署外')});
+      if(!isShiftUsableOnDay(v, day)) warnings.push({level:'bad', text:`${day.key} ${st.name}：区分${shiftLabel(v)}は${day.holType?'土日祝':'平日'}に使用しない設定です`, staff:st.name, date:day.key, dept, allowKey:cellErrorKey(day.key, st.name, '使用日対象外')});
+      if(!g || !groupEnabledForDay(day, dept, g)) warnings.push({level:'bad', text:`${day.key} ${st.name}：${dept} で使用しない帯（${groupLabel(g)||'不明'}）に入っています`, staff:st.name, date:day.key, dept, allowKey:cellErrorKey(day.key, st.name, '帯無効')});
+      if(Array.isArray(st.canShifts) && !st.canShifts.includes(v)) warnings.push({level:'bad', text: st.canShifts.length ? `${day.key} ${st.name}：「入れるシフト」に無い区分${shiftLabel(v)}が設定されています` : `${day.key} ${st.name}：「入れるシフト」が未設定のスタッフに勤務が入っています`, staff:st.name, date:day.key, dept, allowKey:cellErrorKey(day.key, st.name, '入れるシフト外')});
     }
   }
   const countsForLimit = getCounts(out, days, deptOut);
-  for(const st of state.staff){ const c=countsForLimit[st.name]||{total:0}; if(st.minDays && c.total<st.minDays) warnings.push({level:'warn', text:`${st.name}：希望勤務日数下限 ${st.minDays}日に未達（実績${c.total}日）`, staff:st.name}); if(st.maxDays && c.total>st.maxDays) warnings.push({level:'bad', text:`${st.name}：勤務日数上限 ${st.maxDays}日を超過（実績${c.total}日）`, staff:st.name}); }
+  for(const st of state.staff){ const c=countsForLimit[st.name]||{total:0}; if(st.minDays && c.total<st.minDays) warnings.push({level:'warn', text:`${st.name}：希望勤務日数下限 ${st.minDays}日に未達（実績${c.total}日）`, staff:st.name}); if(st.maxDays && c.total>st.maxDays) warnings.push({level:'bad', text:`${st.name}：勤務日数上限 ${st.maxDays}日を超過（実績${c.total}日）`, staff:st.name, allowKey:cellErrorKey('ALL', st.name, '勤務上限')}); }
   for(const st of state.staff){
     if(st.useWeeklyLimit===false) continue;
     const limit=+(st.weeklyAvailableDays ?? 5);
@@ -4983,7 +5009,7 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
           const parts=Object.keys(info.byPeriod).sort().map(pk=>`${periodLabelShortFromKey(pk)}${info.byPeriod[pk]}日`);
           text+=`（この週は締め月をまたいでいます：${parts.join('・')}）`;
         }
-        warnings.push({level:'bad', text, staff:st.name, weekKey:wk});
+        warnings.push({level:'bad', text, staff:st.name, weekKey:wk, allowKey:weeklyAllowKey(wk, st.name), allowKeys:weeklyAllowKeyCandidates(wk, st.name)});
       }
     }
   }
@@ -4993,7 +5019,7 @@ function validate(out=schedule, days=getDays(), detailed=true, deptOut=assignDep
       const v = out[day.key]?.[p.staff] || '';
       const cond = prefConditionText(p);
       const prefShift = normalizeStoredShift(p.shift);
-      if(isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'bad', text:`希望違反：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`, staff:p.staff, date:day.key});
+      if(isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'bad', text:`希望違反：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`, staff:p.staff, date:day.key, allowKey:cellErrorKey(day.key, p.staff, '公休・希望休違反')});
       if(!isRestShift(prefShift) && !prefSatisfied(v, prefShift)) warnings.push({level:'warn', text:`希望未達：${cond} ${p.staff} は${shiftLabel(prefShift)}希望だが${shiftLabel(v)||'未割当'}`, staff:p.staff, date:day.key});
     }
   }
@@ -5205,7 +5231,23 @@ function consecutiveAllowedInRun(out, days, staffName, key){
 
 const LATE_EARLY_REASONS = new Set(['遅番翌日早番','平日遅番→土祝早番禁止','土日祝遅番→土日祝早番禁止']);
 // 遅番→翌早番は2セルで1つの違反。許容キーは「遅番側の日付」をアンカーに共有し、両セルがそろって緑になる。
-function lateEarlyPairKey(anchorLateDayKey, staffName){ return cellErrorKey(anchorLateDayKey, staffName, '遅早ペア'); }
+function lateEarlyPairKey(anchorLateDayKey, staffName){ return `cell|PAIR|${anchorLateDayKey}|${staffName}|遅早ペア`; }
+// 週・遅早ペアの許容キーは期間非依存の新形式にし、旧形式（periodKey入り）は読み取り時のみ受け付ける。
+// 締め月をまたぐ週の許容が「月ごとに二重に必要／前月側から許容不能」になるのを防ぐ（A03/A07）。
+function pairAllowKeyCandidates(anchorLateDayKey, staffName){
+  const [y,m,d]=String(anchorLateDayKey).split('-').map(Number);
+  const keys=[lateEarlyPairKey(anchorLateDayKey, staffName)];
+  if(y&&m&&d) keys.push(`cell|${periodKeyForDate(y,m,d)}|${anchorLateDayKey}|${staffName}|遅早ペア`);
+  keys.push(`cell|${periodKey()}|${anchorLateDayKey}|${staffName}|遅早ペア`);
+  return [...new Set(keys)];
+}
+function weeklyAllowKey(weekKey, staffName){ return `cell|WEEK|${weekKey}|${staffName}|週出勤可能日数超過`; }
+function weeklyAllowKeyCandidates(weekKey, staffName){
+  const keys=[weeklyAllowKey(weekKey, staffName)];
+  for(const dk of getCalendarWeekDates(weekKey)){ const [y,m,d]=dk.split('-').map(Number); if(y&&m&&d) keys.push(`cell|${periodKeyForDate(y,m,d)}|${weekKey}|${staffName}|週出勤可能日数超過`); }
+  return [...new Set(keys)];
+}
+function anyAllowedKey(keys){ return keys.some(k=>allowedErrors[k]); }
 function cellErrorInfo(key, staffName, out=schedule, deptOut=assignDept, days=getDays(), sharedOffMap=null, sharedPrefMap=null){
   const day=dayByKey(days, key); if(!day) return {reason:'', key:'', allowed:false};
   const st=findStaff(staffName); if(!st) return {reason:'', key:'', allowed:false};
@@ -5222,30 +5264,33 @@ function cellErrorInfo(key, staffName, out=schedule, deptOut=assignDept, days=ge
     reasons.push({reason, key:k, allowed: allowedOverride!==null ? allowedOverride : !!allowedErrors[k]});
   };
   if(hardOffApplies(day, staffName, offMap, prefMap)) push('公休・希望休違反');
+  if(day.closed && !day.closure) push('休業日出勤'); // 定休日の勤務も赤セルにする（警告一覧と対応：B10。臨時休業は表示側で別途強調）
   if(!staffCanDept(st, dept)) push('対応部署外');
   if(!isCustomShift(v)){
     if(!isShiftUsableOnDay(v, day)) push('使用日対象外');
     if(!g || !groupEnabledForDay(day, dept, g)) push('帯無効');
     if(!(Array.isArray(st.canShifts)?st.canShifts:SHIFT_CODES).includes(v)) push('入れるシフト外');
-    const lateFromPrev=lateEarlyReasonFromPrevious(out, days, day, staffName, g);
-    const lateToNext=lateEarlyReasonToNext(out, days, day, staffName, g);
-    if(lateFromPrev){
-      // このセルは「早番側」。アンカーは前日（遅番側）。
-      const prevKey=fmtDate(addDays(day.date,-1));
-      push(lateFromPrev, lateEarlyPairKey(prevKey, staffName));
-    }
-    if(lateToNext){
-      // このセルは「遅番側」。アンカーは自分。
-      push(lateToNext, lateEarlyPairKey(key, staffName));
-    }
-    if(wouldExceedConsecutive(out, day, staffName, g)){
-      const k=cellErrorKey(key, staffName, '連勤上限');
-      push('連勤上限', k, !!allowedErrors[k] || consecutiveAllowedInRun(out, days, staffName, key));
-    }
-    if(st.maxDays && countWorkingDaysFor(out, staffName)>st.maxDays) push('勤務上限', cellErrorKey('ALL', staffName, '勤務上限')); // 期間単位の違反なので期間で1キー
-    if(st.useWeeklyLimit!==false){ const limit=+(st.weeklyAvailableDays??5); if(limit>=0 && countWeeklyWorkingDaysFor(out, days, staffName, day)>limit) push('週出勤可能日数超過', cellErrorKey(weekKeyForDay(day), staffName, '週出勤可能日数超過')); } // 週単位で1キー（許容でその週がまとめて緑に）
-    if(g){ const maxNeed=deptMaxNeedsForDay(day, dept); const max=+(maxNeed[g]||0); if(max>0){ const staffByName=new Map(state.staff.map(s=>[s.name,s])); const got=countShiftDept(out[key], g, dept, staffByName, deptOut[key]||{}, day); if(got>max) push('部署最大人数超過', countIssue('deptMax', day, dept, g, got, max).allowKey); } }
   }
+  // 連勤・遅早・勤務上限・週上限・最大人数は「その他（自由入力）」も勤務としてカウントするため、
+  // カスタム区分のセルにも適用してvalidateと判定を一致させる（A05）。
+  const lateFromPrev=lateEarlyReasonFromPrevious(out, days, day, staffName, g);
+  const lateToNext=lateEarlyReasonToNext(out, days, day, staffName, g);
+  if(lateFromPrev){
+    // このセルは「早番側」。アンカーは前日（遅番側）。
+    const prevKey=fmtDate(addDays(day.date,-1));
+    push(lateFromPrev, lateEarlyPairKey(prevKey, staffName), anyAllowedKey(pairAllowKeyCandidates(prevKey, staffName)));
+  }
+  if(lateToNext){
+    // このセルは「遅番側」。アンカーは自分。
+    push(lateToNext, lateEarlyPairKey(key, staffName), anyAllowedKey(pairAllowKeyCandidates(key, staffName)));
+  }
+  if(wouldExceedConsecutive(out, day, staffName, g)){
+    const k=cellErrorKey(key, staffName, '連勤上限');
+    push('連勤上限', k, !!allowedErrors[k] || consecutiveAllowedInRun(out, days, staffName, key));
+  }
+  if(st.maxDays && countWorkingDaysFor(out, staffName, days)>st.maxDays) push('勤務上限', cellErrorKey('ALL', staffName, '勤務上限')); // 期間内の勤務日数で判定（全締め月通算にしない：A02）
+  if(st.useWeeklyLimit!==false){ const limit=+(st.weeklyAvailableDays??5); if(limit>=0 && countWeeklyWorkingDaysFor(out, days, staffName, day)>limit){ const wk=weekKeyForDay(day); push('週出勤可能日数超過', weeklyAllowKey(wk, staffName), anyAllowedKey(weeklyAllowKeyCandidates(wk, staffName))); } } // 週単位で1キー（許容でその週がまとめて緑に）
+  if(g){ const maxNeed=deptMaxNeedsForDay(day, dept); const max=+(maxNeed[g]||0); if(max>0){ const staffByName=new Map(state.staff.map(s=>[s.name,s])); const got=countShiftDept(out[key], g, dept, staffByName, deptOut[key]||{}, day); if(got>max) push('部署最大人数超過', countIssue('deptMax', day, dept, g, got, max).allowKey); } }
   if(!reasons.length) return {reason:'', key:'', allowed:false};
   const unallowed=reasons.filter(r=>!r.allowed);
   if(unallowed.length){
@@ -5262,7 +5307,9 @@ function warningAllowKey(w){
   if(deptMin) return countErrorKey('deptMin', deptMin[1], deptMin[2], groupKeyFromLabel(deptMin[3]));
   const deptMax=text.match(/^(\d{4}-\d{2}-\d{2}) (.+?) (.+?)が最大人数を超過：最大\d+ \/ 実績\d+$/);
   if(deptMax) return countErrorKey('deptMax', deptMax[1], deptMax[2], groupKeyFromLabel(deptMax[3]));
-  const staff=state.staff.find(st=>text.includes(st.name));
+  // 氏名の特定は構造化フィールド優先。本文フォールバックは「長い名前から」照合し包含誤爆を減らす（A08）
+  const staff = (w.staff && state.staff.find(st=>st.name===w.staff))
+    || [...state.staff].sort((a,b)=>String(b.name||'').length-String(a.name||'').length).find(st=>text.includes(st.name));
   // 遅番→翌早番の警告は、遅番側の日付をアンカーにしたペアキーで両セルをまとめて許容する
   const late=text.match(/(\d{4}-\d{2}-\d{2})遅番→(\d{4}-\d{2}-\d{2})早番/);
   if(late && staff) return lateEarlyPairKey(late[1], staff.name);
@@ -5287,7 +5334,10 @@ function warningAllowKey(w){
   }
   return messageErrorKey(text);
 }
-function isWarningAllowed(w){ return !!(allowedErrors[warningAllowKey(w)] || allowedErrors[messageErrorKey(w.text||'')]); }
+function isWarningAllowed(w){
+  if(Array.isArray(w.allowKeys) && w.allowKeys.some(k=>allowedErrors[k])) return true;
+  return !!(allowedErrors[warningAllowKey(w)] || allowedErrors[messageErrorKey(w.text||'')]);
+}
 function renderWarningItem(w, ctx){
   ctx = ctx || {};
   const k=warningAllowKey(w); const allowed=isWarningAllowed(w);
@@ -5911,11 +5961,13 @@ function renderStats(){
     : '<div class="ok">必要人数の不足はありません。</div>';
   const warns=validate(schedule,days);
   const bad=warns.filter(w=>w.level==='bad'), soft=warns.filter(w=>w.level==='warn'), allowed=warns.filter(isWarningAllowed);
-  const filters=[['all',`全て ${warns.length}`],['bad',`重大 ${bad.length}`],['warn',`注意 ${soft.length}`],['allowed',`許容済み ${allowed.length}`]];
+  // 件数チップは「未解消」を主に表示し、許容済みは別枠に分ける（下書きチェックと数字を一致させる：B11）
+  const badUn=bad.filter(w=>!isWarningAllowed(w)), softUn=soft.filter(w=>!isWarningAllowed(w));
+  const filters=[['all',`全て ${warns.length}`],['bad',`重大 ${badUn.length}`],['warn',`注意 ${softUn.length}`],['allowed',`許容済み ${allowed.length}`]];
   const filterBar=`<div class="warnFilterBar" role="group" aria-label="警告の絞り込み">${filters.map(([v,t])=>`<button type="button" class="${statsWarnFilter===v?'active':''}" onclick="setStatsWarnFilter('${v}')">${t}</button>`).join('')}</div>`;
   const shown=warns.filter(w=>{
-    if(statsWarnFilter==='bad') return w.level==='bad';
-    if(statsWarnFilter==='warn') return w.level==='warn';
+    if(statsWarnFilter==='bad') return w.level==='bad' && !isWarningAllowed(w);
+    if(statsWarnFilter==='warn') return w.level==='warn' && !isWarningAllowed(w);
     if(statsWarnFilter==='allowed') return isWarningAllowed(w);
     return true;
   });
