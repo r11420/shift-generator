@@ -5431,7 +5431,7 @@ function renderDeptShiftPreview(){
       const colErr=dayCountIssueClass(dayIssues.get(day.key)||[]);
       const deptNotes=`${mini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}`;
       if(editable && !lockedLabel){
-        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select>`, deptNotes)}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSetDept(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value, '${escAttr(activeBuildDept)}')">${shiftOptionsHtml(v, true, true)}</select><span class="shiftText">${esc(shiftLabel(v)||'')}</span>`, deptNotes)}</td>`;
       }else{
         const title=lockedLabel?`${lockedLabel} のため編集不可`:err;
         html+=`<td class="dateCol ${dayColClass(day)} ${closureCls} ${lockedLabel?'lockedCell':''} ${errCls} ${colErr}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}">${shiftCellInner(`<span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>`, deptNotes)}</td>`;
@@ -5569,7 +5569,7 @@ function renderCalendar(){
       if(err && !errInfo.allowed) hasCellIssue=true;
       const calNotes=`${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}`;
       if(calendarEditMode && !confirmed){
-        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select>`, calNotes)}</td>`;
+        html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select><span class="shiftText">${esc(shiftLabel(v)||'')}</span>`, calNotes)}</td>`;
       }else{
         const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
         html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}">${shiftCellInner(`<span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>`, calNotes)}</td>`;
@@ -5623,7 +5623,8 @@ function getMonthDays(y, m){
     const dt = new Date(y, m-1, d);
     const wd = dt.getDay(); const holiday = getJapaneseHoliday(y, m, d);
     const key = fmtDate(dt);
-    list.push({date:dt, key, y, m, day:d, wd, wdName:WD[wd], holiday, closed:state.closedWeekdays.includes(wd), holType:wd===0||wd===6||!!holiday, isToday:key===todayKey});
+    const closure=isClosureDate(key);
+    list.push({date:dt, key, y, m, day:d, wd, wdName:WD[wd], holiday, closure, closed:state.closedWeekdays.includes(wd)||closure, holType:wd===0||wd===6||!!holiday, isToday:key===todayKey});
   }
   return list;
 }
@@ -5643,12 +5644,13 @@ function monthlyRangeLabelHtml(){
   return `<b>${y}年${m}月（月次）</b><br><span class="small">${y}/${m}/1〜${y}/${m}/${last}　15日締めの2期間にまたがる範囲を表示します</span>`;
 }
 function monthlyStaffRows(){
-  return state.staff.filter(s=>s.dept===MONTHLY_DEPT || (s.supportDepts||[]).includes(MONTHLY_DEPT));
+  return staffSortedByEmpNo(state.staff.filter(s=>s.dept===MONTHLY_DEPT || (s.supportDepts||[]).includes(MONTHLY_DEPT))); // 他ビューと同じ社員番号順（B19）
 }
 function monthlyCellLabel(st, day){
   const v=schedule[day.key]?.[st.name]||'';
   const dep=assignDept[day.key]?.[st.name]||st.dept;
-  const show=(dep===MONTHLY_DEPT || st.dept===MONTHLY_DEPT) ? (shiftLabel(v)||'') : '';
+  const base=(dep===MONTHLY_DEPT || st.dept===MONTHLY_DEPT) ? (shiftLabel(v)||'') : '';
+  const show=(!base && day.closure) ? '臨時休業' : base; // トリマー月次にも臨時休業を表示（B07）
   return {v, dep, show};
 }
 function renderMonthlyView(){
@@ -5686,7 +5688,7 @@ function shiftMonthly(delta){
 function monthlyTableRows(){
   const days=getMonthDays(state.monthlyYear, state.monthlyMonth);
   const rows=[];
-  rows.push(['所属','タグ','スタッフ',...days.map(d=>`${d.y}/${d.m}/${d.day}(${d.wdName})`),'合計','早','中','遅']);
+  rows.push(['所属','タグ','スタッフ',...days.map(d=>`${d.y}/${d.m}/${d.day}(${d.wdName}${d.holiday?'・祝':''}${d.closure?'・臨時休業':''})`),'合計','早','中','遅']);
   for(const st of monthlyStaffRows()){
     const dc=getStaffDeptCounts(st.name, MONTHLY_DEPT, days, schedule, assignDept);
     rows.push([st.dept, (st.tags||[]).join('・'), st.name, ...days.map(day=>monthlyCellLabel(st, day).show), dc.total, dc.E||0, dc.M||0, dc.L||0]);
@@ -5999,27 +6001,29 @@ function shiftTableRowsForData(baseSchedule, baseAssignDept){
   const days=getDays();
   const rows=[];
   const counts=getCounts(baseSchedule,days,baseAssignDept);
-  rows.push(['部署','タグ','スタッフ','下限','上限',...days.map(d=>`${d.y}/${d.m}/${d.day}(${d.wdName})`),'合計','早','中','遅','平日','休/公休']);
+  rows.push(['部署','タグ','スタッフ','下限','上限',...days.map(d=>{ const tags=scheduleTagsForDay(d); return `${d.y}/${d.m}/${d.day}(${d.wdName}${d.holiday?'・祝':''}${d.closure?'・臨時休業':(d.closed?'・定休':'')})${tags.length?`【${tags.join('・')}】`:''}`; }),'合計','早','中','遅','平日','休/公休']);
   for(const st of orderedStaff()){
     const c=counts[st.name]||{total:0,E:0,M:0,L:0,hol:0,week:0,OFF:0};
-    rows.push([st.dept, (st.tags||[]).join('・'), st.name, st.minDays||'', st.maxDays||'', ...days.map(d=>{ const v=normalizeStoredShift(baseSchedule[d.key]?.[st.name]||''); if(!v) return ''; const dep=baseAssignDept[d.key]?.[st.name]||st.dept; const label=shiftLabel(v)||''; return (isWorkingShift(v)&&dep!==st.dept) ? `${label}[${dep}]` : label; }), c.total, c.E||0, c.M||0, c.L||0, c.week, c.OFF||0]);
+    rows.push([st.dept, (st.tags||[]).join('・'), st.name, st.minDays||'', st.maxDays||'', ...days.map(d=>{ const v=normalizeStoredShift(baseSchedule[d.key]?.[st.name]||''); if(!v) return d.closure?'臨時休業':''; const dep=baseAssignDept[d.key]?.[st.name]||st.dept; const label=shiftLabel(v)||''; return (isWorkingShift(v)&&dep!==st.dept) ? `${label}[${dep}]` : label; }), c.total, c.E||0, c.M||0, c.L||0, c.week, c.OFF||0]);
   }
+  // 朝そうじの日別人数もCSVに含める（画面の朝そうじ行と同じ集計：B20）
+  rows.push(['','','朝そうじ','','',...days.map(d=>{ let c=0; for(const st of orderedStaff()){ const v=normalizeStoredShift(baseSchedule[d.key]?.[st.name]||''); if(isWorkingShift(v) && morningCleanActive(st.name, d, v)) c++; } return c||''; }),'','','','','','']);
   return rows;
 }
 function shiftLegendRows(){ return [['シフト区分','時間'], ...SHIFT_CODES.map(c=>[c, SHIFT_TIMES[c]])]; }
 function makeCalendarCSV(){
   const data=calendarRenderData();
-  const rows=[['全体シフト表'], ...shiftTableRowsForData(data.schedule, data.assignDept), [], ['シフト区分対応表'], ...shiftLegendRows()];
+  const rows=[['全体シフト表'+(calendarEditMode?'（編集モード時点・未確定の下書きを含む）':'（確定分のみ）')], ...shiftTableRowsForData(data.schedule, data.assignDept), [], ['シフト区分対応表'], ...shiftLegendRows()];
   return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
 function deptTableRows(dept){
   const days=getDays();
   const rows=[];
-  const staff=state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept));
-  rows.push(['所属','タグ','スタッフ',...days.map(d=>`${d.y}/${d.m}/${d.day}(${d.wdName})`),'合計','早','中','遅']);
+  const staff=staffSortedByEmpNo(state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept))); // 社員番号順（B19）
+  rows.push(['所属','タグ','スタッフ',...days.map(d=>{ const tags=scheduleTagsForDay(d); return `${d.y}/${d.m}/${d.day}(${d.wdName}${d.holiday?'・祝':''}${d.closure?'・臨時休業':(d.closed?'・定休':'')})${tags.length?`【${tags.join('・')}】`:''}`; }),'合計','早','中','遅']);
   for(const st of staff){
     const dc=getStaffDeptCounts(st.name, dept, days, schedule, assignDept);
-    rows.push([st.dept, (st.tags||[]).join('・'), st.name, ...days.map(day=>{ const v=schedule[day.key]?.[st.name]||''; const dep=assignDept[day.key]?.[st.name]||st.dept; return (dep===dept || st.dept===dept) ? (shiftLabel(v)||'') : ''; }), dc.total, dc.E||0, dc.M||0, dc.L||0]);
+    rows.push([st.dept, (st.tags||[]).join('・'), st.name, ...days.map(day=>{ const v=schedule[day.key]?.[st.name]||''; if(!v) return day.closure?'臨時休業':''; const dep=assignDept[day.key]?.[st.name]||st.dept; const label=shiftLabel(v)||''; return (isWorkingShift(v)&&dep!==dept) ? `${label}[${dep}]` : label; }), dc.total, dc.E||0, dc.M||0, dc.L||0]);
   }
   return rows;
 }
@@ -6041,7 +6045,15 @@ function inlineOutputStyles(root){
   root.querySelectorAll('.weekendCol').forEach(el=>{ el.setAttribute('bgcolor','#fff0f4'); el.setAttribute('style',(el.getAttribute('style')||'')+'background-color:#fff0f4;background:#fff0f4;mso-pattern:auto none;'); });
   root.querySelectorAll('th.weekendCol').forEach(el=>{ el.setAttribute('bgcolor','#ffe4ec'); el.setAttribute('style',(el.getAttribute('style')||'')+'background-color:#ffe4ec;background:#ffe4ec;mso-pattern:auto none;'); });
   root.querySelectorAll('.deptCol,.staffCol').forEach(el=>{ el.setAttribute('style',(el.getAttribute('style')||'')+'text-align:left;white-space:nowrap;'); });
-  root.querySelectorAll('.shiftView').forEach(el=>{ el.setAttribute('style','display:inline-block;min-width:28px;border-radius:7px;padding:3px 6px;font-weight:900;border:1px solid #d8d0c5;background:#ffffff;color:#27231f;text-align:center;'); });
+  root.querySelectorAll('.shiftView').forEach(el=>{
+    // 区分グループ色・区分デザイン設定をExcelにも反映する（A22）
+    const m=(el.className||'').match(/shiftGroup-([A-Z]+)/);
+    const a=m ? effectiveAppearance(m[1]) : null;
+    const bg=a?a.bg:'#ffffff', fg=a?a.fg:'#27231f', bd=a?a.border:'#d8d0c5';
+    el.setAttribute('bgcolor', bg);
+    el.setAttribute('style',`display:inline-block;min-width:28px;border-radius:7px;padding:3px 6px;font-weight:900;border:1px solid ${bd};background:${bg};background-color:${bg};color:${fg};text-align:center;mso-pattern:auto none;`);
+  });
+  root.querySelectorAll('.outMini').forEach(el=>{ el.setAttribute('style','display:block;font-size:9px;font-weight:800;color:#6f675e;'); });
   root.querySelectorAll('.manualText').forEach(el=>el.remove());
   root.querySelectorAll('.pill.pDept,.roleBadge').forEach(el=>{ el.setAttribute('style','font-weight:900;background:#ffffff;color:#27231f;'); });
   root.querySelectorAll('.shiftLegend').forEach(el=>{ el.setAttribute('style','margin-top:16px;border:1px solid #d8d0c5;background:#ffffff;padding:8px;'); });
@@ -6051,13 +6063,13 @@ function inlineOutputStyles(root){
   return root;
 }
 function htmlWithInlineStyles(html){ const box=document.createElement('div'); box.innerHTML=html; inlineOutputStyles(box); return box.innerHTML; }
-function excelStyleCss(){ return `table{border-collapse:separate;border-spacing:0;width:100%;font-size:11px}th,td{border-right:1px solid #d8d0c5;border-bottom:1px solid #d8d0c5;padding:4px;text-align:center;vertical-align:top;background:#fff;color:#27231f}th{background:#f4f0e9;font-weight:900}.deptCol,.staffCol{text-align:left;white-space:nowrap}.staffCol{min-width:130px}.deptCol{min-width:86px}.weekendCol{background-color:#fff0f4;background:#fff0f4}th.weekendCol{background-color:#ffe4ec;background:#ffe4ec}.shiftView{display:inline-block;min-width:28px;border-radius:7px;padding:3px 6px;font-weight:900;border:1px solid #d8d0c5;background:#fff;color:#27231f}.shiftGroup-PAID{background:#fff4a8!important;border-color:#d9bf3f!important;color:#6a5600!important}.manualText{display:none!important}.shiftLegend{margin-top:16px;border:1px solid #d8d0c5;background:#fff;padding:8px}.shiftLegend h4{margin:0 0 8px}.legendCompactTable td,.legendCompactTable th{white-space:nowrap}.miniBadge,.confirmedLock,.lock,.noPrintOutput,select,button,input,textarea{display:none!important}`; }
+function excelStyleCss(){ return `table{border-collapse:separate;border-spacing:0;width:100%;font-size:11px}th,td{border-right:1px solid #d8d0c5;border-bottom:1px solid #d8d0c5;padding:4px;text-align:center;vertical-align:top;background:#fff;color:#27231f}th{background:#f4f0e9;font-weight:900}.deptCol,.staffCol{text-align:left;white-space:nowrap}.staffCol{min-width:130px}.deptCol{min-width:86px}.weekendCol{background-color:#fff0f4;background:#fff0f4}th.weekendCol{background-color:#ffe4ec;background:#ffe4ec}.shiftView{display:inline-block;min-width:28px;border-radius:7px;padding:3px 6px;font-weight:900;border:1px solid #d8d0c5;background:#fff;color:#27231f}.manualText{display:none!important}.shiftLegend{margin-top:16px;border:1px solid #d8d0c5;background:#fff;padding:8px}.shiftLegend h4{margin:0 0 8px}.legendCompactTable td,.legendCompactTable th{white-space:nowrap}.miniBadge,.confirmedLock,.lock,.noPrintOutput,select,button,input,textarea{display:none!important}`; }
 function exportHtmlAsExcel(title, bodyHtml, filename){
   const styledBody = htmlWithInlineStyles(bodyHtml);
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>${excelStyleCss()}</style></head><body><h1 style="font-size:18px;color:#27231f;">${esc(title)}</h1>${styledBody}</body></html>`;
   downloadTextFile(html, filename, 'application/vnd.ms-excel;charset=utf-8');
 }
-function exportCalendarExcel(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表', `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
+function exportCalendarExcel(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable')); const legend=shiftLegendExcelHtml(); exportHtmlAsExcel('全体シフト表'+(calendarEditMode?'（下書きを含む・編集モード時点）':'（確定分のみ）'), `<div>${table}</div>${legend}`, `shift_${state.year}_${pad(state.month)}_15締め_全体シフト表.xls`); }
 // CSV/Excel/印刷PDF を1つの「ファイル出力」ボタン＋選択メニューにまとめるための共通部品。
 function closeExportMenus(){ document.querySelectorAll('details.exportMenu[open]').forEach(d=>{ d.open=false; }); }
 // ===== 実行可否（条件未達はボタン非活性＋画面に不足理由を表示）=====
@@ -6194,6 +6206,7 @@ function fallbackCopy(text, done){
 //  ・それ以外（未入力など）→ 空欄
 function obicRestLabel(day, st, offMap, prefMap){
   if(day.closure){ const cv=normalizeStoredShift(schedule[day.key]?.[st.name]||''); return isWorkingShift(cv) ? '' : '休日'; } // 臨時休業＝休日（出勤に上書きされていれば空欄）
+  if(day.closed){ const cv=normalizeStoredShift(schedule[day.key]?.[st.name]||''); return isWorkingShift(cv) ? '' : '休日'; } // 定休日も臨時休業と同じ「休日」に統一（B21※OBIC側仕様は要確認）
   const v = normalizeStoredShift(schedule[day.key]?.[st.name] || '');
   if(isWorkingShift(v)) return '';            // 勤務シフト・その他＝シフト区分入力済み→空欄
   if(isPaidLeaveShift(v)) return '休日';        // 有休→休日
@@ -6251,7 +6264,7 @@ function exportObicExcel(){
   if(reasons.length){ renderObicView(); showToast('Excel出力できません：'+reasonText(reasons[0]),'warn'); return; }
   renderObicView();
   const table=printableTableHtml(document.getElementById('obicTable'));
-  exportHtmlAsExcel('OBIC連携用 休日一覧（公休・希望休）', `<div>${table}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
+  exportHtmlAsExcel('OBIC連携用 休日一覧（公休・希望休・有休・休）', `<div>${table}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
 }
 function printHtmlDocument(title, bodyHtml){
   const w=window.open('', '_blank');
@@ -6316,6 +6329,7 @@ tr.pbBefore{break-before:page;page-break-before:always}
 .totalsTable th,.totalsTable td{padding:3pt 10pt}
 .totalsTable .totalsName{text-align:left;font-weight:700;background:#faf6ee;min-width:90pt}
 .sumCol,.miniBadge,.confirmedLock,.lock,.manualText,.noPrintOutput,select,button,input,textarea{display:none!important}
+.outMini{display:block;font-size:5.5px;font-weight:800;color:#6f675e;line-height:1.1}
 #printRoot{transform-origin:top left}
 .printToolbar{position:sticky;top:0;background:#fff;border-bottom:1pt solid #d8d0c5;padding:8px 12px;margin:0 0 6pt;display:flex;gap:14px;align-items:center;flex-wrap:wrap;z-index:9}
 .printToolbar button{font-size:13px;padding:8px 16px;border-radius:9px;border:0;background:#6d8f72;color:#fff;font-weight:800;cursor:pointer}
@@ -6337,9 +6351,11 @@ function printableTableHtml(table, removeSums=false, blankEmptyCells=false){
   const clone = table?.cloneNode(true);
   if(!clone) return '';
   clone.querySelectorAll('.noPrintOutput,.manualText,.dayErrMark').forEach(el=>el.remove());
+  // 応援（他部署勤務）のバッジは消さず、出力用の小さな注記テキストへ変換する（A23）
+  clone.querySelectorAll('.miniBadge').forEach(el=>{ const s=document.createElement('span'); s.className='outMini'; s.textContent=`（${(el.textContent||'').trim()}）`; el.replaceWith(s); });
   // 印刷・PDFでは合計・早・中・遅カラムを省き、日付列を広く使う
   if(removeSums) clone.querySelectorAll('.sumCol').forEach(el=>el.remove());
-  clone.querySelectorAll('select').forEach(sel=>{ const span=document.createElement('span'); span.className='shiftView '+shiftCellClasses(sel.value); span.textContent=shiftLabel(sel.value)||''; sel.replaceWith(span); });
+  clone.querySelectorAll('select').forEach(sel=>{ const dayObj=(sel.dataset&&sel.dataset.key)?dayByKey(getDays(), sel.dataset.key):null; const span=document.createElement('span'); span.className='shiftView '+shiftCellClasses(sel.value, dayObj); span.textContent=shiftLabel(sel.value)||''; sel.replaceWith(span); }); // 土日祝で帯が変わる区分の色を日付基準で決める（A20）
   // 空欄セルは枠（空のピル）を出さず、出力後に手書き記入できる余白にする
   if(blankEmptyCells) clone.querySelectorAll('.shiftView').forEach(el=>{ if(!el.textContent.trim()) el.remove(); });
   let prevMonth='';
@@ -6366,12 +6382,12 @@ function staffTotalsTableHtml(title, rows){
   return `<div class="totalsBlock"><h4>${esc(title)}</h4><table class="totalsTable"><thead><tr><th>スタッフ</th><th>合計</th><th>早</th><th>中</th><th>遅</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="totalsName">${esc(r.name)}</td><td><b>${r.total||0}</b></td><td>${r.E||0}</td><td>${r.M||0}</td><td>${r.L||0}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function deptTotalsRows(dept, days){
-  return state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept)).map(st=>{
+  return staffSortedByEmpNo(state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept))).map(st=>{ // 社員番号順（B19）
     const c=getStaffDeptCounts(st.name, dept, days, schedule, assignDept);
     return {name:st.name, total:c.total, E:c.E, M:c.M, L:c.L};
   });
 }
-function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${legend}`); }
+function printCalendarView(){ pullInputs(); { const av=getCalendarOutputAvailability(); if(!av.canRun){ toast(reasonText(av.reasons[0])||'まだ出力できるデータがありません。','warn'); return; } } renderCalendar(); const table=printableTableHtml(document.getElementById('calendarTable'), true, true); const legend=shiftLegendHtml(); printHtmlDocument(`全体シフト表（${state.year}年${state.month}月15日締め${calendarEditMode?'・下書きを含む':'・確定分のみ'}）`, `<div>${table}</div>${legend}`); }
 function saveCalendarPDF(){ printCalendarView(); }
 function printDeptView(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力できます。`,'warn'); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
 function saveDeptPDF(dept){ printDeptView(dept); }
