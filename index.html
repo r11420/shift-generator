@@ -1596,8 +1596,11 @@ function defaultDeptGroupEnabled(){
 function defaultState(){
   // 初期状態（初期化後も同様）は設定・スタッフともに空。シフト区分の定義のみ既定値を持つ。
   const now = new Date();
+  // 初期表示は「今日が属する15日締めの締め月」（16日以降は翌月締め）。終了済み期間が初期表示になるのを防ぐ（B09）
+  const initY = (now.getDate()<=15) ? now.getFullYear() : (now.getMonth()===11 ? now.getFullYear()+1 : now.getFullYear());
+  const initM = (now.getDate()<=15) ? now.getMonth()+1 : (now.getMonth()===11 ? 1 : now.getMonth()+2);
   return {
-    year: now.getFullYear(), month: now.getMonth()+1, closeDay: 15,
+    year: initY, month: initM, closeDay: 15,
     monthlyYear: now.getFullYear(), monthlyMonth: now.getMonth()+1,
     maxConsecutive: 5, attempts: 800,
     avoidLateEarly: true, holidayAsWeekend: true,
@@ -1788,6 +1791,8 @@ function normalizeState(){
   for(const d of Object.keys(confirmedDepts)){ if(!DEPTS.includes(d)) delete confirmedDepts[d]; }
   confirmedDeptsByPeriod[periodKey()] = confirmedDepts;
   if(!state.preferencesByPeriod) state.preferencesByPeriod = {};
+  // 現締め月以外の希望も正規化する（旧形式のままだと月次ビュー等の期間横断参照で判定されない：B04）
+  for(const pk in state.preferencesByPeriod){ if(pk!==periodKey() && Array.isArray(state.preferencesByPeriod[pk])) state.preferencesByPeriod[pk]=state.preferencesByPeriod[pk].map(normalizePreference).filter(Boolean); }
   if(Array.isArray(state.preferences) && state.preferences.length && !state.preferencesByPeriod[periodKey()]) state.preferencesByPeriod[periodKey()] = state.preferences;
   state.preferences = (state.preferencesByPeriod[periodKey()] || []).map(normalizePreference).filter(Boolean);
   state.preferencesByPeriod[periodKey()] = state.preferences;
@@ -1807,13 +1812,14 @@ function load(){
     try{
       const obj = JSON.parse(raw);
       state = Object.assign(defaultState(), obj.state || {});
-      schedule = obj.schedule || {};
-      assignDept = obj.assignDept || {};
-      locks = obj.locks || {};
-      allowedErrors = obj.allowedErrors || {};
-      draftWarningPages = obj.draftWarningPages || {};
-      bulkAssignState = obj.bulkAssignState || {};
-      confirmedDeptsByPeriod = obj.confirmedDeptsByPeriod || {};
+      const _plainObj = v => (v && typeof v==='object' && !Array.isArray(v)) ? v : {}; // 壊れたデータでも起動を保証（C03）
+      schedule = _plainObj(obj.schedule);
+      assignDept = _plainObj(obj.assignDept);
+      locks = _plainObj(obj.locks);
+      allowedErrors = _plainObj(obj.allowedErrors);
+      draftWarningPages = _plainObj(obj.draftWarningPages);
+      bulkAssignState = _plainObj(obj.bulkAssignState);
+      confirmedDeptsByPeriod = _plainObj(obj.confirmedDeptsByPeriod);
       activeConfirmedPeriodKey = obj.activeConfirmedPeriodKey || '';
       confirmedDepts = obj.confirmedDepts || {};
       if(!confirmedDeptsByPeriod[periodKey()] && Object.keys(confirmedDepts).length) confirmedDeptsByPeriod[periodKey()] = confirmedDepts;
@@ -2403,6 +2409,8 @@ function scheduleTagUsageReasons(name){
   for(const rs of (state.recurringSchedules||[])){ if(rs.tag===name) reasons.push(`定期予定：${rs.tag}（${recurringRuleText(rs)}）`); }
   for(const k in (state.scheduleEventsByPeriod||{})){ for(const ev of (state.scheduleEventsByPeriod[k]||[])){ if(ev.tag===name) reasons.push(`全体予定：${ev.tag}（${periodEventRuleText(ev)}）`); } }
   const mc=state.morningCleanExclude&&state.morningCleanExclude.byDept; if(mc){ for(const d in mc){ for(const r of (mc[d].rules||[])){ if(r.type==='event' && r.tag===name) reasons.push(`朝そうじ除外（${d}）：予定「${name}」`); } } }
+  let excl=0; for(const pk in (state.scheduleEventExclusionsByPeriod||{})){ excl += (state.scheduleEventExclusionsByPeriod[pk]||[]).filter(x=>x && x.tag===name).length; }
+  if(excl) reasons.push(`個別除外（この日だけ削除）：${excl}件`);
   return reasons;
 }
 function tagUsageReasons(kind, name){ return kind==='master' ? staffTagUsageReasons(name) : scheduleTagUsageReasons(name); }
@@ -2452,6 +2460,7 @@ async function commitTagEdit(kind, index){
     state.scheduleTags[index]=name;
     for(const rs of (state.recurringSchedules||[])){ if(rs.tag===cur) rs.tag=name; }
     for(const k in (state.scheduleEventsByPeriod||{})){ for(const ev of (state.scheduleEventsByPeriod[k]||[])){ if(ev.tag===cur) ev.tag=name; } }
+    for(const pk in (state.scheduleEventExclusionsByPeriod||{})){ for(const x of (state.scheduleEventExclusionsByPeriod[pk]||[])){ if(x && x.tag===cur) x.tag=name; } } // 「この日だけ削除」も追従（B05）
     const mc=state.morningCleanExclude&&state.morningCleanExclude.byDept; if(mc){ for(const d in mc){ for(const r of (mc[d].rules||[])){ if(r.type==='event' && r.tag===cur) r.tag=name; } } }
   }
   editingTag=null;
@@ -2745,6 +2754,14 @@ async function addScheduleEvent(){
   else { const r=readWdOcc('evt'); if(r.error){ showToast(r.error,'warn'); return; } ev.wds=r.wds; ev.occ=r.occ; }
   if(!await showConfirmModal({title:'全体予定を追加しますか？', message:`${tag}（${periodEventRuleText(ev)}）を追加します。\n追加後、シフト表の日付下に表示されます。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   activeScheduleEvents().push(ev);
+  // 同じ日・同じタグに「この日だけ削除」の個別除外が残っていると追加しても表示されないため、自動で解除する（B06）
+  if(ev.axis==='date'){
+    const pk=periodKey(); const arr=state.scheduleEventExclusionsByPeriod && state.scheduleEventExclusionsByPeriod[pk];
+    if(Array.isArray(arr)){
+      const i=arr.findIndex(x=>x && x.date===ev.date && x.tag===ev.tag);
+      if(i>=0){ arr.splice(i,1); if(!arr.length) delete state.scheduleEventExclusionsByPeriod[pk]; toast('この日の「この日だけ削除」を解除して表示します。'); }
+    }
+  }
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   toast('全体予定を追加しました。');
 }
@@ -3197,7 +3214,7 @@ function globalBackupState(){
   if(!state.lastBackupAt) return {kind:'none'};
   return {kind:'stale', last: state.lastBackupAt};
 }
-function fmtBackupTime(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function fmtBackupTime(ts){ const d=new Date(ts); const y=(d.getFullYear()!==new Date().getFullYear())?`${d.getFullYear()}/`:''; return `${y}${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; } // 年跨ぎの古いバックアップを直近と誤認しない（C04）
 function renderGlobalBar(){
   const el=document.getElementById('globalBar');
   if(!el) return;
@@ -3514,7 +3531,11 @@ function deptCriticalCount(dept){ const w = scopeWarnsForDept(dept, validate(sch
 function markDeptGenerated(dept){ progressFor().generatedAt[dept] = Date.now(); }
 function markBackupTaken(){ state.lastBackupSig = backupSignature(); state.lastBackupAt = Date.now(); try{ persist(); }catch(e){} try{ renderGlobalBar(); }catch(e){} }
 // バックアップ要否の判定用に、内容（進捗メタを除く）の署名を作る
-function backupSignature(){ try{ return hashString(JSON.stringify([schedule, assignDept, locks, state.staff, state.deptNeeds, state.deptMaxNeeds, state.deptGroupEnabled, state.preferencesByPeriod, state.closures, state.closedWeekdays, state.maxConsecutive, confirmedDeptsByPeriod, state.scheduleEventsByPeriod, state.recurringSchedules, allowedErrors, state.shiftDefs, state.shiftAppearance, state.morningCleanExclude, state.morningCleanOverrideByPeriod])); }catch(e){ return String(Math.random()); } }
+function backupSignature(){ try{
+  // バックアップ対象（state全体）と機械的に一致させる。表示用の締め月・自身のバックアップ記録だけ除外（B01）
+  const {lastBackupAt, lastBackupSig, year, month, monthlyYear, monthlyMonth, ...sigState}=state;
+  return hashString(JSON.stringify([sigState, schedule, assignDept, locks, allowedErrors, confirmedDeptsByPeriod]));
+}catch(e){ return String(Math.random()); } }
 // 各ステップの完了を「状態」から計算（current=最初の未完了）。スコープは対象締め月。
 function stepsDone(){
   const req = requiredDepartments();
@@ -6531,6 +6552,9 @@ function applyImportedBackup(obj){
   activePrefEditIndex = null;
   calendarEditMode = false;
   generationRunning = false;
+  // 復元前のundo履歴・前案・編集中状態は復元後のデータと無関係のため破棄する（B02）
+  shiftHist={}; genDiff=null; lastScore=null; editingTag=null; staffSearchQuery=''; draftWarnFilters={}; statsWarnFilter='all';
+  try{ clearCellSelection(); }catch(e){}
   normalizeState();
   activeMenu = (ui.activeMenu || obj.activeMenu || activeMenu || 'calendar');
   if(activeMenu === 'csv') activeMenu = 'calendar';
@@ -6569,7 +6593,7 @@ function loadJSONFile(e){
   reader.onerror=()=>{ e.target.value=''; showNoticeModal({title:'読み込み失敗', message:'ファイルの読み込みに失敗しました。', confirmText:'閉じる', variant:'danger'}); };
   reader.readAsText(file);
 }
-async function resetAll(){ if(!await showConfirmModal({title:'すべて初期化しますか？', message:'設定・作成済みシフト・希望が削除されます。\n実行前にバックアップを取得してください。', confirmText:'初期化する', cancelText:'キャンセル', variant:'danger', dangerNote:'この操作は取り消せません。先に「バックアップ」で取得することをおすすめします。'})) return; localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; renderInputs(); renderAll(); showToast('初期化しました。','success'); }
+async function resetAll(){ if(!await showConfirmModal({title:'すべて初期化しますか？', message:'設定・作成済みシフト・希望が削除されます。\n実行前にバックアップを取得してください。', confirmText:'初期化する', cancelText:'キャンセル', variant:'danger', dangerNote:'この操作は取り消せません。先に「バックアップ」で取得することをおすすめします。'})) return; localStorage.removeItem(STORAGE_KEY); state=defaultState(); schedule={}; assignDept={}; locks={}; allowedErrors={}; draftWarningPages={}; bulkAssignState={}; confirmedDepts={}; confirmedDeptsByPeriod={}; activeConfirmedPeriodKey=''; activePrefStaff='全体'; activePrefDept='トリマー'; activePrefEditIndex=null; staffExpanded={}; globalStaffExpanded=false; lastScore=null; shiftHist={}; genDiff=null; editingTag=null; activeStaffTagFilters=[]; staffSearchQuery=''; draftWarnFilters={}; statsWarnFilter='all'; calendarEditMode=false; try{ clearCellSelection(); }catch(e){} renderInputs(); renderAll(); showToast('初期化しました。','success'); }
 
 function showMenuPanel(name){
   if(name === 'csv') name = 'calendar';
