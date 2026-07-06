@@ -3665,6 +3665,8 @@ async function applyBulkShiftToDept(dept){
   const targets=[...wds.map(i=>WD[i]), ...(includeHoliday?['祝日']:[])];
   const label=value?value:'空白';
   if(!await showConfirmModal({title:'一括登録しますか？', message:`${staffName} の ${targets.join('・')} に「${label}」を一括登録します。`, confirmText:'登録する', cancelText:'キャンセル', variant:'primary'})) return;
+  pushShiftHistory(); // 一括登録も「元に戻す」で丸ごと取り消せるようにする（A11）
+  genDiff=null;       // 手動変更後の前案スナップショットは現状と食い違うため破棄（A10）
   const days=getDays(); let n=0, skippedClosed=0, skippedManual=0, skippedPref=0;
   value = normalizeStoredShift(value);
   const isWorkValue = isWorkingShift(value);
@@ -3892,21 +3894,7 @@ function fillAllWorkingStaffForDept(out, deptOut, days, dept, offMap, prefMap, s
     }
   }
 }
-function fillAllWorkingStaff(out, deptOut, days, offMap, prefMap, shortages, random){
-  const fc=makeFillCache();
-  for(const day of days){
-    if(day.closed) continue;
-    for(const st of state.staff){
-      if(staffConfirmedDepts(st).length) continue;
-      if(out[day.key]?.[st.name]) continue;
-      if(hasOffReason(day, st.name, offMap, prefMap)){ out[day.key][st.name]='OFF'; delete deptOut[day.key][st.name]; fillCacheApply(fc, day, st.name, '', '', 'OFF', ''); continue; }
-      const value = chooseFillValue(out, deptOut, days, day, st.name, st.dept, offMap, prefMap, random, fc);
-      applyFillValue(out, deptOut, day, st.name, st.dept, value);
-      const stored=out[day.key][st.name]||'';
-      if(stored) fillCacheApply(fc, day, st.name, '', '', stored, deptOut[day.key][st.name]||'');
-    }
-  }
-}
+// （旧・全体一括生成用の fillAllWorkingStaff は到達不能のため削除：C01）
 function chooseBalancedShift(out, deptOut, days, day, staffName, dept, offMap, prefMap, random, fillCache=null){
   const pref = prefMap.get(day.key+'|'+staffName);
   const groups = ['E','M','L'];
@@ -4112,7 +4100,7 @@ function repairLateEarlyViolations(out, deptOut, days, targetDept, offMap, prefM
         const v = out[day.key]?.[st.name] || '';
         if(!isWorkingShift(v)) continue;
         const dept = deptOut[day.key]?.[st.name] || st.dept;
-        if(targetDept && dept!==targetDept && st.dept!==targetDept) continue;
+        if(targetDept && dept!==targetDept) continue; // 生成対象部署に割り当たったセルだけ修復する（他部署の下書きは書き換えない：A25）
         const g = groupOfShift(v, day);
         const reason = lateEarlyReasonFromPrevious(out, days, day, st.name, g);
         if(!reason) continue;
@@ -4122,7 +4110,7 @@ function repairLateEarlyViolations(out, deptOut, days, targetDept, offMap, prefM
         const currentLocked = !!locks[day.key]?.[st.name] || matchesPreference(st.name, day, v, prefMap);
         const prevLocked = !!locks[prevKey]?.[st.name] || (prevDay && matchesPreference(st.name, prevDay, out[prevKey]?.[st.name]||'', prefMap));
         if(!currentLocked && replaceAssignmentGroup(out, deptOut, days, day, st.name, dept, ['M','L'], offMap, prefMap, random)){ fixedInLoop=changed=true; continue; }
-        if(prevDay && !prevLocked && replaceAssignmentGroup(out, deptOut, days, prevDay, st.name, prevDept, ['M','E'], offMap, prefMap, random)){ fixedInLoop=changed=true; continue; }
+        if(prevDay && !prevLocked && (!targetDept || prevDept===targetDept) && replaceAssignmentGroup(out, deptOut, days, prevDay, st.name, prevDept, ['M','E'], offMap, prefMap, random)){ fixedInLoop=changed=true; continue; }
         if(!currentLocked && trySwapSameDayForLateEarly(out, deptOut, days, day, st.name, offMap, prefMap, random)){ fixedInLoop=changed=true; continue; }
         // どうしても修復できない場合も空欄にはせず、警告・赤セルで検出する。
       }
@@ -4141,7 +4129,7 @@ function strictCleanHardRuleViolations(out, deptOut, days, targetDept, offMap, p
         const v=out[day.key]?.[st.name]||'';
         if(!isWorkingShift(v)) continue;
         const dept=deptOut[day.key]?.[st.name]||st.dept;
-        if(targetDept && dept!==targetDept && st.dept!==targetDept) continue;
+        if(targetDept && dept!==targetDept) continue; // 生成対象部署に割り当たったセルだけ修復する（他部署の下書きは書き換えない：A25）
         if(locks[day.key]?.[st.name]) continue;
         const g=groupOfShift(v, day);
         let bad='';
@@ -4210,6 +4198,7 @@ function tryReassignSurplusSameDay(out, deptOut, days, day, targetDept, targetGr
     const curDept=deptOut[day.key]?.[st.name]||st.dept;
     const curGroup=groupOfShift(cur, day);
     if(curDept===targetDept && curGroup===targetGroup) continue;
+    if(targetDept && curDept!==targetDept) continue; // 他部署の下書きからは引き抜かない（A25）
     if(!staffCanDept(st, targetDept)) continue;
     if(!canRemoveAssignmentWithoutShortage(out, deptOut, day, st, prefMap)) continue;
     const oldDept=curDept;
@@ -4234,7 +4223,7 @@ function tryAdjustAdjacentForMinimum(out, deptOut, days, day, targetDept, target
       if(!isWorkingShift(srcVal) || isCustomShift(srcVal)) continue;
       if(!canRemoveAssignmentWithoutShortage(out, deptOut, srcDay, st, prefMap)) continue;
       const srcDept=deptOut[srcDay.key]?.[st.name]||st.dept;
-      if(targetDept && st.dept!==targetDept && srcDept!==targetDept) continue;
+      if(targetDept && srcDept!==targetDept) continue; // 移動元も生成対象部署の割当に限定（A25）
       clearAssignmentForRepair(out, deptOut, srcDay, st.name);
       if(isRestShift(cur)) clearAssignmentForRepair(out, deptOut, day, st.name);
       const actual = canPlaceGroupStrict(out, deptOut, days, day, st.name, targetGroup, targetDept, offMap, prefMap)
@@ -4361,7 +4350,7 @@ function repairBandErrors(out, deptOut, days, targetDept, offMap, prefMap, rando
         if(day.closed) continue;
         if(locks[day.key]?.[st.name]) continue;
         const dept=deptOut[day.key]?.[st.name]||st.dept;
-        if(targetDept && dept!==targetDept && st.dept!==targetDept) continue;
+        if(targetDept && dept!==targetDept) continue; // 生成対象部署に割り当たったセルだけ修復する（他部署の下書きは書き換えない：A25）
         if(matchesPreference(st.name, day, out[day.key]?.[st.name]||'', prefMap)) continue; // 希望は最優先で保持
         const reason=cellRuleViolationReason(out, deptOut, days, day, st, offMap, prefMap);
         if(!reason || !BAND_FIXABLE_REASONS.has(reason)) continue;
@@ -4433,7 +4422,8 @@ async function generateDeptSchedule(dept, options={}){
   let best=null;
   const qDays = getDays();
   // 生成前の状態（前案）を必ずスナップショットしておき、生成後の差分確認・「前案に戻す」に使う
-  const prevSnap={}; for(const day of qDays){ for(const st of candidates){ prevSnap[day.key+'|'+st.name]=normalizeStoredShift(schedule[day.key]?.[st.name]||''); } }
+  const prevSnap={}, prevDeptSnap={}, prevLockSnap={};
+  for(const day of qDays){ for(const st of candidates){ const k=day.key+'|'+st.name; prevSnap[k]=normalizeStoredShift(schedule[day.key]?.[st.name]||''); const pd=assignDept[day.key]?.[st.name]; if(pd) prevDeptSnap[k]=pd; if(locks[day.key]?.[st.name]) prevLockSnap[k]=true; } }
   _mtgDayKeysCache = computeMtgDayKeys(qDays); // チーフMTG該当日を採点ループ前に1回だけ算出（生成中は不変）
   generationRunning = true;
   generationCancel=false;
@@ -4480,12 +4470,15 @@ async function generateDeptSchedule(dept, options={}){
       mergeOutsidePeriodData(best);
       schedule=best.schedule; assignDept=best.assignDept || {}; lastScore=best;
       // 生成後の状態をスナップショットし、前案との差分確認モーダル・「前案に戻す」に使う。
-      const afterSnap={}; for(const day of qDays){ for(const st of candidates){ afterSnap[day.key+'|'+st.name]=normalizeStoredShift(best.schedule[day.key]?.[st.name]||''); } }
+      // 区分だけでなく割当部署・手動ロックも保存し、「前案に戻す」で3点セットを完全復元する（A09）。
+      const afterSnap={}, afterDeptSnap={}, afterLockSnap={};
+      for(const day of qDays){ for(const st of candidates){ const k=day.key+'|'+st.name; afterSnap[k]=normalizeStoredShift(best.schedule[day.key]?.[st.name]||''); const ad=(best.assignDept||{})[day.key]?.[st.name]; if(ad) afterDeptSnap[k]=ad; if(locks[day.key]?.[st.name]) afterLockSnap[k]=true; } }
       let changed=0; for(const k in afterSnap){ if((afterSnap[k]||'')!==(prevSnap[k]||'')) changed++; }
       genDiff = (hadData && changed>0)
         ? { dept, period: periodKey(),
             days: qDays.map(d=>({key:d.key, m:d.m, day:d.day, wd:d.wd, holiday:!!d.holiday, closed:!!d.closed})),
-            staff: candidates.map(s=>s.name), prev: prevSnap, after: afterSnap, changed }
+            staff: candidates.map(s=>s.name), prev: prevSnap, after: afterSnap, changed,
+            prevDept: prevDeptSnap, afterDept: afterDeptSnap, prevLock: prevLockSnap, afterLock: afterLockSnap }
         : null;
       markDeptGenerated(dept);
       // 盤面が変わったため、この部署に関わるスタッフの「セル単位の許容」を掃除する（旧許容の自動適用を防ぐ）
@@ -4585,12 +4578,15 @@ function restoreGenPrev(){
   if(isDeptConfirmed(g.dept)){ showToast('この部署は確定済みです。再編集してから操作してください。','warn'); closeGenDiffModal(); return; }
   pushShiftHistory();
   // 前案（再生成前の値）をスナップショットから書き戻す。対象は前案に含まれるセルのみ。
+  // 区分だけでなく割当部署・手動ロックも復元する（A09：兼務の応援が所属部署へ付け替わるのを防ぐ）。
   for(const d of g.days){
     for(const name of g.staff){
       const k=d.key+'|'+name;
       const v=g.prev[k]||'';
       if(!schedule[d.key]) schedule[d.key]={};
       if(v) schedule[d.key][name]=v; else delete schedule[d.key][name];
+      if(g.prevDept){ if(!assignDept[d.key]) assignDept[d.key]={}; const pd=g.prevDept[k]; if(pd) assignDept[d.key][name]=pd; else delete assignDept[d.key][name]; }
+      if(g.prevLock){ if(!locks[d.key]) locks[d.key]={}; if(g.prevLock[k]) locks[d.key][name]=true; else delete locks[d.key][name]; }
     }
   }
   genDiff=null;
@@ -4681,6 +4677,9 @@ function buildBaseFromCurrent(days, staffByName){
   const out={}; const deptOut={};
   const offMap = fixedWeeklyOffMap(days);
   const prefMap = buildPreferenceMap(days);
+  // 確定済み部署のスタッフ・手動ロック済みセルは生成の下ごしらえでも書き換えない（S04）。
+  // 固定公休・希望休との矛盾が残る場合は、上書きせず赤セル＋警告で知らせる方針に統一する。
+  const confirmedStaffSet=new Set(state.staff.filter(s=>staffConfirmedDepts(s).length).map(s=>s.name));
   for(const day of days){
     out[day.key]={}; deptOut[day.key]={};
     for(const st of state.staff){
@@ -4688,12 +4687,14 @@ function buildBaseFromCurrent(days, staffByName){
       const currentDept = assignDept[day.key]?.[st.name] || (isWorkingShift(current)?st.dept:'');
       out[day.key][st.name]=current;
       if(currentDept) deptOut[day.key][st.name]=currentDept;
-      // 固定公休・希望休は絶対優先。過去の下書きや自動割当が残っていても休へ戻す。
+      // 固定公休・希望休は最優先。過去の下書きや自動割当が残っていても休へ戻す（保護セルを除く）。
+      // ※グローバルの locks はここでは絶対に変更しない（試行のたびに実行されるため、
+      //   生成を中止しても手動ロックだけ消える事故になっていた）。
       const prefRest = normalizeStoredShift(prefMap.get(day.key+'|'+st.name));
       if(offMap.get(st.name)?.has(day.key) || isRestShift(prefRest)){
+        if(confirmedStaffSet.has(st.name) || locks[day.key]?.[st.name]) continue;
         out[day.key][st.name]=isRestShift(prefRest) ? prefRest : 'OFF';
         delete deptOut[day.key][st.name];
-        if(locks[day.key]) delete locks[day.key][st.name];
       }
     }
   }
@@ -4766,114 +4767,8 @@ function buildOneDeptSchedule(dept, random=0){
   const score=evaluate(out, days, shortages, deptOut, warns);
   return {schedule:out, assignDept:deptOut, locks, score, shortages, warns};
 }
-function generateSchedule(options={keepLocks:false}){
-  pullInputs(); normalizeState();
-  if(state.staff.length===0){ msg('スタッフを1名以上登録してください。','bad'); return; }
-  const attempts = Math.max(30, Math.min(1500, state.attempts || 800));
-  const seedOffset = generationSeedFor('全体', !!options.variant);
-  let best = null;
-  for(let a=0; a<attempts; a++){
-    const result = buildOneSchedule({keepLocks:options.keepLocks, random:seedOffset+a});
-    result.quality = scheduleQuality(result.schedule, getDays(), result.assignDept, '', result.warns);
-    if(isBetterSchedule(result, best)) best = result;
-    if(best && best.quality.bad===0 && (best.quality.shortage||0)===0 && best.quality.warn===0) break;
-  }
-  if(best && (best.quality.bad>0 || (best.quality.shortage||0)>0 || best.quality.warn>0)) best = refineBestSchedule('', best, getDays(), seedOffset);
-  if(best) best = rebalanceBestSchedule('', best, getDays());
-  mergeOutsidePeriodData(best);
-  schedule = best.schedule; assignDept = best.assignDept || {}; locks = best.locks; lastScore = best;
-  preserveScroll(()=>{ save(); renderAll(); });
-}
-function recalculateKeepLocks(){ generateSchedule({keepLocks:true}); }
-function buildOneSchedule({keepLocks=false, random=0}){
-  const days = getDays();
-  const staff = state.staff.map(s=>s.name);
-  const staffByName = staffIndexMap();
-  const offMap = fixedWeeklyOffMap(days);
-  const prefMap = buildPreferenceMap(days);
-  const out = {}; const deptOut = {}; const newLocks = keepLocks ? JSON.parse(JSON.stringify(locks||{})) : {};
-  for(const day of days){
-    out[day.key] = {}; deptOut[day.key] = {};
-    for(const s of staff) out[day.key][s] = '';
-    if(schedule[day.key]) for(const s of staff){
-      const st=staffByName.get(s); const cur=normalizeStoredShift(schedule[day.key]?.[s]||''); const curDept=assignDept[day.key]?.[s] || (isWorkingShift(cur) ? st?.dept || '' : '');
-      const preserveConfirmed = (curDept && isDeptConfirmed(curDept)) || isDeptConfirmed(st?.dept||'');
-      if(preserveConfirmed || (keepLocks && locks[day.key]?.[s])){ out[day.key][s]=cur; if(curDept) deptOut[day.key][s]=curDept; }
-    }
-    for(const s of staff){ const pref = normalizeStoredShift(prefMap.get(day.key+'|'+s)); if(offMap.get(s)?.has(day.key) || isRestShift(pref)){ out[day.key][s] = isRestShift(pref) ? pref : 'OFF'; delete deptOut[day.key][s]; if(locks[day.key]) delete locks[day.key][s]; } }
-  }
-  // 固定希望を最優先で先置き（全体生成）
-  for(const day of days){
-    if(day.closed) continue;
-    for(const st of state.staff){
-      if(staffConfirmedDepts(st).length) continue;
-      if(out[day.key][st.name]) continue;
-      if(hasOffReason(day, st.name, offMap, prefMap)) continue;
-      const want=normalizeStoredShift(prefMap.get(day.key+'|'+st.name));
-      if(want && !isRestShift(want)){ out[day.key][st.name]=want; deptOut[day.key][st.name]=st.dept; }
-    }
-  }
-  const shiftsOrder = ['L','E','M'];
-  const shortages = [];
-  // 部署別生成と同じく、集計は1回全計算→以後差分更新（兼務スタッフは関係する全部署の行を更新）。
-  let countsCache=null; const peerRowsByDept=new Map();
-  const peerRowsFor=(dept)=>{ let pr=peerRowsByDept.get(dept); if(!pr){ pr=deptPeerRowsMap(out, deptOut, days, dept); peerRowsByDept.set(dept, pr); } return pr; };
-  const applyAssign=(day, name, prevVal, prevDept, nextVal, nextDept)=>{
-    updateCountsForCell(countsCache, day, name, prevVal, nextVal);
-    for(const [d,rows] of peerRowsByDept) updatePeerRowsForCell(rows, day, name, prevVal, prevDept, nextVal, nextDept, d);
-  };
-  for(const day of days){
-    if(day.closed) continue;
-    for(const dept of DEPTS){
-      const need = deptNeedsForDay(day, dept);
-      const maxNeed = deptMaxNeedsForDay(day, dept);
-      for(const sh of shiftsOrder){
-        const minTarget = +(need[sh]||0);
-        const maxTarget = +(maxNeed[sh]||0);
-        const target = maxTarget>0 ? Math.min(minTarget, maxTarget) : minTarget;
-        for(let i=countShiftDept(out[day.key], sh, dept, staffByName, deptOut[day.key], day); i<target; i++){
-          const cands = staff.filter(s=>!hardRuleViolation(out, deptOut, days, day, s, sh, dept, offMap, prefMap));
-          if(!cands.length){ break; }
-          if(!countsCache) countsCache=getCounts(out, days, deptOut);
-          const peerRows=peerRowsFor(dept);
-          const costMap=new Map(cands.map(s=>[s, candidateCost(out,deptOut,days,day,s,sh,dept,random,countsCache,peerRows)]));
-          cands.sort((a,b)=>costMap.get(a)-costMap.get(b));
-          const actual=chooseActualShiftForGroup(out, days, day, cands[0], sh, random, countsCache);
-          if(!actual) break;
-          const prevVal=out[day.key][cands[0]]||'';
-          const prevDept=deptOut[day.key][cands[0]] || staffByName.get(cands[0])?.dept || '';
-          out[day.key][cands[0]] = actual; deptOut[day.key][cands[0]] = dept;
-          applyAssign(day, cands[0], prevVal, prevDept, actual, dept);
-        }
-      }
-    }
-    const gNeed = globalNeedsForDay(day);
-    for(const sh of ['L','E']){
-      for(let i=countShiftAll(out[day.key], sh, day); i<(gNeed[sh]||0); i++){
-        const cands = staff.filter(s=>{
-          const home=staffByName.get(s)?.dept || '';
-          return !hardRuleViolation(out, deptOut, days, day, s, sh, home, offMap, prefMap);
-        });
-        if(!cands.length){ break; }
-        if(!countsCache) countsCache=getCounts(out, days, deptOut);
-        const costMap=new Map(cands.map(s=>[s, candidateCost(out,deptOut,days,day,s,sh,staffByName.get(s)?.dept||'__GLOBAL__',random,countsCache,peerRowsFor(staffByName.get(s)?.dept||''))]));
-        cands.sort((a,b)=>costMap.get(a)-costMap.get(b));
-        const actual=chooseActualShiftForGroup(out, days, day, cands[0], sh, random, countsCache);
-        if(!actual) break;
-        const prevVal=out[day.key][cands[0]]||'';
-        const prevDept=deptOut[day.key][cands[0]] || staffByName.get(cands[0])?.dept || '';
-        const nextDept=staffByName.get(cands[0])?.dept || '';
-        out[day.key][cands[0]] = actual; deptOut[day.key][cands[0]] = nextDept;
-        applyAssign(day, cands[0], prevVal, prevDept, actual, nextDept);
-      }
-    }
-  }
-  fillAllWorkingStaff(out, deptOut, days, offMap, prefMap, shortages, random);
-  finalizeStrictSchedule(out, deptOut, days, '', offMap, prefMap, random);
-  const warns = validate(out, days, false, deptOut);
-  const score = evaluate(out, days, shortages, deptOut, warns);
-  return {schedule:out, assignDept:deptOut, locks:newLocks, score, shortages, warns};
-}
+// （旧・全体一括生成 generateSchedule / recalculateKeepLocks / buildOneSchedule は部署別フロー移行後に到達不能となったため削除：C01。
+//   履歴なし・未確定下書き破棄・グローバルlocks変異など現行方針と異なる危険な挙動を含んでいたため、誤配線防止のため本体ごと撤去。）
 function countShiftAll(dayAssignments, groupKey, dayObj=null){return Object.values(dayAssignments||{}).filter(v=>groupOfShift(v, dayObj)===groupKey).length;}
 function countShiftDept(dayAssignments, groupKey, dept, staffByName=staffIndexMap(), dayDeptMap={}, dayObj=null){
   let n=0;
@@ -5499,6 +5394,7 @@ function renderDeptShiftPreview(){
   box.innerHTML=html;
 }
 function toggleCalendarEditMode(){
+  clearCellSelection(); // 再描画で見えなくなった旧選択が一括適用に効く事故を防ぐ（A12）
   calendarEditMode = !calendarEditMode;
   renderCalendar();
 }
@@ -5554,6 +5450,7 @@ async function manualSetDept(key, staffName, value, dept){ genDiff=null;
   setShiftValue(key, staffName, value, target, true);
 }
 function setShiftValue(key, staffName, value, targetDept, markLock=true, noRender=false){
+  genDiff=null; // 手動編集後は「前案と比較／前案に戻す」のスナップショットが現状と食い違うため破棄する（A10）
   const pos = noRender?null:captureScrollState();
   if(!schedule[key]) schedule[key]={};
   if(!assignDept[key]) assignDept[key]={};
@@ -5984,15 +5881,22 @@ function snapshotShiftSlice(ctx){
   return JSON.stringify({days:ctx.days, staff:ctx.staff, main:ctx.main, schedule:pick(schedule), assignDept:pick(assignDept), locks:pick(locks), closures:clo});
 }
 function restoreShiftSlice(snap){
-  try{ const o=JSON.parse(snap); const inScope=s=> o.staff===null || o.staff.includes(s);
-    const apply=(target,src)=>{ for(const k of o.days){ if(!target[k]) target[k]={}; for(const s of Object.keys(target[k])){ if(inScope(s)) delete target[k][s]; } for(const s in (src[k]||{})){ target[k][s]=src[k][s]; } } };
+  try{ const o=JSON.parse(snap);
+    // 確定済み部署のスタッフは undo/redo でも書き換えない（S05：確定の保証を undo が破らない）
+    const confirmedSkip=new Set(state.staff.filter(s=>staffConfirmedDepts(s).length).map(s=>s.name));
+    const inScope=s=> (o.staff===null || o.staff.includes(s)) && !confirmedSkip.has(s);
+    const apply=(target,src)=>{ for(const k of o.days){ if(!target[k]) target[k]={}; for(const s of Object.keys(target[k])){ if(inScope(s)) delete target[k][s]; } for(const s in (src[k]||{})){ if(inScope(s)) target[k][s]=src[k][s]; } } };
     apply(schedule,o.schedule); apply(assignDept,o.assignDept); apply(locks,o.locks);
     if(o.main){ if(!state.closures) state.closures={}; for(const k of o.days){ if(o.closures[k]) state.closures[k]=o.closures[k]; else delete state.closures[k]; } }
   }catch(e){}
 }
-function pushShiftHistory(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); st.undo.push(snapshotShiftSlice(ctx)); if(st.undo.length>SHIFT_HISTORY_MAX) st.undo.shift(); st.redo.length=0; refreshUndoRedoButtons(); }
-function undoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.undo.length){ toast('元に戻せる操作はありません。','warn'); return; } st.redo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.undo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('元に戻しました。'); }
-function redoShift(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.redo.length){ toast('やり直せる操作はありません。','warn'); return; } st.undo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.redo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('やり直しました。'); }
+function pushShiftHistory(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); st.undo.push(snapshotShiftSlice(ctx)); if(st.undo.length>SHIFT_HISTORY_MAX) st.undo.shift(); st.redo.length=0;
+  // 全体×締め月と部署×締め月はデータが重複するため、別コンテキストの古いスナップショットを
+  // 残すと undo がその後の編集まで巻き戻してしまう（S05）。同じ締め月の他コンテキスト履歴は破棄する。
+  for(const key of Object.keys(shiftHist)){ if(key!==ctx.key && key.endsWith('|'+periodKey())) delete shiftHist[key]; }
+  refreshUndoRedoButtons(); }
+function undoShift(){ clearCellSelection(); const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.undo.length){ toast('元に戻せる操作はありません。','warn'); return; } st.redo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.undo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('元に戻しました。'); }
+function redoShift(){ clearCellSelection(); const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.redo.length){ toast('やり直せる操作はありません。','warn'); return; } st.undo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.redo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('やり直しました。'); }
 function refreshUndoRedoButtons(){ document.querySelectorAll('.shiftUndoBtn').forEach(b=>b.disabled=!shiftCanUndo()); document.querySelectorAll('.shiftRedoBtn').forEach(b=>b.disabled=!shiftCanRedo()); }
 function undoRedoBarHtml(){ return `<span class="undoRedoBar" title="この部署・締め月の中での編集を取り消せます"><button type="button" class="btn2 shiftUndoBtn" onclick="undoShift()" ${shiftCanUndo()?'':'disabled'} title="元に戻す（この部署・締め月の直前の編集を取り消す / Ctrl+Z）">↩ 元に戻す</button><button type="button" class="btn2 shiftRedoBtn" onclick="redoShift()" ${shiftCanRedo()?'':'disabled'} title="取り消した編集をやり直す（Ctrl+Y）">↪ やり直す</button></span>`; }
 async function manualSet(key, staffName, value){ value = await normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ showToast('全体シフト表は参照モードです。編集ボタンを押してから変更してください。','warn'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ showToast(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`,'warn'); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
@@ -6548,6 +6452,7 @@ async function resetAll(){ if(!await showConfirmModal({title:'すべて初期化
 
 function showMenuPanel(name){
   if(name === 'csv') name = 'calendar';
+  try{ clearCellSelection(); }catch(e){} // 画面遷移で範囲選択を破棄（A12）
   // activeMenuを先に更新してからpersistしないと、リロード時に一つ前の画面が復元されてしまう。
   activeMenu = name;
   try{ pullInputs(); normalizeState(); persist(); }catch(e){}
