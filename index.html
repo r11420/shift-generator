@@ -235,7 +235,7 @@ th.weekendCol{background:#ffe4ec!important}.dateCol.weekendCol{background:#fff0f
 .deptBuildCard b{display:block;font-size:16px}.confirmBadge{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#edf7ed;color:#285c2b;margin-top:5px}.editBadge{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#fff6db;color:#7a4b00;margin-top:5px}.lockedCell{background:#f7f2e8!important}.confirmedLock{font-size:10px;color:#285c2b;background:#edf7ed;border:1px solid #cde8cd;border-radius:8px;padding:1px 4px;margin-top:3px;display:inline-block}.editableSelect:disabled{opacity:.72;cursor:not-allowed;background:#f5f0e7;color:#6d6258}.deptNotice{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.deptNotice .badge{background:#edf7ed;color:#285c2b}.deptStatusLine{font-size:12px;color:var(--muted);margin-top:4px}.deptActionBox{background:#fffaf4;border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}.deptActionBox h3{margin-top:0}
 
 
-.calendarControl{display:grid;grid-template-columns:150px 150px minmax(220px,1fr);gap:10px;align-items:end;margin:0 0 12px;padding:12px;background:#fffaf4;border:1px solid var(--line);border-radius:16px}.calendarMode{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.modeBadge{display:inline-flex;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;background:#edf7ed;color:#285c2b}.modeBadge.editing{background:#fff6db;color:#7a4b00}.shiftView{display:inline-flex;min-width:34px;justify-content:center;border-radius:9px;padding:4px 7px;font-weight:900;border:1px solid var(--line);background:#fff}.shiftView.shift-E{background:#fff3de;border-color:#f2c87b;color:#935d00}.shiftView.shift-M{background:#e8f2fc;border-color:#a8cceb;color:#265f8d}.shiftView.shift-L{background:#f2eafd;border-color:#c5ade7;color:#5d398c}.shiftView.shift-OFF{background:#eee9e2;border-color:#d2c7ba;color:#64584e}.shiftView.shiftGroup-PAID{background:#fff4a8;border-color:#e1c642;color:#6a5600}.calendarHelp{font-size:12px;color:var(--muted);margin:6px 0 10px}.deptShiftPreview{margin-top:14px}.deptShiftPreview table{min-width:980px}
+.calendarControlSingle{grid-template-columns:1fr!important}.calendarControl{display:grid;grid-template-columns:150px 150px minmax(220px,1fr);gap:10px;align-items:end;margin:0 0 12px;padding:12px;background:#fffaf4;border:1px solid var(--line);border-radius:16px}.calendarMode{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.modeBadge{display:inline-flex;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;background:#edf7ed;color:#285c2b}.modeBadge.editing{background:#fff6db;color:#7a4b00}.shiftView{display:inline-flex;min-width:34px;justify-content:center;border-radius:9px;padding:4px 7px;font-weight:900;border:1px solid var(--line);background:#fff}.shiftView.shift-E{background:#fff3de;border-color:#f2c87b;color:#935d00}.shiftView.shift-M{background:#e8f2fc;border-color:#a8cceb;color:#265f8d}.shiftView.shift-L{background:#f2eafd;border-color:#c5ade7;color:#5d398c}.shiftView.shift-OFF{background:#eee9e2;border-color:#d2c7ba;color:#64584e}.shiftView.shiftGroup-PAID{background:#fff4a8;border-color:#e1c642;color:#6a5600}.calendarHelp{font-size:12px;color:var(--muted);margin:6px 0 10px}.deptShiftPreview{margin-top:14px}.deptShiftPreview table{min-width:980px}
 
 
 .progressBox{display:none;margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px}
@@ -743,10 +743,8 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <div class="panelActions"><button id="calendarEditBtn" class="btn2" onclick="toggleCalendarEditMode()"><img class="appicon" src="assets/icons/svg/edit-mode.svg" alt="">編集モードにする</button><button class="btn" onclick="showMenuPanel('deptBuild')"><img class="appicon" src="assets/icons/svg/nav-department-create.svg" alt="">部署別シフト作成へ</button><span class="vDivider" aria-hidden="true"></span><span id="calendarExportSlot"></span></div>
       </div>
       <div id="calendarAvailSlot" class="noPrint"></div>
-      <div class="calendarControl noPrint">
-        <div><label for="year">締め年</label><input id="year" type="text" inputmode="numeric" min="2024" max="2038"></div>
-        <div><label for="month">締め月</label><div class="monthNav"><button type="button" class="btn2 navBtn" onclick="shiftPeriod(-1)" title="前の締め月へ" aria-label="前の締め月へ">◀</button><input id="month" type="text" inputmode="numeric" min="1" max="12"><button type="button" class="btn2 navBtn" onclick="shiftPeriod(1)" title="次の締め月へ" aria-label="次の締め月へ">▶</button></div></div>
-        <div><label>15日締め期間</label><div class="periodBox" id="periodDisplay"></div></div>
+      <div class="calendarControl calendarControlSingle noPrint">
+        <div><label>15日締め期間</label><div class="periodBox" id="periodDisplay"></div><div class="small">締め月の変更は、上部の作業バー「締め月」から行えます（全画面共通）。</div></div>
       </div>
       <div id="calendarModeBox" class="calendarHelp"></div>
       <div class="summary" id="summary"></div>
@@ -1987,8 +1985,8 @@ async function requestRuleChange(id){
 }
 
 function renderInputs(){
-  document.getElementById('year').value = state.year;
-  document.getElementById('month').value = state.month;
+  { const yEl=document.getElementById('year'); if(yEl) yEl.value = state.year; }
+  { const mEl=document.getElementById('month'); if(mEl) mEl.value = state.month; }
   document.getElementById('maxConsecutive').value = state.maxConsecutive;
   document.getElementById('attempts').value = state.attempts;
   document.getElementById('avoidLateEarly').checked = state.avoidLateEarly;
@@ -3449,7 +3447,10 @@ function confirmedViewData(){
       const v = schedule[day.key]?.[st.name] || '';
       if(!v) continue;
       const rel = cellRelevantDept(day.key, st.name);
-      if(rel && isDeptConfirmed(rel)){
+      // 休・有休セルは、所属が未確定でも兼務先が確定済みなら表示する
+      // （応援だけ確定したスタッフの休が虫食いに見える問題を解消：B12）
+      const restVisible = !isWorkingShift(normalizeStoredShift(v)) && staffConfirmedDepts(st).length>0;
+      if((rel && isDeptConfirmed(rel)) || restVisible){
         viewSchedule[day.key][st.name] = v;
         const dep = assignDept[day.key]?.[st.name] || '';
         if(dep) viewAssignDept[day.key][st.name] = dep;
@@ -5549,29 +5550,32 @@ function renderCalendar(){
   html+='<th class="sumCol">合計</th><th class="sumCol">早</th><th class="sumCol">中</th><th class="sumCol">遅</th></tr></thead><tbody>';
   const sortedStaff=orderedStaff();
   const offMapShared=fixedWeeklyOffMap(days), prefMapShared=buildPreferenceMap(days);
-  let hasCellIssue=false; // 全体表にセル赤枠は出さないが、未解消の個人シフトエラーの有無だけ拾い、上部の案内に使う
+  // 全体表にセル赤枠は出さない代わりの上部案内は、表示中データではなく保存データ全体（validate）で判定する（B15：臨時休業セルやモード切替で案内が出ない/消える問題を解消）
+  const hasCellIssue = validate(schedule, days, true, assignDept).some(w=>w.level==='bad' && !isWarningAllowed(w));
   for(const st of sortedStaff){
     const c=counts[st.name]||{total:0,E:0,M:0,L:0,hol:0};
     const lockedLabel=staffLockedLabel(st);
     const deptPill = st.dept ? `<span class="pill pDept">${esc(deptLabel(st.dept))}</span>` : `<span class="pill pDeptUnset" title="部署が未設定です。スタッフ画面で所属部署を設定してください。">部署未設定</span>`;
     html+=`<tr${st.dept?'':' class="unsetRow"'}><td class="deptCol sticky1">${deptPill}</td><td class="staffCol sticky2">${esc(st.name)}<div>${tagBadgesHtml(st)}</div>${lockedLabel?`<div><span class="confirmedLock">${esc(lockedLabel)}</span></div>`:''}${st.maxDays?`<div><span class="limitBadge">上限${st.maxDays}日</span></div>`:''}<div class="small">${esc(st.skill||'')}</div></td>`;
     for(const day of days){
-      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov; html+=`<td class="dateCol closureHead" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています（修正は部署別シフト作成で）':'臨時休業（部署別で空欄・休・有休に変更可）'}">${shiftCellInner(showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`, '')}</td>`; continue; }
+      if(day.closure){ const ov=normalizeStoredShift(displaySchedule[day.key]?.[st.name]||''); const work=isWorkingShift(ov); const showClosure=!ov;
+        const adep0=displayAssignDept[day.key]?.[st.name]||st.dept;
+        const closureNotes=`${(work&&adep0!==st.dept)?`<div class="miniBadge">${esc(adep0)}</div>`:''}${hopeMarkHtml(st.name, day, ov)}${morningCleanMarkHtml(st.name, day, ov)}${locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''}`;
+        html+=`<td class="dateCol closureHead" data-cell="${day.key}|${encodeURIComponent(st.name)}" title="${work?'臨時休業日に出勤が入っています（修正は部署別シフト作成で）':'臨時休業（部署別で空欄・休・有休に変更可）'}">${shiftCellInner(showClosure?`<span class="shiftView closureView">${CLOSURE_LABEL}</span>`:`<span class="shiftView ${shiftCellClasses(ov, day)}">${esc(shiftLabel(ov))}</span>`, closureNotes)}</td>`; continue; }
       const v=displaySchedule[day.key]?.[st.name]||'';
       const adep=displayAssignDept[day.key]?.[st.name]||st.dept;
       const confirmed=!!lockedLabel; // 所属・兼務先のいずれかが確定済みなら行ごと編集不可
       const staffEnc=encodeURIComponent(st.name);
       const deptMini=(isWorkingShift(v)&&adep!==st.dept)?`<div class="miniBadge">${esc(adep)}</div>`:'';
-      const lockMark='';
+      const lockMark=locks[day.key]?.[st.name]?'<span class="manualText">手動</span>':''; // 手動ロックを全体表でも表示（B14）
       // 全体シフト表ではセル単位の赤枠（個人シフトエラー）を出さない。個人エラーは部署別シフト作成で確認・修正する。
       // err は説明用ツールチップにのみ使用し、errorCell クラス（赤枠・緑枠）は付与しない（印刷/PDF・Excelにも赤枠を出さないため）。
       const errInfo=cellErrorInfo(day.key, st.name, displaySchedule, displayAssignDept, days, offMapShared, prefMapShared); const err=errInfo.reason; const errCls='';
-      if(err && !errInfo.allowed) hasCellIssue=true;
       const calNotes=`${deptMini}${hopeMarkHtml(st.name, day, v)}${morningCleanMarkHtml(st.name, day, v)}${lockMark}`;
-      if(calendarEditMode && !confirmed){
+      if(calendarEditMode && !confirmed && st.dept){
         html+=`<td class="dateCol ${dayColClass(day)} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(err)}">${shiftCellInner(`<select class="editableSelect ${shiftCellClasses(v, day)}" style="width:${editableSelectWidth(v)}px" data-key="${day.key}" data-staff="${staffEnc}" onchange="manualSet(this.dataset.key, decodeURIComponent(this.dataset.staff), this.value)">${shiftOptionsHtml(v, true, true)}</select><span class="shiftText">${esc(shiftLabel(v)||'')}</span>`, calNotes)}</td>`;
       }else{
-        const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:'' );
+        const title=err?err:(confirmed?`${lockedLabel} のため編集不可`:(!st.dept?'部署未設定のため全体シフト表からは入力できません。スタッフ画面で所属部署を設定してください。':'' ));
         html+=`<td class="dateCol ${dayColClass(day)} ${confirmed?'lockedCell':''} ${errCls}" data-cell="${day.key}|${staffEnc}" title="${escAttr(title)}">${shiftCellInner(`<span class="shiftView ${shiftCellClasses(v, day)}">${shiftLabel(v)||''}</span>`, calNotes)}</td>`;
       }
     }
@@ -5583,7 +5587,7 @@ function renderCalendar(){
   // 全体シフト表はセル赤枠を出さない代わりに、未解消の個人シフトエラーがあるときだけ上部にやわらかく案内する（印刷には出さない）。
   const calHint=document.getElementById('calendarErrorHint');
   if(calHint) calHint.innerHTML = hasCellIssue
-    ? `<div class="calErrHint"><span>シフト区分のエラーは全体シフト表には表示していません。詳細の確認・修正は<b>「部署別シフト作成」</b>または<b>「集計・警告」</b>で行えます。</span><button type="button" class="btnOutlineSmall" onclick="showMenuPanel('stats')">集計・警告を開く</button></div>`
+    ? `<div class="calErrHint"><span>シフト区分のエラーは全体シフト表には表示していません。詳細の確認・修正は<b>「部署別シフト作成」</b>または<b>「集計・警告」</b>で行えます。</span><button type="button" class="btnOutlineSmall" onclick="showMenuPanel('deptBuild')">部署別シフト作成を開く</button><button type="button" class="btnOutlineSmall" onclick="showMenuPanel('stats')">集計・警告を開く</button></div>`
     : '';
   // ファイル出力（CSV/Excel/印刷PDF）：出力できるデータが無いときは非活性＋理由表示
   const calAvail=getCalendarOutputAvailability();
@@ -5743,6 +5747,11 @@ function toggleCellInSelection(sel){ const k=cellKeyOf(sel); if(cellSel.has(k)) 
 async function applyValueToSelectionCells(value){
   const sels=selectionSelects(); if(!sels.length) return;
   if(value==='__OTHER__'){ const v=await normalizeManualShiftValue('__OTHER__'); if(v==='__CANCEL__') return; value=v; }
+  // 臨時休業日への勤務一括設定は単セル編集と同じく確認する（B13）
+  if(isWorkingShift(normalizeStoredShift(value))){
+    const nClosure=sels.filter(sel=>isClosureDate(sel.dataset.key)).length;
+    if(nClosure && !await showConfirmModal({title:'臨時休業日が含まれています', message:`選択範囲に臨時休業日が ${nClosure}セル含まれています。\n必要な作業がある場合のみ勤務シフトを設定してください。`, confirmText:'設定する', cancelText:'キャンセル', variant:'caution'})) return;
+  }
   pushShiftHistory(); // 一括適用前の状態を保存（誤操作のやり直し用）
   let n=0;
   for(const sel of sels){
@@ -5950,7 +5959,10 @@ function pushShiftHistory(){ const ctx=shiftCtx(); const st=ctxStacks(ctx); st.u
 function undoShift(){ clearCellSelection(); const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.undo.length){ toast('元に戻せる操作はありません。','warn'); return; } st.redo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.undo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('元に戻しました。'); }
 function redoShift(){ clearCellSelection(); const ctx=shiftCtx(); const st=ctxStacks(ctx); if(!st.redo.length){ toast('やり直せる操作はありません。','warn'); return; } st.undo.push(snapshotShiftSlice(ctx)); restoreShiftSlice(st.redo.pop()); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); toast('やり直しました。'); }
 function refreshUndoRedoButtons(){ document.querySelectorAll('.shiftUndoBtn').forEach(b=>b.disabled=!shiftCanUndo()); document.querySelectorAll('.shiftRedoBtn').forEach(b=>b.disabled=!shiftCanRedo()); }
-function undoRedoBarHtml(){ return `<span class="undoRedoBar" title="この部署・締め月の中での編集を取り消せます"><button type="button" class="btn2 shiftUndoBtn" onclick="undoShift()" ${shiftCanUndo()?'':'disabled'} title="元に戻す（この部署・締め月の直前の編集を取り消す / Ctrl+Z）">↩ 元に戻す</button><button type="button" class="btn2 shiftRedoBtn" onclick="redoShift()" ${shiftCanRedo()?'':'disabled'} title="取り消した編集をやり直す（Ctrl+Y）">↪ やり直す</button></span>`; }
+function undoRedoBarHtml(){
+  const scopeLabel = shiftCtx().main ? '全体シフト表（この締め月）' : 'この部署・締め月'; // 実際のundo範囲を明示（B16）
+  return `<span class="undoRedoBar" title="${scopeLabel}の中での編集を取り消せます"><button type="button" class="btn2 shiftUndoBtn" onclick="undoShift()" ${shiftCanUndo()?'':'disabled'} title="元に戻す（${scopeLabel}の直前の編集を取り消す / Ctrl+Z）">↩ 元に戻す</button><button type="button" class="btn2 shiftRedoBtn" onclick="redoShift()" ${shiftCanRedo()?'':'disabled'} title="取り消した編集をやり直す（Ctrl+Y）">↪ やり直す</button></span>`;
+}
 async function manualSet(key, staffName, value){ value = await normalizeManualShiftValue(value); if(value==='__CANCEL__'){ preserveScroll(()=>renderAll()); return; } if(!calendarEditMode){ showToast('全体シフト表は参照モードです。編集ボタンを押してから変更してください。','warn'); preserveScroll(()=>renderAll()); return; } const st=state.staff.find(x=>x.name===staffName); const lockedLabel=staffLockedLabel(st); if(lockedLabel){ showToast(`${lockedLabel} のため編集できません。「部署別シフト作成」で該当部署を再編集にしてください。`,'warn'); preserveScroll(()=>renderAll()); return; } pushShiftHistory(); const currentDept=assignDept[key]?.[staffName] || st?.dept || ''; setShiftValue(key, staffName, value, currentDept, true); }
 function setStatsWarnFilter(f){ statsWarnFilter=f; renderStats(); }
 function renderStats(){
