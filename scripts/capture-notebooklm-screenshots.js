@@ -326,7 +326,7 @@ async function main() {
   // ===== フェーズ4: 確定 → 全体シフト表 / ファイル出力 / OBIC =====
   await page.evaluate(() => {
     window.isWarningAllowed = () => true; // 撮影用：全警告を許容扱いにして確定を通す（データは破壊しない）
-    DEPTS.forEach((d) => { try { setActiveBuildDept(d); if (!confirmedDepts[d]) toggleDeptConfirm(d); } catch (e) {} });
+    DEPTS.forEach((d) => { try { setActiveBuildDept(d); if (!confirmedDepts[d]) toggleDeptConfirm(d, {skipConfirm:true}); } catch (e) {} });
     persist(); renderAll();
   });
   await page.waitForTimeout(300);

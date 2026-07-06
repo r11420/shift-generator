@@ -1125,7 +1125,12 @@ function normalizeShiftDefs(defs){
     const rawTime = String(d.time||'').trim();
     const _tr = parseShiftTimeRange(rawTime);
     let time;
-    if(_tr.start!=null && _tr.end!=null){ time = canonicalShiftTime(_tr.start, _tr.end); }
+    if(_tr.start!=null && _tr.end!=null){
+      let s=Math.max(0, Math.min(26*60, _tr.start)), e=Math.max(0, Math.min(26*60, _tr.end));
+      if(e<=s){ console.warn('シフト区分の時間が「開始≧終了」のため既定（9:00-18:00）に補正します：', code, JSON.stringify(rawTime)); s=9*60; e=18*60; }
+      else if(s!==_tr.start || e!==_tr.end){ console.warn('シフト区分の時間を0:00〜26:00の範囲に丸めました：', code, JSON.stringify(rawTime)); }
+      time = canonicalShiftTime(s, e); // 表示（ステッパー）と保存値のズレを読込時に解消（B08）
+    }
     else { if(rawTime && rawTime!=='時間未設定') console.warn('シフト区分の時間を解析できませんでした。出勤9:00／退勤18:00に補正します：', code, JSON.stringify(rawTime)); time = '9:00-18:00'; }
     const weekGroup = ['E','M','L'].includes(d.weekGroup) ? d.weekGroup : autoGroupByTime(time,false);
     const holGroup = ['E','M','L'].includes(d.holGroup) ? d.holGroup : autoGroupByTime(time,true);
@@ -1464,18 +1469,20 @@ async function handlePrefShiftOtherSelect(sel){
   sel.dataset.prev = v;
 }
 function createPreferenceFromInputs(prefix='', staffName=activePrefStaff){
+  const anchorEl = prefix==='new' ? null : document.querySelector(`.prefItem[data-pref-idx="${prefix}"]`);
   const type = document.getElementById(prefix+'PrefType')?.value || 'date';
   const shift = document.getElementById(prefix+'PrefShift')?.value || 'OFF';
-  if(shift === '__OTHER__'){ showPrefInputError('「その他」の内容が入力されていません。希望欄でもう一度「その他」を選び、内容を入力してください。'); return null; }
+  if(shift === '__OTHER__'){ showPrefInputError('「その他」の内容が入力されていません。希望欄でもう一度「その他」を選び、内容を入力してください。', anchorEl); return null; }
   if(type === 'holiday') return {type:'holiday', staff:staffName, shift};
   if(type === 'weekday'){
-    const root = prefix === 'new' ? document.querySelector('.prefAddBox') : document.querySelector(`.prefItem[data-pref-idx="${prefix}"]`);
+    const root = prefix === 'new' ? document.querySelector('.prefAddBox') : anchorEl;
     const r = readPrefWdOcc(root);
-    if(r.error){ showPrefInputError(r.error); return null; }
+    if(r.error){ showPrefInputError(r.error, anchorEl); return null; }
     return {type:'weekday', wds:r.wds, occ:r.occ, staff:staffName, shift};
   }
-  const date = normalizeDateInput((document.getElementById(prefix+'PrefDate')?.value || '').trim());
-  if(!date){ showPrefInputError('日付を入力してください。'); return null; }
+  const rawDate=(document.getElementById(prefix+'PrefDate')?.value || '').trim();
+  const date = normalizeDateInput(rawDate);
+  if(!date){ showPrefInputError(rawDate ? '日付が正しくありません。存在する日付を「18」または「2026-07-18」の形式で入力してください。' : '日付を入力してください。', anchorEl); return null; }
   return {type:'date', date, staff:staffName, shift};
 }
 function prefTypeOptions(value='date'){ return [['date','日付指定'],['weekday','曜日指定'],['holiday','祝日']].map(([v,t])=>`<option value="${v}" ${value===v?'selected':''}>${t}</option>`).join(''); }
@@ -1521,8 +1528,9 @@ function refreshAllPrefConditionVisibility(){
   updatePrefConditionVisibility('new');
   document.querySelectorAll('.prefItem[data-pref-idx]').forEach(el=>updatePrefConditionVisibility(el.dataset.prefIdx));
 }
-function showPrefInputError(message){
-  const box = document.querySelector('.prefAddBox') || document.querySelector('.prefItem[data-pref-idx]');
+function showPrefInputError(message, anchorEl=null){
+  // 編集中の行が指定されたらその行の直下に出す（上部の追加フォームに出て気づけない問題を解消:B29）
+  const box = anchorEl || document.querySelector('.prefAddBox') || document.querySelector('.prefItem[data-pref-idx]');
   if(!box) return;
   let el = box.querySelector('.prefInputError');
   if(!el){
@@ -1783,7 +1791,7 @@ function normalizeState(){
   if(Array.isArray(state.preferences) && state.preferences.length && !state.preferencesByPeriod[periodKey()]) state.preferencesByPeriod[periodKey()] = state.preferences;
   state.preferences = (state.preferencesByPeriod[periodKey()] || []).map(normalizePreference).filter(Boolean);
   state.preferencesByPeriod[periodKey()] = state.preferences;
-  if(activePrefDept !== '全体' && activePrefDept !== '店舗' && !DEPTS.includes(activePrefDept)) activePrefDept = 'トリマー';
+  if(activePrefDept !== '全体' && activePrefDept !== '店舗' && activePrefDept !== '未設定' && !DEPTS.includes(activePrefDept)) activePrefDept = 'トリマー';
   if(activePrefStaff !== '全体' && !state.staff.some(s=>s.name===activePrefStaff)){ activePrefStaff = '全体'; }
   if(activePrefStaff !== '全体'){ const pst = state.staff.find(s=>s.name===activePrefStaff); if(pst && pst.dept) activePrefDept = pst.dept; } // 部署未設定('')スタッフではタブを切り替えない
 }
@@ -1918,7 +1926,7 @@ function pullInputs(){
     //  ・氏名を空にされた行は旧状態を維持（黙ってスタッフ消滅・データ孤児化を防ぐ）
     //  ・他スタッフと同名への変更は旧名へ戻す（同名はキー衝突するため不可）
     //  ・正当な改名はキー移行（renameStaffData）で全データを追従させる
-    const renames=[]; const revertedDup=[];
+    const renames=[]; const revertedDup=[]; const deptChanges=[];
     for(const old of (state.staff||[])){
       if(visibleIds.has(old.id)){
         const upd = updatedById.get(old.id);
@@ -1929,6 +1937,12 @@ function pullInputs(){
           if(dup){ Object.assign(upd, {name:old.name, kana:old.kana, sei:old.sei, mei:old.mei, seiKana:old.seiKana, meiKana:old.meiKana}); revertedDup.push(old.name); }
           else renames.push([old.name, upd.name]);
         }
+        if(old.dept && upd.dept && old.dept!==upd.dept){
+          // 所属変更に追従して兼務チェックを更新（旧所属が兼務に残ると旧部署へ割当が続く：A18）
+          upd.supportDepts=(upd.supportDepts||[]).filter(d=>d!==old.dept);
+          if(!upd.supportDepts.includes(upd.dept)) upd.supportDepts.push(upd.dept);
+          deptChanges.push(upd.name);
+        }
         nextStaff.push(upd);
       }else nextStaff.push(old);
     }
@@ -1937,6 +1951,7 @@ function pullInputs(){
     for(const [o,n] of renames) renameStaffData(o,n);
     if(renames.length) toast('氏名の変更に合わせて、作成済みシフト・希望・許容の設定を新しい氏名へ引き継ぎました。','ok');
     if(revertedDup.length) showToast(`同じ氏名のスタッフがいるため氏名を変更できません（${revertedDup[0]}）。識別できる表記にしてください。`,'warn');
+    if(deptChanges.length) toast(`所属変更に合わせて兼務可能部署を更新しました（${deptChanges[0]}）。旧部署の兼務が必要な場合はチェックし直してください。`,'ok');
   }
   // 希望休は追加・保存・削除ボタンでのみ更新する。
   // 画面遷移や自動生成時のpullInputsで再構築すると、未編集中の希望休が消えるためここでは触らない。
@@ -2219,9 +2234,16 @@ function pullShiftDefsFromInputs(){
   const rows=[...document.querySelectorAll('.shiftDefRow')];
   if(!rows.length) return;
   const oldByCode={}; (state.shiftDefs||[]).forEach(d=>{ if(d&&d.code) oldByCode[String(d.code).trim().toUpperCase()]=d; });
-  state.shiftDefs = normalizeShiftDefs(rows.map(row=>{
+  const prevDefs=normalizeShiftDefs(state.shiftDefs); // 描画時と同じ並び（行index→旧コードの対応）
+  const seenCodes=new Set(); const fixedNotes=[];
+  state.shiftDefs = normalizeShiftDefs(rows.map((row, rowIdx)=>{
     const rawCode = row.querySelector('.sdCode')?.value || '';
-    const code = rawCode.trim().toUpperCase();
+    let code = rawCode.trim().toUpperCase();
+    // 空欄・重複の区分名は行を黙って消さず、直前の区分名へ戻して警告する（A19）
+    const prevCode = prevDefs[rowIdx]?.code || '';
+    if(!code && prevCode){ code=prevCode; fixedNotes.push(`空欄→${prevCode}`); }
+    else if(code && seenCodes.has(code) && prevCode && prevCode!==code && !seenCodes.has(prevCode)){ fixedNotes.push(`「${code}」重複→${prevCode}`); code=prevCode; }
+    if(code) seenCodes.add(code);
     // 時間は手入力欄ではなくステッパーの data 属性（時・分）から正規化して組み立てる。
     const sh=+row.dataset.sh||0, sm=+row.dataset.sm||0, eh=+row.dataset.eh||0, em=+row.dataset.em||0;
     const time = canonicalShiftTime(sh*60+sm, eh*60+em);
@@ -2237,9 +2259,10 @@ function pullShiftDefsFromInputs(){
     if(!hasEarly) morningClean = false;
     else if(!oldHadEarly) morningClean = true;
     else { const cb=row.querySelector('.sdMorningClean'); morningClean = cb ? !!cb.checked : (old ? old.morningClean!==false : true); }
-    return { code: rawCode, time, weekGroup, holGroup, useWeek, useHol, morningClean };
+    return { code, time, weekGroup, holGroup, useWeek, useHol, morningClean };
   }));
   rebuildShiftRuntime();
+  if(fixedNotes.length) showToast(`区分名が空欄・重複だったため元に戻しました（${fixedNotes[0]}${fixedNotes.length>1?` 他${fixedNotes.length-1}件`:''}）。`,'warn');
 }
 async function addShiftDefRow(){ pullInputs(); const code=await showInputModal({title:'シフト区分を追加', message:'追加するシフト区分名を入力してください。時間（出勤・退勤）は追加後に「−／＋」ボタンで設定できます。', placeholder:'例：R', confirmText:'追加する', cancelText:'キャンセル', validate:v=>state.shiftDefs.some(d=>d.code===v.trim().toUpperCase())?'同じ区分名がすでにあります。':null}); if(!code) return; const time='9:00-18:00'; state.shiftDefs.push({code:code.trim().toUpperCase(), time, weekGroup:autoGroupByTime(time,false), holGroup:autoGroupByTime(time,true), useWeek:true, useHol:true}); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); showToast('シフト区分を追加しました。時間は出勤・退勤の「−／＋」で設定してください。','success'); }
 async function deleteShiftDefRow(index){ pullInputs(); const d=state.shiftDefs[index]; if(!d) return; if(!await showConfirmModal({title:'シフト区分を削除しますか？', message:`シフト区分 ${d.code} を削除します。\n既存シフトで使っている場合、表示は残ることがありますが候補からは外れます。`, confirmText:'削除する', cancelText:'キャンセル', variant:'danger', dangerNote:'削除すると元に戻せません。'})) return; state.shiftDefs.splice(index,1); normalizeState(); preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
@@ -2816,15 +2839,17 @@ function renderPrefList(){
   const counts = new Map();
   for(const p of prefs) counts.set(p.staff, (counts.get(p.staff)||0)+1);
   if(activePrefDept === '店舗') activePrefDept = '全体'; // 臨時休業は「全体予定」タブへ移動（旧データの選択値は全体へ寄せる）
-  if(activePrefDept !== '全体' && activePrefDept !== '店舗' && !DEPTS.includes(activePrefDept)) activePrefDept = 'トリマー';
+  if(activePrefDept !== '全体' && activePrefDept !== '店舗' && activePrefDept !== '未設定' && !DEPTS.includes(activePrefDept)) activePrefDept = 'トリマー';
   // 「申請一覧」（内部値は'全体'）はスタッフを個別選択せず、申請の一覧表示のみ（スタッフは「全体」のみ）。
-  const visibleStaff = activePrefDept === '全体' ? [] : state.staff.filter(st=>st.dept===activePrefDept);
+  const visibleStaff = activePrefDept === '全体' ? [] : state.staff.filter(st=> activePrefDept==='未設定' ? !st.dept : st.dept===activePrefDept); // 部署未設定スタッフも希望を登録できる（B17）
   if(activePrefStaff !== '全体'){
     const activeStaffObj = state.staff.find(st=>st.name===activePrefStaff);
-    if(!activeStaffObj || activePrefDept === '全体' || (activePrefDept !== '全体' && activeStaffObj.dept !== activePrefDept)) activePrefStaff = '全体';
+    const objDept = activeStaffObj ? (activeStaffObj.dept || '未設定') : '';
+    if(!activeStaffObj || activePrefDept === '全体' || objDept !== activePrefDept) activePrefStaff = '全体';
   }
   const deptOptions = `<option value="全体" ${activePrefDept==='全体'?'selected':''}>申請一覧（全${state.staff.length}名）</option>`
     + orderedDepts().map(d=>`<option value="${esc(d)}" ${activePrefDept===d?'selected':''}>${esc(d)}（${state.staff.filter(s=>s.dept===d).length}名）</option>`).join('')
+    + (state.staff.some(s=>!s.dept)?`<option value="未設定" ${activePrefDept==='未設定'?'selected':''}>部署未設定（${state.staff.filter(s=>!s.dept).length}名）</option>`:'')
     ;
   const staffTabs = [`<button type="button" class="${activePrefStaff==='全体'?'active':''}" onclick="setActivePrefStaff('全体')">全体 <span class="staffCount">${prefs.length}</span></button>`]
     .concat(visibleStaff.map(st=>`<button type="button" class="${activePrefStaff===st.name?'active':''}" onclick="setActivePrefStaff('${escAttr(st.name)}')">${esc(st.name)} <span class="staffCount">${counts.get(st.name)||0}</span></button>`));
@@ -2905,7 +2930,7 @@ function setActivePrefDept(dept){
   preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
 }
 function prefSort(a,b){ return prefConditionText(a).localeCompare(prefConditionText(b),'ja') || (a.staff||'').localeCompare(b.staff||'','ja') || (a.shift||'').localeCompare(b.shift||''); }
-function setActivePrefStaff(name){ clearPrefInputError(); pullInputs(); activePrefStaff = name; const st=state.staff.find(x=>x.name===name); if(st && activePrefDept !== '全体') activePrefDept=st.dept; activePrefEditIndex = null; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
+function setActivePrefStaff(name){ clearPrefInputError(); pullInputs(); activePrefStaff = name; const st=state.staff.find(x=>x.name===name); if(st && activePrefDept !== '全体') activePrefDept=st.dept||'未設定'; activePrefEditIndex = null; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); }
 function prefRowHtml(p,i){
   const editing = activePrefEditIndex === i;
   const optsShift = shiftOptionsHtml(p.shift, false);
@@ -3091,6 +3116,10 @@ async function confirmAddStaffFromForm(){
   const weeklyAvailableDays=+(document.querySelector('#staffAddForm .stWeeklyAvailableDays')?.value || 5);
   if(!await showConfirmModal({title:'スタッフを追加しますか？', message:`${deptLabel(dept)} に ${name} を追加します。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   pullInputs();
+  if(!canShifts.length){
+    const okEmpty=await showConfirmModal({title:'入れるシフトが未選択です', message:`${name} は「入れるシフト」が1つも選ばれていません。\nこのまま登録すると自動生成の割当対象になりません（手動入力は可能です）。`, confirmText:'このまま登録', cancelText:'戻って選ぶ', variant:'caution', cautionNote:'自動生成に入れる場合は、入れるシフトを1つ以上チェックしてください。'});
+    if(!okEmpty) return;
+  }
   state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0}));
   staffAddFormOpen=false; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   showToast('スタッフを追加しました。','success');
@@ -3208,14 +3237,15 @@ function setMenuPeriodFromInputs(){
 }
 function normalizeDateInput(v){
   if(!v) return '';
+  // 存在しない日付（例：2/30・31日の無い月の31）は繰り越さず無効として空を返す（A16）
   if(/^\d{1,2}$/.test(v)){
     const d = +v;
     const dt = d <= 15 ? new Date(state.year, state.month-1, d) : new Date(state.year, state.month-2, d);
-    return fmtDate(dt);
+    return dt.getDate()===d ? fmtDate(dt) : '';
   }
   const m = v.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
-  if(m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
-  return v;
+  if(m){ const y=+m[1], mo=+m[2], d=+m[3]; const dt=new Date(y, mo-1, d); return (dt.getFullYear()===y && dt.getMonth()===mo-1 && dt.getDate()===d) ? fmtDate(dt) : ''; }
+  return '';
 }
 function parseOff(offText){return (offText||'').split(/[\s,、，]+/).map(x=>normalizeDateInput(x.trim())).filter(Boolean);}
 function fixedWeeklyOffMap(days){
@@ -3610,6 +3640,10 @@ function setDeptBuildTab(tab){
 }
 
 function renderBulkAssignBox(dept){
+  // 確定済みは操作フォームを出さず理由を先に示す（押してから拒否されるUIをやめる：A24）
+  if(isDeptConfirmed(dept)){
+    return `<div class="bulkAssignBox"><h3>${esc(dept)} の一括手動登録</h3><div class="draftEmptyNote">確定済みのため一括登録はロックされています。やり直す場合は下の「再編集」を押してください。</div></div>`;
+  }
   const rows=state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept));
   const saved=bulkAssignState[dept] || {staff:'', shift:'', other:'', wds:[]};
   const savedStaff = rows.some(s=>s.name===saved.staff) ? saved.staff : (rows[0]?.name || '');
@@ -3817,7 +3851,7 @@ function setDraftWarnFilter(dept, mode){
 }
 
 
-function toggleDeptConfirm(dept){
+async function toggleDeptConfirm(dept, opts={}){
   pullInputs();
   syncConfirmedForCurrentPeriod(); normalizeState();
   if(isDeptConfirmed(dept)){
@@ -3830,6 +3864,12 @@ function toggleDeptConfirm(dept){
       showToast(`未解消のエラーが ${unresolved}件 あります。解消するか「下書きチェック」「集計・警告」で許容すると確定できます。`,'warn');
       return;
     }
+    // 確定は全体表反映＋編集ロックの重い操作のため、内容サマリ付きで確認する（B28）
+    const scoped=scopeWarnsForDept(dept, validate(schedule, getDays(), true, assignDept));
+    const warnCnt=scoped.filter(w=>w.level==='warn' && !isWarningAllowed(w)).length;
+    const allowedCnt=scoped.filter(isWarningAllowed).length;
+    const okConfirm=opts.skipConfirm ? true : await showConfirmModal({title:`${dept} を確定しますか？`, message:`確定すると全体シフト表に反映され、${dept} のシフトは編集できなくなります（「再編集」で解除できます）。${warnCnt?`\n注意が ${warnCnt}件 あります（確定は可能です）。`:''}${allowedCnt?`\n許容済みの項目が ${allowedCnt}件 あります。`:''}`, confirmText:'確定する', cancelText:'キャンセル', variant:'primary'});
+    if(!okConfirm) return;
     confirmedDepts[dept]=true;
     toast(`${dept} のシフトを確定しました。`);
   }
@@ -4860,7 +4900,7 @@ function candidateCost(out, deptOut, days, day, staffName, sh, slotDept, random,
   const lateReason = lateEarlyReasonForAssignment(out, days, day, staffName, sh);
   if(lateReason==='平日遅番→土祝早番禁止') cost += 5000;
   else if(lateReason) cost += 1800;
-  if(sh==='E'){ const adjPrev = adjacentDayValue(out, days, day, staffName, -1); if(adjPrev.day && groupOfShift(adjPrev.value, adjPrev.day)==='L') cost += 999; }
+  if(sh==='E'){ const adjPrev = adjacentDayValue(out, days, day, staffName, -1); if(adjPrev.day && groupOfShift(adjPrev.value, adjPrev.day)==='L') cost += (state.avoidLateEarly ? 999 : 3); } // 設定OFF時は弱い選好のみ（A26）
   const prevCon = consecutiveRunLength(out, day, staffName, -1);
   cost += prevCon*prevCon*1.25;
   cost += pseudoRandom(staffName + day.key + sh + slotDept + random) * 4.0;

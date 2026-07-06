@@ -55,7 +55,7 @@ async function genDepts(page, list) {
   }
 }
 async function confirmDepts(page, list) {
-  await page.evaluate((list) => { window.isWarningAllowed = () => true; list.forEach((d) => { try { setActiveBuildDept(d); if (!confirmedDepts[d]) toggleDeptConfirm(d); } catch (e) {} }); persist(); renderAll(); }, list);
+  await page.evaluate((list) => { window.isWarningAllowed = () => true; list.forEach((d) => { try { setActiveBuildDept(d); if (!confirmedDepts[d]) toggleDeptConfirm(d, {skipConfirm:true}); } catch (e) {} }); persist(); renderAll(); }, list);
   await page.waitForTimeout(250);
 }
 async function show(page, panel) { await page.evaluate((p) => { showMenuPanel(p); const ca = document.querySelector('.contentArea'); if (ca) ca.scrollTop = 0; }, panel); await page.waitForTimeout(300); }

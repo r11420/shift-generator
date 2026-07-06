@@ -101,7 +101,7 @@ async function seedDummy(page){
     normalizeState(); persist(); renderInputs(); renderAll();
     for(const d of DEPTS){ try{ await generateDeptSchedule(d);}catch(e){} }
     window.isWarningAllowed=()=>true;
-    for(const d of DEPTS){ try{ setActiveBuildDept(d); if(!confirmedDepts[d]) toggleDeptConfirm(d);}catch(e){} }
+    for(const d of DEPTS){ try{ setActiveBuildDept(d); if(!confirmedDepts[d]) toggleDeptConfirm(d, {skipConfirm:true});}catch(e){} }
     persist(); renderAll();
   });
   await page.waitForTimeout(400);
@@ -264,7 +264,7 @@ async function seedDummy(page){
   await annotate(page,'SS-305',['#deptBuildPanel .confirmBtn'],'確定');
   // OBIC
   await page.evaluate(()=>{ DEPTS.forEach(d=>{state.deptNeeds[d]={week:{E:1,M:1,L:1},hol:{E:1,M:1,L:1}};}); }); // 念のため
-  await page.evaluate(async()=>{ window.isWarningAllowed=()=>true; for(const d of DEPTS){try{await generateDeptSchedule(d);setActiveBuildDept(d);if(!confirmedDepts[d])toggleDeptConfirm(d);}catch(e){}} persist(); showMenuPanel('obic'); renderAll(); window.scrollTo(0,0); }); await page.waitForTimeout(400);
+  await page.evaluate(async()=>{ window.isWarningAllowed=()=>true; for(const d of DEPTS){try{await generateDeptSchedule(d);setActiveBuildDept(d);if(!confirmedDepts[d])toggleDeptConfirm(d, {skipConfirm:true});}catch(e){}} persist(); showMenuPanel('obic'); renderAll(); window.scrollTo(0,0); }); await page.waitForTimeout(400);
   await annotate(page,'SS-801',['#obicSummary','.obicCopyBtn','.obicExcelBtn'],'対象人数/コピー/Excel');
   await annotate(page,'SS-806',['.obicCopyBtn'],'コピー');
   await annotate(page,'SS-807',['.obicExcelBtn'],'Excel出力');
