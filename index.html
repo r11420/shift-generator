@@ -6467,14 +6467,15 @@ function applyImportedBackup(obj){
   activeMenu = (ui.activeMenu || obj.activeMenu || activeMenu || 'calendar');
   if(activeMenu === 'csv') activeMenu = 'calendar';
   syncConfirmedForCurrentPeriod();
-  const restored = {state, schedule, assignDept, locks, allowedErrors, draftWarningPages, bulkAssignState, confirmedDepts, confirmedDeptsByPeriod, activeConfirmedPeriodKey, activeBuildDept, activeBasicDept, activePrefStaff, activePrefDept, activeStaffDept, activeStaffTagFilters, deptPreviewSize, deptBuildTab, draftWarnPageSize, activeMenu, staffExpanded, globalStaffExpanded};
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+  // 保存はpersist()に一本化（タブロックのガードを迂回しない：B03）
+  persist();
   renderInputs();
   document.querySelectorAll('.menuPanel').forEach(el=>el.classList.toggle('active', el.dataset.panel===activeMenu));
   document.querySelectorAll('.menuItem').forEach(el=>el.classList.toggle('active', el.dataset.panel===activeMenu));
   renderAll();
 }
 function openBackupFilePicker(){
+  if(!canPersistThisTab()){ showNoticeModal({title:'このタブでは復元できません', message:'別のタブが編集中のため、このタブからは復元できません。\n編集中のタブで実行するか、表示中の案内から「このタブで編集」に切り替えてください。', confirmText:'閉じる', variant:'caution'}); return; }
   const input = document.getElementById('jsonFile');
   if(!input){ showNoticeModal({title:'復元できません', message:'バックアップ復元用のファイル入力が見つかりません。', confirmText:'閉じる', variant:'danger'}); return; }
   input.value = '';
@@ -6536,7 +6537,14 @@ function _openModal(overlay, {initialFocus, onEnter, onEsc}){
   requestAnimationFrame(()=>overlay.classList.add('show'));
   function onKey(e){
     if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); onEsc&&onEsc(); }
-    else if(e.key==='Enter'){ if(e.target && e.target.tagName==='TEXTAREA') return; e.preventDefault(); onEnter&&onEnter(); }
+    else if(e.key==='Enter'){
+      if(e.target && e.target.tagName==='TEXTAREA') return;
+      e.preventDefault();
+      // フォーカス中のボタンを優先実行する（キャンセルにフォーカスしてEnter→確定が走る誤発火を防ぐ：S07）
+      const a=document.activeElement;
+      if(a && a.tagName==='BUTTON' && overlay.contains(a)){ a.click(); return; }
+      onEnter&&onEnter();
+    }
     else if(e.key==='Tab'){ const f=_modalFocusables(overlay); if(!f.length) return; const first=f[0], last=f[f.length-1]; if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); } else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } }
   }
   document.addEventListener('keydown', onKey, true);
@@ -6551,7 +6559,7 @@ function showConfirmModal(opts={}){
     const note = (variant==='danger') ? `<div class="appModalDangerNote">${esc(dangerNote||'この操作は取り消せない場合があります。実行前にバックアップの取得をおすすめします。')}</div>` : (variant==='caution' && cautionNote ? `<div class="appModalCautionNote">${esc(cautionNote)}</div>` : '');
     overlay.innerHTML=`<div class="appModalCard variant-${variant}" role="dialog" aria-modal="true" aria-labelledby="${tid}"><h2 class="appModalTitle" id="${tid}">${esc(title)}</h2>${message?`<div class="appModalMsg">${esc(message)}</div>`:''}${note}<div class="appModalBtns"><button type="button" class="appModalBtn appModalCancel">${esc(cancelText)}</button><button type="button" class="appModalBtn appModalConfirm variant-${variant}">${esc(confirmText)}</button></div></div>`;
     let done=false; const finish=v=>{ if(done) return; done=true; close(); resolve(v); };
-    const close=_openModal(overlay, {initialFocus: overlay.querySelector('.appModalConfirm'), onEnter:()=>finish(true), onEsc:()=>finish(false)});
+    const close=_openModal(overlay, {initialFocus: overlay.querySelector(variant==='danger' ? '.appModalCancel' : '.appModalConfirm'), onEnter:()=>finish(true), onEsc:()=>finish(false)});
     overlay.querySelector('.appModalConfirm').onclick=()=>finish(true);
     overlay.querySelector('.appModalCancel').onclick=()=>finish(false);
   });
@@ -6799,7 +6807,7 @@ function ensureTabLockOverlay(){
 }
 function setTabEditor(on){ tabIsEditor = !!on; const ov = ensureTabLockOverlay(); ov.classList.toggle('show', !tabIsEditor); }
 // このタブで編集を引き継ぐ：他タブをロックし、最新の保存内容を読み直してから編集権を得る（古い状態での上書きを防ぐ）
-function takeoverThisTab(){ tabPost('takeover'); setTabEditor(true); tabLockResolved = true; try{ load(); }catch(e){ console.warn(e); } }
+function takeoverThisTab(){ tabPost('takeover'); setTabEditor(true); tabLockResolved = true; try{ load(); normalizeState(); renderInputs(); renderAll(); }catch(e){ console.warn(e); } }
 if(tabBC){
   tabBC.onmessage = (ev)=>{
     const m = ev.data || {};
@@ -6814,7 +6822,11 @@ if(tabBC){
     } else if(m.type === 'takeover'){
       if(tabIsEditor) setTabEditor(false); tabLockResolved = true;               // 別タブが引き継いだ
     } else if(m.type === 'editor-left'){
-      if(!tabIsEditor){ setTabEditor(true); tabPost('iam-editor'); }             // 編集タブが閉じた→取り戻す
+      if(!tabIsEditor){
+        // 編集権を得る前に必ず保存データを読み直す（このタブの古いメモリ状態で最新の保存を上書きしない：S06）
+        try{ load(); normalizeState(); renderInputs(); renderAll(); }catch(e){ console.warn(e); }
+        setTabEditor(true); tabPost('iam-editor');
+      }
       tabLockResolved = true;
     }
   };
