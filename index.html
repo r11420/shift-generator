@@ -1039,11 +1039,8 @@ let activeBasicDept = 'トリマー';
 let activePrefStaff = '全体';
 let activePrefDept = 'トリマー';
 let prefsTab = 'request'; // シフト希望・全体予定パネルのタブ: request（シフト希望）/ event（全体予定）
-let shiftAppearanceOpen = false; // 基本ルール：区分デザイン設定の開閉（現在はカテゴリ内に常時表示）
 // 基本ルール：カテゴリ別アコーディオンの開閉状態（前回開いていたカテゴリを記憶）。
 let basicOpenCats = (()=>{ try{ return JSON.parse(localStorage.getItem('kjmBasicCats')||'{}')||{}; }catch(e){ return {}; } })();
-let shiftDefOpen = false; // 基本ルール：シフト区分の折りたたみ
-let basicTab = 'common'; // 基本ルールパネルのタブ: common（共通ルール）/ dept（部署別ルール）
 let activePrefEditIndex = null;
 let generationRunning = false;
 let generationCancel = false; // 生成中止リクエスト
@@ -1206,7 +1203,7 @@ function shiftOptionsCompactHtml(value='', includeBlank=true){
   return opts.map(([v,t])=>`<option value="${esc(v)}" ${value===v?'selected':''}>${esc(t)}</option>`).join('');
 }
 function shiftLegendHtml(){ return `<div class="shiftLegend"><h4>シフト区分対応表</h4><div class="shiftLegendGrid">${SHIFT_CODES.map(c=>`<div class="shiftLegendItem"><b>${c}</b>${SHIFT_TIMES[c]}</div>`).join('')}</div><div class="stateLegend noPrint"><h4>状態色の見かた</h4><span class="stateLegendItem slBad">赤枠＝未解消のエラー</span><span class="stateLegendItem slAllowed">緑枠＝許容済み（確認のうえOKにした違反）</span><span class="stateLegendItem slWarn">金＝注意（確定は可能）</span><span class="stateLegendItem slSel">薄緑の背景＝範囲選択中</span></div></div>`; } // 状態色の凡例（B25）
-function shiftLegendTableHtml(){ const defs=normalizeShiftDefs(state.shiftDefs); let html='<div class="shiftLegend"><h4>シフト区分対応表</h4><table class="legendCompactTable"><thead><tr><th>区分</th><th>時間</th><th>区分</th><th>時間</th><th>区分</th><th>時間</th><th>区分</th><th>時間</th></tr></thead><tbody>'; for(let i=0;i<defs.length;i+=4){ const cells=[defs[i], defs[i+1], defs[i+2], defs[i+3]].map(d=>d?`<td><b>${esc(d.code)}</b></td><td>${esc(d.time)}</td>`:'<td></td><td></td>').join(''); html+=`<tr>${cells}</tr>`; } return html+'</tbody></table></div>'; }
+// （shiftLegendTableHtml は shiftLegendExcelHtml と重複・未使用のため削除：C10）
 function shiftLegendExcelHtml(){ const defs=normalizeShiftDefs(state.shiftDefs); let html='<div class="shiftLegend"><h4>シフト区分対応表</h4><table class="legendCompactTable"><thead><tr><th>区分</th><th>時間</th><th>区分</th><th>時間</th><th>区分</th><th>時間</th><th>区分</th><th>時間</th></tr></thead><tbody>'; for(let i=0;i<defs.length;i+=4){ const cells=[defs[i],defs[i+1],defs[i+2],defs[i+3]].map(d=>d?`<td><b>${esc(d.code)}</b></td><td>${esc(d.time)}</td>`:'<td></td><td></td>').join(''); html+=`<tr>${cells}</tr>`; } return html+'</tbody></table></div>'; }
 function groupOfShift(v, dayObj=null){ v=normalizeStoredShift(v); if(!v || isRestShift(v) || isCustomShift(v)) return ''; if(dayObj && dayObj.holType && SHIFT_GROUP_HOL[v]) return SHIFT_GROUP_HOL[v]; return SHIFT_GROUP[v] || (['E','M','L'].includes(v)?v:''); }
 function isShiftUsableOnDay(code, dayObj){ if(!code || !SHIFT_CODES.includes(code)) return false; if(dayObj && dayObj.holType) return SHIFT_USE_HOL[code] !== false; return SHIFT_USE_WEEK[code] !== false; }
@@ -1251,7 +1248,6 @@ function shiftAppearanceCss(){
 function applyShiftAppearanceStyle(){ if(typeof document==='undefined') return; let el=document.getElementById('shiftAppearanceStyle'); if(!el){ el=document.createElement('style'); el.id='shiftAppearanceStyle'; (document.head||document.documentElement).appendChild(el); } el.textContent=shiftAppearanceCss(); }
 function dayColClass(day){ return day.closure ? 'closureHead' : (day.closed ? 'closedHead' : (day.holType ? 'weekendCol' : '')); }
 // ===== 全体予定（定期予定＋全体予定）：シフト表の日付下にタグ表示 =====
-const WD_FULL = WD; // 曜日ラベルは WD と同一（重複定義を避けて一元化）
 function daysInMonthOf(y,m){ return new Date(y,m,0).getDate(); }
 function nthOfWeekdayInMonth(day){ return Math.floor((day.day-1)/7)+1; } // その曜日が月内で何回目か
 function isLastWeekdayInMonth(day){ return day.day + 7 > daysInMonthOf(day.y, day.m); }
@@ -1282,7 +1278,7 @@ function occText(occ){
   if(o.includes('last')) parts.push('最終');
   return parts.join('・')||'毎週';
 }
-function wdListText(wds){ return (wds||[]).map(Number).sort((a,b)=>a-b).map(w=>WD_FULL[w]||'').join('・'); }
+function wdListText(wds){ return (wds||[]).map(Number).sort((a,b)=>a-b).map(w=>WD[w]||'').join('・'); }
 function recurringMatchesDay(rs, day){ // 定期予定1件がこの日に該当するか
   if(rs.axis==='date'){
     if(rs.month && rs.month!=='every' && +rs.month!==day.m) return false; // 月指定（毎月以外）
@@ -1491,7 +1487,7 @@ function prefWdOccCheckboxesHtml(p={}){
   const {wds,occ} = wdOccOf(p);
   const wdSet = new Set((wds||[]).map(Number));
   const occSet = new Set((occ||['every']).map(String));
-  const wdRow = WD_FULL.map((w,i)=>`<label class="badge"><input type="checkbox" class="prefWdCheck" value="${i}" ${wdSet.has(i)?'checked':''}>${w}</label>`).join('');
+  const wdRow = WD.map((w,i)=>`<label class="badge"><input type="checkbox" class="prefWdCheck" value="${i}" ${wdSet.has(i)?'checked':''}>${w}</label>`).join('');
   const nthRow = [1,2,3,4,5].map(n=>`<label class="badge"><input type="checkbox" class="prefOccCheck" value="${n}" ${occSet.has(String(n))?'checked':''}>第${n}</label>`).join('')
     + `<label class="badge occEvery"><input type="checkbox" class="prefOccCheck" value="every" ${occSet.has('every')?'checked':''}>毎週</label>`;
   return `<div class="recCheckGroup"><div class="recCheckLabel">曜日（複数可）</div><div class="weekdayChecks">${wdRow}</div></div>
@@ -2064,16 +2060,7 @@ function applyBasicCats(){
     sub.classList.toggle('open', open);
   });
 }
-// 旧：共通ルール／部署別ルールのタブ切替（カテゴリ化前の互換用。現在は未使用だが参照安全のため残す）
-function setBasicTab(t){ basicTab = (t==='dept')?'dept':'common'; applyBasicTab(); }
-function applyBasicTab(){
-  const cp=document.getElementById('basicCommonPane'), dp=document.getElementById('basicDeptPane');
-  const cb=document.getElementById('basicTabCommonBtn'), db=document.getElementById('basicTabDeptBtn');
-  if(cp) cp.style.display = basicTab==='common' ? '' : 'none';
-  if(dp) dp.style.display = basicTab==='dept' ? '' : 'none';
-  if(cb) cb.classList.toggle('active', basicTab==='common');
-  if(db) db.classList.toggle('active', basicTab==='dept');
-}
+// （旧タブUIの setBasicTab/applyBasicTab は現行アコーディオンへ移行済みのため削除：C02）
 function buildableDepts(){ return orderedDepts(); }
 function renderBasicDeptTabs(){
   const box=document.getElementById('basicDeptTabs'); if(!box) return;
@@ -2181,8 +2168,6 @@ function renderShiftAppearanceEditor(){
   bindShiftAppearanceDelegation();
   box.innerHTML=renderShiftAppearancePanelHtml();
 }
-function toggleShiftAppearanceEditor(){ pullInputs(); shiftAppearanceOpen=!shiftAppearanceOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
-function toggleShiftDefEditor(){ pullInputs(); shiftDefOpen=!shiftDefOpen; preserveScroll(()=>{ persist(); renderInputs(); }); }
 function appearancePreviewClass(group){ return 'shiftGroup-'+group; }
 function shiftAppearanceRowsHtml(){
   return APPEARANCE_GROUPS.map(k=>{ const eff=effectiveAppearance(k); const idk=saClass(k); const over=!!(state.shiftAppearance&&state.shiftAppearance[k]); const label=APPEARANCE_GROUP_LABEL[k]||k;
@@ -2207,10 +2192,8 @@ function bindShiftAppearanceDelegation(){
   document.addEventListener('change', onCtl);
   document.addEventListener('click', e=>{ const t=e.target && e.target.closest && e.target.closest('[data-sapact]'); if(!t) return;
     const act=t.dataset.sapact;
-    if(act==='toggle') toggleShiftAppearanceEditor();
-    else if(act==='reset-all') resetAllShiftAppearance();
+    if(act==='reset-all') resetAllShiftAppearance();
     else if(act==='reset-row') resetShiftAppearanceRow(t);
-    else if(act==='defToggle') toggleShiftDefEditor();
   });
 }
 function updateShiftAppearanceRow(el){
@@ -2536,7 +2519,7 @@ function onRecMonthChange(){ const ms=document.getElementById('recMonth'), ds=do
 function onRecTagChange(){ const t=document.getElementById('recTag')?.value; const o=document.getElementById('recTagOther'); if(o) o.style.display = t==='__OTHER__'?'':'none'; }
 // 曜日チェック＋回数チェックの入力ブロック（定期予定・全体予定で共用）。occ に 'last' を出すかは withLast で切替。
 function wdOccCheckboxesHtml(prefix, withLast){
-  const wdRow = WD_FULL.map((w,i)=>`<label class="badge"><input type="checkbox" class="${prefix}WdCheck" value="${i}">${w}</label>`).join('');
+  const wdRow = WD.map((w,i)=>`<label class="badge"><input type="checkbox" class="${prefix}WdCheck" value="${i}">${w}</label>`).join('');
   const nthRow = [1,2,3,4,5].map(n=>`<label class="badge"><input type="checkbox" class="${prefix}OccCheck" value="${n}">第${n}</label>`).join('')
     + (withLast?`<label class="badge"><input type="checkbox" class="${prefix}OccCheck" value="last">最終</label>`:'')
     + `<label class="badge occEvery"><input type="checkbox" class="${prefix}OccCheck" value="every">毎週</label>`;
@@ -5193,7 +5176,7 @@ function mcRuleText(r){
   if(!r) return '';
   if(r.type==='all') return '全日（この部署は常に付けない）';
   if(r.type==='event') return `予定「${r.tag}」がある日`;
-  if(r.type==='wd'){ const names=(r.wds||[]).map(w=>w==='hol'?'祝':WD_FULL[w]).filter(Boolean).join('・'); const oc=(!r.occ||!r.occ.length||r.occ.includes('every'))?'毎週':r.occ.map(o=>o==='last'?'最終':`第${o}`).join('・'); return `${names} ${oc}`; }
+  if(r.type==='wd'){ const names=(r.wds||[]).map(w=>w==='hol'?'祝':WD[w]).filter(Boolean).join('・'); const oc=(!r.occ||!r.occ.length||r.occ.includes('every'))?'毎週':r.occ.map(o=>o==='last'?'最終':`第${o}`).join('・'); return `${names} ${oc}`; }
   return '';
 }
 // 部署別ルールタブに表示する、その部署の朝そうじ除外ルール（条件を組み立てて登録）
@@ -5204,7 +5187,7 @@ function morningCleanDeptHtml(dept){
     `<div class="recFormRow"><select id="mcRuleType" title="条件タイプ"><option value="all">全日（この部署は常に付けない）</option><option value="event">全体予定で指定</option><option value="wd">曜日で指定</option></select>`+
       `<span id="mcrEventOpts" style="display:none"><select id="mcRuleTag">${scheduleTagOptionsHtml()}</select><input id="mcRuleTagOther" placeholder="その他の内容" style="display:none"></span></div>`+
     `<div id="mcrWdOpts" class="recWdBlock" style="display:none">`+
-      `<div class="recCheckGroup"><div class="recCheckLabel">曜日（複数可）</div><div class="weekdayChecks">${WD_FULL.map((w,i)=>`<label class="badge"><input class="mcrWd" type="checkbox" value="${i}">${w}</label>`).join('')}<label class="badge"><input class="mcrWd" type="checkbox" value="hol">祝</label></div><div class="mcRow" style="margin-top:6px"><button type="button" class="btn2 mcMini" data-mcact="wd-all">全チェック</button><button type="button" class="btn2 mcMini" data-mcact="wd-none">全解除</button></div></div>`+
+      `<div class="recCheckGroup"><div class="recCheckLabel">曜日（複数可）</div><div class="weekdayChecks">${WD.map((w,i)=>`<label class="badge"><input class="mcrWd" type="checkbox" value="${i}">${w}</label>`).join('')}<label class="badge"><input class="mcrWd" type="checkbox" value="hol">祝</label></div><div class="mcRow" style="margin-top:6px"><button type="button" class="btn2 mcMini" data-mcact="wd-all">全チェック</button><button type="button" class="btn2 mcMini" data-mcact="wd-none">全解除</button></div></div>`+
       `<div class="recCheckGroup"><div class="recCheckLabel">回数（複数可・「毎週」で第Nは無視）</div><div class="weekdayChecks">${[1,2,3,4,5].map(n=>`<label class="badge occPill"><input class="mcrOcc" type="checkbox" value="${n}">第${n}</label>`).join('')}<label class="badge occPill"><input class="mcrOcc" type="checkbox" value="last">最終</label><label class="badge occPill"><input class="mcrOcc" type="checkbox" value="every">毎週</label></div></div>`+
     `</div>`+
     `<div class="recFormRow"><button type="button" class="btn" data-mcact="add-rule" ${da}>＋ ルール追加</button></div>`+
@@ -6466,14 +6449,11 @@ function saveCalendarPDF(){ printCalendarView(); }
 function printDeptView(dept){ if(!isDeptConfirmed(dept)){ showToast(`${dept} は未確定のため印刷/PDF出力できません。確定後に出力できます。`,'warn'); return; } activeBuildDept=dept; renderDeptShiftPreview(); const box=document.getElementById('deptShiftPreview'); const table=printableTableHtml(box?.querySelector('table'), true, true); const totals=staffTotalsTableHtml('スタッフ別 合計・早・中・遅', deptTotalsRows(dept, getDays())); printHtmlDocument(`${dept}のシフト表（${state.year}年${state.month}月15日締め）`, `<div>${table}</div>${shiftLegendHtml()}${totals}`); }
 function saveDeptPDF(dept){ printDeptView(dept); }
 function cellCsvLabel(day, st){ const v=normalizeStoredShift(schedule[day.key]?.[st.name]||''); if(!v) return ''; const dep=assignDept[day.key]?.[st.name]||st.dept; const label=shiftLabel(v)||''; return (isWorkingShift(v)&&dep!==st.dept) ? `${label}[${dep}]` : label; }
-function makeCSV(){ return makeCalendarCSV(); }
 function csvCell(v){v=String(v??''); return '"'+v.replace(/"/g,'""')+'"';}
 function backupTimestamp(){
   const d = new Date();
   return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
-function renderCsvPreview(){}
-function exportCSV(){ exportCalendarCSV(); }
 function buildBackupPayload(){
   pullInputs();
   normalizeState();
