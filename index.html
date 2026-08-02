@@ -126,7 +126,7 @@ textarea{min-height:66px;resize:vertical}button{border:0;border-radius:13px;padd
 .staffSummaryMeta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px}
 .empNoBadge{display:inline-block;border-radius:8px;padding:2px 7px;font-size:11px;font-weight:900;background:#eef2f7;color:#3a5a86;border:1px solid #cdddf0}
 .empNoBadge.empNoMissing{background:#fbe7e4;color:#9c4844;border-color:#e6c4c0}
-.staffOpenHint{font-size:11px;font-weight:800;color:var(--accent2);background:var(--soft);border:1px solid #cfe0d2;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.staffOpenHint{font-size:11px;font-weight:800;color:var(--accent2);background:var(--soft);border:1px solid #cfe0d2;border-radius:999px;padding:3px 10px;white-space:nowrap}.staffMoveCtrl{display:inline-flex;gap:4px;margin-right:10px;flex:0 0 auto}.staffMoveBtn{width:28px;height:28px;min-width:28px;padding:0;border:1px solid var(--sgl);background:#fff;color:var(--accent2);border-radius:8px;font-weight:900;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.staffMoveBtn:hover:not(:disabled){background:var(--sgs)}.staffMoveBtn:disabled{opacity:.35;cursor:default}
 .reqMark{display:inline-block;font-size:10px;font-weight:900;color:#fff;background:var(--bad);border-radius:999px;padding:1px 6px;margin-left:2px;vertical-align:1px}
 .staffEditFooter .staffDeleteBtn{width:auto;order:-1}
 .staffSearchWrap{display:flex;align-items:center;gap:8px;margin:8px 0}
@@ -910,7 +910,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     </section>
     <section class="card menuPanel" data-panel="staff">
       <div class="panelHead noPrint">
-        <div><h2><img class="appicon xl" src="assets/icons/svg/nav-staff.svg" alt="">スタッフ</h2><p>部署タブを切り替えて、その部署のスタッフだけを編集できます。一覧はOBIC連携と同じく社員番号の昇順で表示されます（未設定は末尾）。</p></div>
+        <div><h2><img class="appicon xl" src="assets/icons/svg/nav-staff.svg" alt="">スタッフ</h2><p>部署タブを切り替えて、その部署のスタッフだけを編集できます。一覧の「↑」「↓」で表示順を並び替えでき、その順番が全体シフト表・部署別・印刷/Excel/CSVにも使われます（OBIC連携用のみ社員番号順のまま）。</p></div>
       </div>
       <div class="deptTabs" id="staffDeptTabs"></div>
       <div class="staffToolbar">
@@ -918,7 +918,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
         <div id="staffAddForm" class="staffAddForm"></div>
       </div>
       <div id="staffList"></div>
-      <div class="footerNote">スタッフ情報では、毎週固定の公休日を曜日で指定します。「祝日」にチェックすると日本の祝日もすべて固定公休になります。個別日の休み・勤務不可・早中遅希望は「シフト希望・全体予定」で登録してください。同姓同名がいる場合は、氏名欄に識別用の表記を追加してください。兼務可能部署を設定すると、所属部署以外の必要人数にも自動で入れる候補になります。一覧は社員番号の昇順で自動整列します（手動の並び替えはありません）。</div>
+      <div class="footerNote">スタッフ情報では、毎週固定の公休日を曜日で指定します。「祝日」にチェックすると日本の祝日もすべて固定公休になります。個別日の休み・勤務不可・早中遅希望は「シフト希望・全体予定」で登録してください。同姓同名がいる場合は、氏名欄に識別用の表記を追加してください。兼務可能部署を設定すると、所属部署以外の必要人数にも自動で入れる候補になります。一覧は「↑」「↓」で並び替えた表示順で表示され、他の画面・出力にも同じ順番が使われます（OBIC連携用のみ社員番号順）。</div>
 
     </section>
     <section class="card menuPanel" data-panel="prefs">
@@ -1773,7 +1773,17 @@ function normalizeState(){
   }).filter(s=>s.name);
   // バックアップ等から来た未知のタグはマスタへ取り込んで消失を防ぐ
   for(const s of state.staff){ for(const t of (s.tags||[])){ if(t && !state.tags.includes(t)) state.tags.push(t); } }
-  state.staff = staffSortedByEmpNo(state.staff); // 一覧・全体表・OBIC・出力で常に社員番号の昇順に統一（手動並べ替えは廃止）
+  // スタッフ表示順（sortOrder）：スタッフ画面の「↑↓」で管理する。配列自体を表示順に保つため、
+  // state.staff.filter(...) で作る各画面のリストも自動的にこの並びになる（OBICのみ社員番号順を別途維持）。
+  // 未導入データ（全員sortOrderなし）は従来の社員番号順で初期化＝導入前と表示が変わらない。
+  {
+    const hasAny = state.staff.some(s=>typeof s.sortOrder==='number' && isFinite(s.sortOrder));
+    const ordered = hasAny
+      ? [...state.staff].sort((a,b)=> displayOrderVal(a)-displayOrderVal(b) || empNoSortVal(a)-empNoSortVal(b) || kanaSortKey(a).localeCompare(kanaSortKey(b),'ja'))
+      : staffSortedByEmpNo(state.staff);
+    ordered.forEach((s,i)=>{ s.sortOrder=i; }); // 常に0..n-1の一意な整数へ振り直す（欠損・重複・歯抜けを解消）
+    state.staff = ordered;
+  }
   if(!Array.isArray(activeStaffTagFilters)) activeStaffTagFilters = activeStaffTagFilters ? [activeStaffTagFilters] : [];
   activeStaffTagFilters = activeStaffTagFilters.filter(t=>state.tags.includes(t));
   if(activeStaffDept !== '全体' && !DEPTS.includes(activeStaffDept)) activeStaffDept = 'トリマー';
@@ -1905,6 +1915,7 @@ function pullInputs(){
       return finalizeStaffTags({
         id,
         empNo: el.querySelector('.stEmpNo') ? el.querySelector('.stEmpNo').value.trim() : ((state.staff||[]).find(s=>s.id===id)?.empNo||''),
+        sortOrder: (state.staff||[]).find(s=>s.id===id)?.sortOrder, // 表示順はDOMに無いため既存値を持ち越す
         name,
         kana,
         sei, mei, seiKana, meiKana,
@@ -2603,7 +2614,7 @@ function renderStaffList(){
   const scoped = state.staff.map((s,i)=>({s,i})).filter(x=>activeStaffDept==='全体' || x.s.dept===activeStaffDept);
   // 検索は一覧を作り直さず表示/非表示で行う（IME安定・2回目以降も効く）。ここでは全行を描画する。
   const rows = (activeStaffTagFilters.length ? scoped.filter(x=>activeStaffTagFilters.every(t=>(x.s.tags||[]).includes(t))) : scoped) // AND条件
-    .sort((a,b)=> empNoSortVal(a.s)-empNoSortVal(b.s) || kanaSortKey(a.s).localeCompare(kanaSortKey(b.s),'ja') || (a.s.name||'').localeCompare(b.s.name||'','ja')); // OBICと同様に社員番号の昇順で表示（保存順=自動生成順は変えない）
+    .sort((a,b)=> displayOrderVal(a.s)-displayOrderVal(b.s) || empNoSortVal(a.s)-empNoSortVal(b.s)); // スタッフ画面で設定した表示順（↑↓で変更可。OBICのみ社員番号順）
   const curQuery = currentStaffSearch();
   const filterBar = staffTagFilterBarHtml();
   const searchBar = `<div class="staffSearchWrap"><img class="appicon staffSearchIcon" src="assets/icons/svg/ui-search.svg" alt=""><input id="staffSearchInput" class="staffSearchInput" type="search" placeholder="氏名・よみがなで検索" value="${escAttr(curQuery)}" oninput="onStaffSearchInput(event)" oncompositionend="onStaffSearchCommit(event)" autocomplete="off"><button type="button" id="staffSearchClear" class="staffSearchClear" title="検索をクリア" onclick="clearStaffSearch()" style="display:none">×</button><span id="staffSearchCount" class="staffSearchCount" style="display:none"></span></div>`;
@@ -2623,6 +2634,7 @@ function renderStaffList(){
           <div class="staffSummaryName"><b>${esc(s.name||'未入力スタッフ')}</b>${s.kana?`<span class="summaryKana">${esc(s.kana)}</span>`:''}</div>
           <div class="staffSummaryMeta">${isValidEmpNo(s.empNo)?`<span class="empNoBadge">No.${esc(s.empNo)}</span>`:'<span class="empNoBadge empNoMissing">番号未設定</span>'}<span class="pill pDept">${esc(deptLabel(s.dept))}</span>${tagBadgesHtml(s)}${s.maxDays?`<span class="limitBadge">上限${s.maxDays}日</span>`:''}</div>
         </div>
+        <span class="staffMoveCtrl noPrint" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()"><button type="button" class="staffMoveBtn" onclick="moveStaffOrder('${escAttr(s.id)}',-1)" ${localIdx===0?'disabled':''} title="上へ移動" aria-label="${escAttr(s.name||'スタッフ')} を上へ移動">↑</button><button type="button" class="staffMoveBtn" onclick="moveStaffOrder('${escAttr(s.id)}',1)" ${localIdx===rows.length-1?'disabled':''} title="下へ移動" aria-label="${escAttr(s.name||'スタッフ')} を下へ移動">↓</button></span>
         <span class="staffOpenHint" aria-hidden="true">編集</span>
       </div>
     </div>`;
@@ -3121,7 +3133,7 @@ async function confirmAddStaffFromForm(){
     const okEmpty=await showConfirmModal({title:'入れるシフトが未選択です', message:`${name} は「入れるシフト」が1つも選ばれていません。\nこのまま登録すると自動生成の割当対象になりません（手動入力は可能です）。`, confirmText:'このまま登録', cancelText:'戻って選ぶ', variant:'caution', cautionNote:'自動生成に入れる場合は、入れるシフトを1つ以上チェックしてください。'});
     if(!okEmpty) return;
   }
-  state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0}));
+  state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0, sortOrder: state.staff.reduce((m,s)=>Math.max(m, displayOrderVal(s)===Infinity?-1:s.sortOrder), -1)+1}));
   staffAddFormOpen=false; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   showToast('スタッフを追加しました。','success');
 }
@@ -5449,7 +5461,7 @@ function shiftCellInner(codeHtml, notesHtml){
 function renderDeptShiftPreview(){
   const box=document.getElementById('deptShiftPreview'); if(!box) return;
   const days=getDays();
-  const rows=staffSortedByEmpNo(state.staff.filter(s=>s.dept===activeBuildDept || (s.supportDepts||[]).includes(activeBuildDept)));
+  const rows=state.staff.filter(s=>s.dept===activeBuildDept || (s.supportDepts||[]).includes(activeBuildDept)); // 表示順（スタッフ画面の並び）
   const editable=!isDeptConfirmed(activeBuildDept);
   let html=`<h3>${esc(activeBuildDept)} のシフト確認 <span class="pvSizeSeg" role="group" aria-label="表サイズの切替"><span class="pvSizeLabel">表サイズ:</span><button type="button" class="${deptPreviewSize==='small'?'active':''}" onclick="setDeptPreviewSize('small')" title="6人表示">小</button><button type="button" class="${deptPreviewSize==='medium'?'active':''}" onclick="setDeptPreviewSize('medium')" title="10人表示">中</button><button type="button" class="${deptPreviewSize==='large'?'active':''}" onclick="setDeptPreviewSize('large')" title="15人表示">大</button></span></h3><div class="small">対象スタッフ（兼務含む）の全シフトを表示しています。兼務スタッフは他部署分の勤務もここに表示され、どの部署のページからでも編集できます。所属・兼務先のいずれかが確定済みのスタッフは編集できません。</div>${editable?'<div class="cellOpHint"><img class="appicon" src="assets/icons/svg/sheet-edit.svg" alt="">セルは<b>左クリック</b>でよく使う区分メニュー、<b>右クリック</b>で全区分の一覧。<b>Shift+ドラッグ</b>／<b>Shift+クリック</b>（または Shift+矢印）で複数セルを範囲選択し、右クリックでまとめて入力できます。</div>':''}${editable?`<div class="undoRedoRow">${undoRedoBarHtml()}</div>`:''}<div class="tableWrap deptPvWrap pv${deptPreviewSize[0].toUpperCase()+deptPreviewSize.slice(1)}"><table><thead><tr><th class="deptCol headSticky1">所属</th><th class="staffCol headSticky2">スタッフ</th>`;
   // 人数系エラー（個人に紐づかない）の日列を赤枠表示する。
@@ -5577,8 +5589,8 @@ function formatPeriodShort(){const {start,end}=getPeriodBounds(); return `${star
 // 全体シフト表などの表示順：部署の並び（DEPTS）は固定し、各部署の中だけ社員番号の昇順に並べる。
 // 全体シフト表の並び：通常部署の順 → 末尾に部署未設定（DEPTSに無い／空）をまとめる。
 // 部署未設定スタッフは表示のみ。部署別の自動生成候補（staffCanDept）には入らないため割当はされない。
-function unsetDeptStaff(){ return staffSortedByEmpNo(state.staff.filter(s=>!s.dept || !DEPTS.includes(s.dept))); }
-function orderedStaff(){ return [...orderedDepts().flatMap(d=>staffSortedByEmpNo(state.staff.filter(s=>s.dept===d))), ...unsetDeptStaff()]; }
+function unsetDeptStaff(){ return state.staff.filter(s=>!s.dept || !DEPTS.includes(s.dept)); } // 配列＝表示順（部署未設定は末尾グループとして表示）
+function orderedStaff(){ return [...orderedDepts().flatMap(d=>state.staff.filter(s=>s.dept===d)), ...unsetDeptStaff()]; } // 部署順→スタッフ画面の表示順
 function renderCalendar(){
   const days=getDays();
   const renderData = calendarRenderData();
@@ -5693,7 +5705,7 @@ function monthlyRangeLabelHtml(){
   return `<b>${y}年${m}月（月次）</b><br><span class="small">${y}/${m}/1〜${y}/${m}/${last}　15日締めの2期間にまたがる範囲を表示します</span>`;
 }
 function monthlyStaffRows(){
-  return staffSortedByEmpNo(state.staff.filter(s=>s.dept===MONTHLY_DEPT || (s.supportDepts||[]).includes(MONTHLY_DEPT))); // 他ビューと同じ社員番号順（B19）
+  return state.staff.filter(s=>s.dept===MONTHLY_DEPT || (s.supportDepts||[]).includes(MONTHLY_DEPT)); // 他ビューと同じ表示順（スタッフ画面の並び）
 }
 function monthlyCellLabel(st, day){
   const v=schedule[day.key]?.[st.name]||'';
@@ -6076,7 +6088,7 @@ function makeCalendarCSV(){
 function deptTableRows(dept){
   const days=getDays();
   const rows=[];
-  const staff=staffSortedByEmpNo(state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept))); // 社員番号順（B19）
+  const staff=state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept)); // 表示順（スタッフ画面の並び）
   rows.push(['所属','タグ','スタッフ',...days.map(d=>{ const tags=scheduleTagsForDay(d); return `${d.y}/${d.m}/${d.day}(${d.wdName}${d.holiday?'・祝':''}${d.closure?'・臨時休業':(d.closed?'・定休':'')})${tags.length?`【${tags.join('・')}】`:''}`; }),'合計','早','中','遅']);
   for(const st of staff){
     const dc=getStaffDeptCounts(st.name, dept, days, schedule, assignDept);
@@ -6211,9 +6223,25 @@ function kanaSortKey(st){
 // 並び替え用の社員番号値。正規の5桁のみ数値化し、未設定・不正値は末尾（バッジ表示と整合）。
 function empNoSortVal(st){ return isValidEmpNo(st.empNo) ? parseInt(String(st.empNo).trim(),10) : Number.POSITIVE_INFINITY; }
 // 社員番号の昇順（未設定は末尾）。同番号はよみがな→氏名で安定化。スタッフ一覧・OBICで共用。
+// 社員番号順（OBIC連携専用の並び。スタッフ画面の並び替えの影響を受けない）
 function staffSortedByEmpNo(list){ return [...list].sort((a,b)=> empNoSortVal(a)-empNoSortVal(b) || kanaSortKey(a).localeCompare(kanaSortKey(b),'ja') || (a.name||'').localeCompare(b.name||'','ja')); }
+// ===== スタッフ表示順（スタッフ画面で設定した並び）=====
+function displayOrderVal(st){ return (st && typeof st.sortOrder==='number' && isFinite(st.sortOrder)) ? st.sortOrder : Number.POSITIVE_INFINITY; }
+function sortStaffByDisplayOrder(list){ return [...list].sort((a,b)=> displayOrderVal(a)-displayOrderVal(b) || empNoSortVal(a)-empNoSortVal(b) || kanaSortKey(a).localeCompare(kanaSortKey(b),'ja') || (a.name||'').localeCompare(b.name||'','ja')); }
+// スタッフ画面の「↑↓」：表示中リスト（部署タブ・タグ絞り込み適用後）内で隣のスタッフとsortOrderを交換する。
+function moveStaffOrder(id, dir){
+  pullInputs(); normalizeState();
+  const scoped=state.staff.filter(s=>activeStaffDept==='全体' || s.dept===activeStaffDept);
+  const list=sortStaffByDisplayOrder(activeStaffTagFilters.length ? scoped.filter(s=>activeStaffTagFilters.every(t=>(s.tags||[]).includes(t))) : scoped);
+  const i=list.findIndex(s=>s.id===id); const j=i+dir;
+  if(i<0 || j<0 || j>=list.length) return;
+  const a=list[i], b=list[j]; const tmp=a.sortOrder; a.sortOrder=b.sortOrder; b.sortOrder=tmp;
+  normalizeState(); // 配列順も新しい表示順へ同期
+  preserveScroll(()=>{ persist(); renderInputs(); renderAll(); }); // 全画面へ即時反映
+  toast('スタッフの並び順を保存しました。');
+}
 // 部署未設定（未配属）スタッフはシフト表・自動生成の対象外なのでOBIC出力からも除外し、カレンダーと行が一致するようにする。
-function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='')); }
+function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='')); } // OBICは本社提出用のため、スタッフ画面の並び替えに関わらず常に社員番号順
 // OBICのコピー/Excel出力をブロックすべき「エラー」理由を返す（無ければ空文字）。
 //  ・対象スタッフが0名（未登録/全員部署未設定）→ 出力する中身が無い
 //  ・社員番号未設定が1名以上 → 末尾に回り、OBIC貼り付けで全行がずれる重大エラー
@@ -6439,7 +6467,7 @@ function staffTotalsTableHtml(title, rows){
   return `<div class="totalsBlock"><h4>${esc(title)}</h4><table class="totalsTable"><thead><tr><th>スタッフ</th><th>合計</th><th>早</th><th>中</th><th>遅</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="totalsName">${esc(r.name)}</td><td><b>${r.total||0}</b></td><td>${r.E||0}</td><td>${r.M||0}</td><td>${r.L||0}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function deptTotalsRows(dept, days){
-  return staffSortedByEmpNo(state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept))).map(st=>{ // 社員番号順（B19）
+  return state.staff.filter(s=>s.dept===dept || (s.supportDepts||[]).includes(dept)).map(st=>{ // 表示順（スタッフ画面の並び）
     const c=getStaffDeptCounts(st.name, dept, days, schedule, assignDept);
     return {name:st.name, total:c.total, E:c.E, M:c.M, L:c.L};
   });
