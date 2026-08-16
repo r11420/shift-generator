@@ -435,7 +435,7 @@ button,input,select{font-size:15px}
 .obicCountWarn{background:#fbe7e4;color:#9c4844;border-color:#e6c4c0}
 .obicBlockMsg{background:#fbe7e4;border:1px solid #e6c4c0;border-left:5px solid #c0504a;border-radius:12px;padding:10px 14px;margin:0 0 10px;color:#8a2c2c;font-weight:700;font-size:13.5px;line-height:1.65}
 .obicBlockMsg ul.obicBlockList{margin:5px 0 0;padding-left:1.3em}.obicBlockMsg li{margin:3px 0}
-.obicCountOk{font-size:12px;color:var(--muted)}
+.obicCountOk{font-size:12px;color:var(--muted)}.obicEmptyCard{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--gdb);border:1px solid var(--gdl);border-left:5px solid var(--gd);border-radius:12px;padding:10px 13px;margin:0 0 10px;font-size:13px;color:#6a5320}.obicEmptyCard .btnOutlineSmall{margin-left:auto}
 .obicHeadSub{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-top:1px}
 .obicEmpNoLine{margin-top:3px}
 .shiftView.closureView{font-size:10px;background:#efe7da!important;border-color:#ddd0bc!important;color:#7a6a52!important;font-weight:800;white-space:nowrap}
@@ -961,10 +961,10 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:12p
     </section>
     <section class="card menuPanel" data-panel="obic">
       <div class="panelHead noPrint">
-        <div><h2><img class="appicon xl" src="assets/icons/svg/action-export-excel.svg" alt="">【店長】OBIC連携用</h2><p>全スタッフの休日（公休・希望休・有休）を、OBIC取り込み用に出力します。公休・希望休・有休の日を「休日」、勤務シフト（その他を含む）の日は空欄にします。スタッフは<b>社員番号の昇順</b>で並びます。対象の締め月は「全体シフト表」で選択した月です。「コピー」は日付セル（休日/空欄）をExcelと同じ形式でクリップボードへコピーします。</p></div>
+        <div><h2><img class="appicon xl" src="assets/icons/svg/action-export-excel.svg" alt="">【店長】OBIC連携用</h2><p><b>公休の日だけ「休日」</b>と出力します（有休・勤務シフト区分・その他・空欄はすべて空白）。対象は「スタッフ」画面で<b>「OBIC連携に表示する」がON</b>のスタッフのみで、<b>社員番号の昇順</b>に並びます（スタッフ画面の並び替えは影響しません）。対象の締め月は「全体シフト表」で選択した月です。「コピー」「Excel出力」はどちらも<b>1スタッフ＝1行</b>です。</p></div>
         <div class="panelActions"><button class="btn2" onclick="showMenuPanel('calendar')">全体シフト表へ戻る</button><span class="vDivider" aria-hidden="true"></span><button class="btn obicCopyBtn" onclick="copyObicTable()" title="日付セル（休日/空欄）をExcel形式でコピー"><img class="appicon" src="assets/icons/svg/copy.svg" alt="">コピー</button><button class="btn2 obicExcelBtn" onclick="exportObicExcel()" title="全スタッフの休日をExcel形式で保存"><img class="appicon" src="assets/icons/svg/spreadsheet-download.svg" alt="">Excel出力</button></div>
       </div>
-      <div id="viewObic"><div class="small noPrint" style="margin:0 0 8px">臨時休業日のOBIC出力は、シフト表上の各スタッフの設定（休日／勤務）に従います。臨時休業でも全員を自動で休日にはしません。</div><div id="obicSummary" class="obicSummary noPrint"></div><div id="obicBlockMsg" class="obicBlockMsg noPrint" style="display:none"></div><div class="tableWrap"><table id="obicTable"></table></div></div>
+      <div id="viewObic"><div class="small noPrint" style="margin:0 0 8px">臨時休業日・定休日は公休として「休日」を出力します（その日に勤務シフトが入っているスタッフだけ空白）。有休は勤怠側で別管理のため、OBICでは空白です。</div><div id="obicSummary" class="obicSummary noPrint"></div><div id="obicEmptyMsg" class="noPrint" style="display:none"></div><div id="obicBlockMsg" class="obicBlockMsg noPrint" style="display:none"></div><div class="tableWrap"><table id="obicTable"></table></div></div>
     </section>
   </main>
 </div>
@@ -1762,6 +1762,7 @@ function normalizeState(){
       offHolidays: !!s.offHolidays,
       useFixedOff: s.useFixedOff === undefined ? true : !!s.useFixedOff,
       useWeeklyLimit: s.useWeeklyLimit === undefined ? true : !!s.useWeeklyLimit,
+      obicEnabled: s.obicEnabled !== false, // OBIC連携用の表示・出力対象（未設定の既存データ・既存バックアップはONで補完）
       weeklyAvailableDays: Math.max(0, Math.min(7, +(s.weeklyAvailableDays ?? 5) || 0)),
       canShifts: can,
       supportDepts: support,
@@ -1926,6 +1927,7 @@ function pullInputs(){
         offHolidays: !!el.querySelector('.stOffHoliday')?.checked,
         useFixedOff: !!el.querySelector('.stUseFixedOff')?.checked,
         useWeeklyLimit: !!el.querySelector('.stUseWeeklyLimit')?.checked,
+        obicEnabled: el.querySelector('.stObicEnabled') ? !!el.querySelector('.stObicEnabled').checked : ((state.staff||[]).find(s=>s.id===id)?.obicEnabled!==false),
         weeklyAvailableDays: clampInt(el.querySelector('.stWeeklyAvailableDays')?.value, 0, 7, 5),
         canShifts: [...el.querySelectorAll('.stCanShift:checked')].map(x=>x.value),
         supportDepts: [...el.querySelectorAll('.stSupportDept:checked')].map(x=>x.value),
@@ -2667,6 +2669,11 @@ function renderStaffList(){
           <div class="ruleHintCard"><b>週の出勤可能日数</b><div class="small"><b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。スタッフごとに設定できます。この日数を超えると、下書きチェックや集計・警告に表示されます。</div></div>
           <div class="small">「固定公休を考慮」「週の出勤可能日数を考慮」の両方をチェックすると、曜日公休と週の出勤可能日数の両方を考慮します。</div>
         </div>
+        <div class="workControlBox">
+          <label>OBIC連携</label>
+          <label class="badge"><input class="stObicEnabled" type="checkbox" ${s.obicEnabled!==false?'checked':''}>OBIC連携に表示する</label>
+          <div class="small">ONにすると【店長】OBIC連携用の一覧・出力に表示されます。OFFにしても、シフト表・自動生成・集計などKJM Shift＋の他の機能では今までどおり使えます。</div>
+        </div>
         <label>入れるシフト</label>
         ${shiftCheckboxes(Array.isArray(s.canShifts)?s.canShifts:SHIFT_CODES)}
         <label>対応できる部署・兼務可能部署</label>
@@ -3031,6 +3038,11 @@ function renderStaffAddForm(){
       </div>
       <div class="ruleHintCard"><b>週の出勤可能日数</b><div class="small"><b>日曜〜土曜</b>の1週間で、出勤できる最大日数です。スタッフごとに設定できます。この日数を超えると、下書きチェックや集計・警告に表示されます。</div></div>
     </div>
+    <div class="workControlBox">
+      <label>OBIC連携</label>
+      <label class="badge"><input class="stObicEnabled" type="checkbox" checked>OBIC連携に表示する</label>
+      <div class="small">ONにすると【店長】OBIC連携用の一覧・出力に表示されます。</div>
+    </div>
     <label>入れるシフト</label>${shiftCheckboxes([])}
     <label>固定公休日（曜日・祝日）</label>${weekdayCheckboxes([], false)}
     <div class="row" style="margin-top:10px"><button class="btn" type="button" onclick="confirmAddStaffFromForm()">追加</button><button class="btn2" type="button" onclick="hideStaffAddForm()">取消</button></div>`;
@@ -3127,13 +3139,14 @@ async function confirmAddStaffFromForm(){
   const useFixedOff=!!document.querySelector('#staffAddForm .stUseFixedOff')?.checked;
   const useWeeklyLimit=!!document.querySelector('#staffAddForm .stUseWeeklyLimit')?.checked;
   const weeklyAvailableDays=+(document.querySelector('#staffAddForm .stWeeklyAvailableDays')?.value || 5);
+  const obicEnabled = document.querySelector('#staffAddForm .stObicEnabled') ? !!document.querySelector('#staffAddForm .stObicEnabled').checked : true;
   if(!await showConfirmModal({title:'スタッフを追加しますか？', message:`${deptLabel(dept)} に ${name} を追加します。`, confirmText:'追加する', cancelText:'キャンセル', variant:'primary'})) return;
   pullInputs();
   if(!canShifts.length){
     const okEmpty=await showConfirmModal({title:'入れるシフトが未選択です', message:`${name} は「入れるシフト」が1つも選ばれていません。\nこのまま登録すると自動生成の割当対象になりません（手動入力は可能です）。`, confirmText:'このまま登録', cancelText:'戻って選ぶ', variant:'caution', cautionNote:'自動生成に入れる場合は、入れるシフトを1つ以上チェックしてください。'});
     if(!okEmpty) return;
   }
-  state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0, sortOrder: state.staff.reduce((m,s)=>Math.max(m, displayOrderVal(s)===Infinity?-1:s.sortOrder), -1)+1}));
+  state.staff.push(finalizeStaffTags({id:makeStaffId(), empNo, name, kana, sei, mei, seiKana, meiKana, dept, tags, skill, offWds, offHolidays, useFixedOff, useWeeklyLimit, weeklyAvailableDays, obicEnabled, canShifts:canShifts, supportDepts: dept?[dept]:[], minDays:0, maxDays:0, sortOrder: state.staff.reduce((m,s)=>Math.max(m, displayOrderVal(s)===Infinity?-1:s.sortOrder), -1)+1}));
   staffAddFormOpen=false; preserveScroll(()=>{ persist(); renderInputs(); renderAll(); });
   showToast('スタッフを追加しました。','success');
 }
@@ -6241,7 +6254,10 @@ function moveStaffOrder(id, dir){
   toast('スタッフの並び順を保存しました。');
 }
 // 部署未設定（未配属）スタッフはシフト表・自動生成の対象外なのでOBIC出力からも除外し、カレンダーと行が一致するようにする。
-function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='')); } // OBICは本社提出用のため、スタッフ画面の並び替えに関わらず常に社員番号順
+// OBIC対象スタッフ：全スタッフ → 「OBIC連携に表示する」がONかつ部署設定済み → 社員番号順。
+// 本社提出用のため、スタッフ画面の手動並び替え（sortOrder）は使わない。
+function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='' && s.obicEnabled!==false)); }
+function obicExcludedCount(){ return state.staff.filter(s=>s.obicEnabled===false).length; }
 // OBICのコピー/Excel出力をブロックすべき「エラー」理由を返す（無ければ空文字）。
 //  ・対象スタッフが0名（未登録/全員部署未設定）→ 出力する中身が無い
 //  ・社員番号未設定が1名以上 → 末尾に回り、OBIC貼り付けで全行がずれる重大エラー
@@ -6267,8 +6283,9 @@ function obicExportBlockReasons(){
 // 行＝スタッフ（社員番号順）、列＝対象期間の各日。貼り付け先のC5（最初のスタッフ行・最初の日）に対応。
 function obicCopyText(){
   const days=getDays();
-  const offMap=fixedWeeklyOffMap(days), prefMap=buildPreferenceMap(days);
-  return obicStaffSorted().map(st=> days.map(day=>obicRestLabel(day, st, offMap, prefMap)).join('\t')).join('\r\n');
+  const offMap=fixedWeeklyOffMap(days);
+  // 1スタッフ＝1行（画面・Excelと同じ対象・同じ順・同じ変換）
+  return obicStaffSorted().map(st=> days.map(day=>obicDayValue(day, st, offMap)).join('\t')).join('\r\n');
 }
 function copyObicTable(){
   pullInputs();
@@ -6289,22 +6306,24 @@ function fallbackCopy(text, done){
 //  ・勤務シフト／その他（＝シフト区分が入力済み）→ 空欄
 //  ・固定公休／希望休（休希望）／有休／休(OFF) → 「休日」
 //  ・それ以外（未入力など）→ 空欄
-function obicRestLabel(day, st, offMap, prefMap){
-  if(day.closure){ const cv=normalizeStoredShift(schedule[day.key]?.[st.name]||''); return isWorkingShift(cv) ? '' : '休日'; } // 臨時休業＝休日（出勤に上書きされていれば空欄）
-  if(day.closed){ const cv=normalizeStoredShift(schedule[day.key]?.[st.name]||''); return isWorkingShift(cv) ? '' : '休日'; } // 定休日も臨時休業と同じ「休日」に統一（B21※OBIC側仕様は要確認）
+// ===== OBIC連携用の日付セル変換（画面・コピー・Excelで共通に使う唯一の実装）=====
+// 変換ルールは1つだけ：「公休」＝休日、それ以外（有休・勤務シフト区分・その他の勤務区分・空欄）＝空白。
+//   公休とみなすもの：休(OFF)のセル／固定公休（曜日・祝日）／臨時休業・定休日（店舗休業で全員休み）
+//   ※有休(PAID)は勤怠側で別管理のため、OBICには「休日」として出さない。
+function obicDayValue(day, st, offMap){
   const v = normalizeStoredShift(schedule[day.key]?.[st.name] || '');
-  if(isWorkingShift(v)) return '';            // 勤務シフト・その他＝シフト区分入力済み→空欄
-  if(isPaidLeaveShift(v)) return '休日';        // 有休→休日
-  const koukyuu = !!offMap.get(st.name)?.has(day.key);
-  const pref = normalizeStoredShift(prefMap.get(day.key+'|'+st.name) || '');
-  const kibouRest = pref === 'OFF' || isPaidLeaveShift(pref); // 希望休・有休希望
-  if(koukyuu || kibouRest || v === 'OFF') return '休日';
-  return '';
+  if(isPaidLeaveShift(v)) return '';                    // 有休 → 空白
+  if(isWorkingShift(v)) return '';                      // 勤務シフト区分・その他 → 空白（休業日に出勤が入っている場合も空白）
+  if(v === 'OFF') return '休日';                         // 休（公休）→ 休日
+  if(day.closed) return '休日';                          // 臨時休業・定休日は全員が公休扱い
+  if(offMap && offMap.get(st.name)?.has(day.key)) return '休日'; // 固定公休（曜日・祝日）→ 休日
+  return '';                                             // 空欄・希望休のみ（未反映）→ 空白
 }
+function obicRestLabel(day, st, offMap){ return obicDayValue(day, st, offMap); } // 旧名の互換ラッパー
 function renderObicView(){
   const tbl=document.getElementById('obicTable'); if(!tbl) return;
   const days=getDays();
-  const offMap=fixedWeeklyOffMap(days), prefMap=buildPreferenceMap(days);
+  const offMap=fixedWeeklyOffMap(days);
   const staff=obicStaffSorted();
   // 合計人数＋エラー（未確定部署・社員番号未設定・部署未設定）をテーブル上部に表示
   const sumBox=document.getElementById('obicSummary');
@@ -6312,13 +6331,15 @@ function renderObicView(){
   if(sumBox){
     const total=staff.length;
     const missing=staff.filter(st=>!isValidEmpNo(st.empNo)).length;
-    const unassigned=state.staff.filter(s=>s.dept==='').length; // OBIC対象外（部署未設定）
+    const unassigned=state.staff.filter(s=>s.dept==='' && s.obicEnabled!==false).length; // OBIC対象だが部署未設定
+    const excluded=obicExcludedCount(); // 「OBIC連携に表示する」OFF
     sumBox.innerHTML = (total
       ? `<span class="obicCountPill">対象スタッフ 合計 <b>${total}</b> 名</span>`
         + (missing ? `<span class="obicCountPill obicCountWarn" title="社員番号が未設定のスタッフは末尾に並び、OBICとの行ズレの原因になります。">社員番号 未設定 <b>${missing}</b> 名</span>` : `<span class="obicCountOk">全員に社員番号あり</span>`)
       : `<span class="obicCountPill">対象スタッフ 合計 <b>0</b> 名</span>`)
       + (unconfirmed.length ? `<span class="obicCountPill obicCountWarn" title="未確定の部署があります。確定してから出力してください。">未確定部署 <b>${unconfirmed.length}</b>（${esc(unconfirmed.join('・'))}）</span>` : '')
-      + (unassigned ? `<span class="obicCountPill obicCountWarn" title="部署未設定のスタッフはOBIC出力の対象外です。部署を割り当ててください。">部署未設定 <b>${unassigned}</b> 名</span>` : '');
+      + (unassigned ? `<span class="obicCountPill obicCountWarn" title="部署未設定のスタッフはOBIC出力の対象外です。部署を割り当ててください。">部署未設定 <b>${unassigned}</b> 名</span>` : '')
+      + (excluded ? `<span class="obicCountPill" title="「スタッフ」画面で「OBIC連携に表示する」がOFFのスタッフです。KJM Shift＋内では通常どおり使えます。">OBIC対象外 <b>${excluded}</b> 名</span>` : '');
   }
   // 未確定部署・社員番号未設定・部署未設定・対象0名 のいずれかがあれば、コピー/Excel出力を無効化し理由を表示する。
   const reasons = obicExportBlockReasons();
@@ -6331,16 +6352,36 @@ function renderObicView(){
   let html='<thead><tr><th class="deptCol headSticky1">部署</th><th class="staffCol headSticky2">スタッフ<span class="obicHeadSub">社員番号</span></th>';
   for(const day of days){ const cls=dayColClass(day); html+=`<th class="dateCol ${cls}" ${day.holiday?`title="${escAttr(day.holiday)}"`:''}>${dateHeaderInner(day)}</th>`; }
   html+='</tr></thead><tbody>';
+  const emptyBox=document.getElementById('obicEmptyMsg');
   if(!staff.length){
-    html+=`<tr><td class="deptCol sticky1"></td><td class="staffCol sticky2">スタッフが登録されていません</td>${days.map(()=>'<td class="dateCol"></td>').join('')}</tr>`;
-  }
+    const msg = state.staff.length
+      ? 'OBIC連携対象のスタッフがいません。「スタッフ」画面で「OBIC連携に表示する」をONにしてください。'
+      : 'スタッフが登録されていません。「スタッフ」画面から登録してください。';
+    html+=`<tr><td class="deptCol sticky1"></td><td class="staffCol sticky2">対象なし</td>${days.map(()=>'<td class="dateCol"></td>').join('')}</tr>`;
+    if(emptyBox){ emptyBox.style.display=''; emptyBox.innerHTML=`<div class="obicEmptyCard"><b>${esc(msg)}</b><button type="button" class="btnOutlineSmall" onclick="showMenuPanel('staff')">スタッフ設定を開く</button></div>`; }
+  }else if(emptyBox){ emptyBox.style.display='none'; emptyBox.innerHTML=''; }
   for(const st of staff){
     const empBadge = isValidEmpNo(st.empNo) ? `<span class="empNoBadge">No.${esc(st.empNo)}</span>` : `<span class="empNoBadge empNoMissing">番号未設定</span>`;
     html+=`<tr><td class="deptCol sticky1"><span class="pill pDept">${esc(deptLabel(st.dept))}</span></td><td class="staffCol sticky2">${esc(st.name)}<div class="obicEmpNoLine">${empBadge}</div></td>`;
-    for(const day of days){ const label=obicRestLabel(day, st, offMap, prefMap); html+=`<td class="dateCol ${dayColClass(day)}">${label?`<span class="obicRest">${esc(label)}</span>`:''}</td>`; }
+    for(const day of days){ const label=obicDayValue(day, st, offMap); html+=`<td class="dateCol ${dayColClass(day)}">${label?`<span class="obicRest">${esc(label)}</span>`:''}</td>`; }
     html+='</tr>';
   }
   html+='</tbody>'; tbl.innerHTML=html;
+}
+// OBIC連携用Excelの表を、画面DOMの複製ではなくデータから直接組み立てる。
+// 1スタッフ＝1レコード＝1行（社員番号・氏名・各日のOBIC値を同じ行に置く）。
+// 画面のスタッフ列は氏名と社員番号を2段表示にしているため、DOM複製だとExcel側で
+// 1人が2行に分かれ、コピー時に空白行が混ざっていた。ここでは列を分けて1行にする。
+function obicExcelTableHtml(){
+  const days=getDays();
+  const offMap=fixedWeeklyOffMap(days);
+  const staff=obicStaffSorted();
+  const head='<tr><th>部署</th><th>社員番号</th><th>スタッフ</th>'+days.map(d=>`<th>${d.m}/${d.day}(${d.wdName})</th>`).join('')+'</tr>';
+  const body=staff.map(st=>{
+    const cells=days.map(day=>`<td>${esc(obicDayValue(day, st, offMap))}</td>`).join('');
+    return `<tr><td>${esc(deptLabel(st.dept))}</td><td>${esc(st.empNo||'')}</td><td>${esc(st.name)}</td>${cells}</tr>`;
+  }).join('');
+  return `<table class="obicExcelTable"><thead>${head}</thead><tbody>${body}</tbody></table>`;
 }
 function exportObicExcel(){
   pullInputs();
@@ -6348,8 +6389,7 @@ function exportObicExcel(){
   const reasons=obicExportBlockReasons();
   if(reasons.length){ renderObicView(); showToast('Excel出力できません：'+reasonText(reasons[0]),'warn'); return; }
   renderObicView();
-  const table=printableTableHtml(document.getElementById('obicTable'));
-  exportHtmlAsExcel('OBIC連携用 休日一覧（公休・希望休・有休・休）', `<div>${table}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
+  exportHtmlAsExcel('OBIC連携用 休日一覧（公休のみ「休日」）', `<div>${obicExcelTableHtml()}</div>`, `shift_${state.year}_${pad(state.month)}_15締め_OBIC連携_休日一覧.xls`);
 }
 function printHtmlDocument(title, bodyHtml){
   const w=window.open('', '_blank');
