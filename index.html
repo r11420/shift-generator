@@ -432,6 +432,8 @@ button,input,select{font-size:15px}
 .obicSummary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
 .obicCountPill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:800;background:var(--soft);color:var(--accent2);border:1px solid var(--line)}
 .obicCountPill b{font-size:16px}
+.obicExcludedPill{flex-basis:100%;border-radius:14px;align-items:baseline;white-space:normal;line-height:1.7;padding:7px 13px}
+.obicExcludedNames{font-weight:700;font-size:12.5px;color:var(--ink2);margin-left:4px;word-break:break-word;overflow-wrap:anywhere}
 .obicCountWarn{background:#fbe7e4;color:#9c4844;border-color:#e6c4c0}
 .obicBlockMsg{background:#fbe7e4;border:1px solid #e6c4c0;border-left:5px solid #c0504a;border-radius:12px;padding:10px 14px;margin:0 0 10px;color:#8a2c2c;font-weight:700;font-size:13.5px;line-height:1.65}
 .obicBlockMsg ul.obicBlockList{margin:5px 0 0;padding-left:1.3em}.obicBlockMsg li{margin:3px 0}
@@ -6257,7 +6259,9 @@ function moveStaffOrder(id, dir){
 // OBIC対象スタッフ：全スタッフ → 「OBIC連携に表示する」がONかつ部署設定済み → 社員番号順。
 // 本社提出用のため、スタッフ画面の手動並び替え（sortOrder）は使わない。
 function obicStaffSorted(){ return staffSortedByEmpNo(state.staff.filter(s=>s.dept!=='' && s.obicEnabled!==false)); }
-function obicExcludedCount(){ return state.staff.filter(s=>s.obicEnabled===false).length; }
+// OBIC対象外（「OBIC連携に表示する」OFF）のスタッフ。人数も氏名もこの配列から算出する。
+// 並びはスタッフ画面の表示順（state.staff の並び）。
+function obicExcludedStaff(){ return state.staff.filter(s=>s.obicEnabled===false); }
 // OBICのコピー/Excel出力をブロックすべき「エラー」理由を返す（無ければ空文字）。
 //  ・対象スタッフが0名（未登録/全員部署未設定）→ 出力する中身が無い
 //  ・社員番号未設定が1名以上 → 末尾に回り、OBIC貼り付けで全行がずれる重大エラー
@@ -6332,14 +6336,14 @@ function renderObicView(){
     const total=staff.length;
     const missing=staff.filter(st=>!isValidEmpNo(st.empNo)).length;
     const unassigned=state.staff.filter(s=>s.dept==='' && s.obicEnabled!==false).length; // OBIC対象だが部署未設定
-    const excluded=obicExcludedCount(); // 「OBIC連携に表示する」OFF
+    const excludedStaff=obicExcludedStaff(); // 「OBIC連携に表示する」OFF（人数・氏名の共通ソース）
     sumBox.innerHTML = (total
       ? `<span class="obicCountPill">対象スタッフ 合計 <b>${total}</b> 名</span>`
         + (missing ? `<span class="obicCountPill obicCountWarn" title="社員番号が未設定のスタッフは末尾に並び、OBICとの行ズレの原因になります。">社員番号 未設定 <b>${missing}</b> 名</span>` : `<span class="obicCountOk">全員に社員番号あり</span>`)
       : `<span class="obicCountPill">対象スタッフ 合計 <b>0</b> 名</span>`)
       + (unconfirmed.length ? `<span class="obicCountPill obicCountWarn" title="未確定の部署があります。確定してから出力してください。">未確定部署 <b>${unconfirmed.length}</b>（${esc(unconfirmed.join('・'))}）</span>` : '')
       + (unassigned ? `<span class="obicCountPill obicCountWarn" title="部署未設定のスタッフはOBIC出力の対象外です。部署を割り当ててください。">部署未設定 <b>${unassigned}</b> 名</span>` : '')
-      + (excluded ? `<span class="obicCountPill" title="「スタッフ」画面で「OBIC連携に表示する」がOFFのスタッフです。KJM Shift＋内では通常どおり使えます。">OBIC対象外 <b>${excluded}</b> 名</span>` : '');
+      + (excludedStaff.length ? `<span class="obicCountPill obicExcludedPill" title="「スタッフ」画面で「OBIC連携に表示する」がOFFのスタッフです。KJM Shift＋内では通常どおり使えます。">OBIC対象外 <b>${excludedStaff.length}</b> 名<span class="obicExcludedNames">${excludedStaff.map(s=>esc(s.name)).join('・')}</span></span>` : '');
   }
   // 未確定部署・社員番号未設定・部署未設定・対象0名 のいずれかがあれば、コピー/Excel出力を無効化し理由を表示する。
   const reasons = obicExportBlockReasons();
